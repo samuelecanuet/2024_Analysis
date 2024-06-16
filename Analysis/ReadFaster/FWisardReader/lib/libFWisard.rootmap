@@ -1,0 +1,7 @@
+[ libFWisard.so ]
+# List of selected classes
+class FWisardReader
+header FWisardReader.hh
+# List of selected vars
+var wisColTxt
+var wisColEnd

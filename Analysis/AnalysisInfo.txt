@@ -1,0 +1,15 @@
+
+
+FASTER data reading program
+===========================
+
+  Libraries:
+    - GTools1.0
+    - fasterac 2.11 (or 2.17)
+    - FasterProcess1.0
+
+  Execution in "Analysis/ReadFaster" directory (link to executable)
+  Compilation in "Analysis/ReadFaster/FWisardReader/src" directory
+
+  Example:
+    Analysis/ReadFaster > FWisardReadRun "../Runs/run_%3R_*_*.fast" -r"5,11:18"

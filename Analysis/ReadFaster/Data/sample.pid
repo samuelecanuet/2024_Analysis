@@ -1,0 +1,152 @@
+# qdc caras channel:BetaHi1
+101:QDC4:BetaHi1
+# qdc caras channel:BetaHi2
+102:QDC4:BetaHi2
+# qdc caras channel:BetaHi3
+103:QDC4:BetaHi3
+# qdc caras channel:BetaHi4
+104:QDC4:BetaHi4
+# qdc caras channel:BetaHi5
+105:QDC4:BetaHi5
+# qdc caras channel:BetaHi6
+106:QDC4:BetaHi6
+# qdc caras channel:BetaHi7
+107:QDC4:BetaHi7
+# qdc caras channel:BetaHi8
+108:QDC4:BetaHi8
+# adc mosahr channel CRRC4:D1.1
+11:CRRC4_SPECTRO:D1.1
+# adc mosahr channel CRRC4:D2.1
+21:CRRC4_SPECTRO:D2.1
+# adc mosahr channel CRRC4:D3.1
+31:CRRC4_SPECTRO:D3.1
+# adc mosahr channel CRRC4:D4.1
+41:CRRC4_SPECTRO:D4.1
+# adc mosahr channel CRRC4:D5.1
+51:CRRC4_SPECTRO:D5.1
+# adc mosahr channel CRRC4:D6.1
+61:CRRC4_SPECTRO:D6.1
+# adc mosahr channel CRRC4:D7.1
+71:CRRC4_SPECTRO:D7.1
+# adc mosahr channel CRRC4:D8.1
+81:CRRC4_SPECTRO:D8.1
+# adc mosahr channel CRRC4:D1.2
+12:CRRC4_SPECTRO:D1.2
+# adc mosahr channel CRRC4:D2.2
+22:CRRC4_SPECTRO:D2.2
+# adc mosahr channel CRRC4:D3.2
+32:CRRC4_SPECTRO:D3.2
+# adc mosahr channel CRRC4:D4.2
+42:CRRC4_SPECTRO:D4.2
+# adc mosahr channel CRRC4:D5.2
+52:CRRC4_SPECTRO:D5.2
+# adc mosahr channel CRRC4:D6.2
+62:CRRC4_SPECTRO:D6.2
+# adc mosahr channel CRRC4:D7.2
+72:CRRC4_SPECTRO:D7.2
+# adc mosahr channel CRRC4:D8.2
+82:CRRC4_SPECTRO:D8.2
+# adc mosahr channel CRRC4:D1.3
+13:CRRC4_SPECTRO:D1.3
+# adc mosahr channel CRRC4:D2.3
+23:CRRC4_SPECTRO:D2.3
+# adc mosahr channel CRRC4:D3.3
+33:CRRC4_SPECTRO:D3.3
+# adc mosahr channel CRRC4:D4.3
+43:CRRC4_SPECTRO:D4.3
+# adc mosahr channel CRRC4:D5.3
+53:CRRC4_SPECTRO:D5.3
+# adc mosahr channel CRRC4:D6.3
+63:CRRC4_SPECTRO:D6.3
+# adc mosahr channel CRRC4:D7.3
+73:CRRC4_SPECTRO:D7.3
+# adc mosahr channel CRRC4:D8.3
+83:CRRC4_SPECTRO:D8.3
+# adc mosahr channel CRRC4:D1.4
+14:CRRC4_SPECTRO:D1.4
+# adc mosahr channel CRRC4:D2.4
+24:CRRC4_SPECTRO:D2.4
+# adc mosahr channel CRRC4:D3.4
+34:CRRC4_SPECTRO:D3.4
+# adc mosahr channel CRRC4:D4.4
+44:CRRC4_SPECTRO:D4.4
+# adc mosahr channel CRRC4:D5.4
+54:CRRC4_SPECTRO:D5.4
+# adc mosahr channel CRRC4:D6.4
+64:CRRC4_SPECTRO:D6.4
+# adc mosahr channel CRRC4:D7.4
+74:CRRC4_SPECTRO:D7.4
+# adc mosahr channel CRRC4:D8.4
+84:CRRC4_SPECTRO:D8.4
+# adc mosahr channel CRRC4:D1.5
+15:CRRC4_SPECTRO:D1.5
+# adc mosahr channel CRRC4:D2.5
+25:CRRC4_SPECTRO:D2.5
+# adc mosahr channel CRRC4:D3.5
+35:CRRC4_SPECTRO:D3.5
+# adc mosahr channel CRRC4:D4.5
+45:CRRC4_SPECTRO:D4.5
+# adc mosahr channel CRRC4:D5.5
+55:CRRC4_SPECTRO:D5.5
+# adc mosahr channel CRRC4:D6.5
+65:CRRC4_SPECTRO:D6.5
+# adc mosahr channel CRRC4:D7.5
+75:CRRC4_SPECTRO:D7.5
+# adc mosahr channel CRRC4:D8.5
+85:CRRC4_SPECTRO:D8.5
+# adc mosahr channel CRRC4:D1.R
+16:CRRC4_SPECTRO:D1.R
+# adc mosahr channel CRRC4:D2.R
+26:CRRC4_SPECTRO:D2.R
+# adc mosahr channel CRRC4:D3.R
+36:CRRC4_SPECTRO:D3.R
+# adc mosahr channel CRRC4:D4.R
+46:CRRC4_SPECTRO:D4.R
+# adc mosahr channel CRRC4:D5.R
+56:CRRC4_SPECTRO:D5.R
+# adc mosahr channel CRRC4:D6.R
+66:CRRC4_SPECTRO:D6.R
+# adc mosahr channel CRRC4:D7.R
+76:CRRC4_SPECTRO:D7.R
+# adc mosahr channel CRRC4:D8.R
+86:CRRC4_SPECTRO:D8.R
+# qdc caras channel:BetaHi9
+109:QDC4:BetaHi9
+# qdc caras channel:BetaLo1
+111:QDC4:BetaLo1
+# qdc caras channel:BetaLo2
+112:QDC4:BetaLo2
+# qdc caras channel:NOT_USED_MCP
+130:QDC4:NOT_USED_MCP
+# adc mosahr channel CRRC4:CRRC4_1
+180:CRRC4_SPECTRO:CRRC4_1
+# adc mosahr channel CRRC4:CRRC4_2
+181:CRRC4_SPECTRO:CRRC4_2
+# adc mosahr channel CRRC4:CRRC4_3
+182:CRRC4_SPECTRO:CRRC4_3
+# adc mosahr channel CRRC4:CRRC4_4
+183:CRRC4_SPECTRO:CRRC4_4
+# adc mosahr channel CRRC4:NOT_USED_RA1
+121:CRRC4_SPECTRO:NOT_USED_RA1
+# adc mosahr channel CRRC4:NOT_USED_RA2
+122:CRRC4_SPECTRO:NOT_USED_RA2
+# adc mosahr channel CRRC4:NOT_USED_RA3
+123:CRRC4_SPECTRO:NOT_USED_RA3
+# adc mosahr channel CRRC4:NOT_USED_RA4
+124:CRRC4_SPECTRO:NOT_USED_RA4
+# qdc caras channel:BetaLo3
+113:QDC4:BetaLo3
+# qdc caras channel:BetaLo4
+114:QDC4:BetaLo4
+# qdc caras channel:BetaLo5
+115:QDC4:BetaLo5
+# qdc caras channel:BetaLo6
+116:QDC4:BetaLo6
+# qdc caras channel:BetaLo7
+117:QDC4:BetaLo7
+# qdc caras channel:BetaLo8
+118:QDC4:BetaLo8
+# qdc caras channel:BetaLo9
+119:QDC4:BetaLo9
+# qdc caras channel:NOT_USED_Beta
+120:QDC4:NOT_USED_Beta
