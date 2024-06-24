@@ -133,7 +133,7 @@ TFile *dark_file;
 
 TH1D* h;
 
-int Verbose = 0;
+// int Verbose = 0;
 
 bool Calibration = false;
 

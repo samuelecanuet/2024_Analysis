@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <gsl/gsl_statistics.h>
 #include "TFile.h"
+#include "../../../lib/SignalDict/Signal.h"
 
 #include "/home/local1/Documents/lib/GTools1.0/include/GString.hh"
 
@@ -22,10 +23,12 @@ string RESET = "\033[0m";
 
 void Error(const string& message) {
     cout << RED << "<ERROR> " << message << RESET << endl;
+    exit(0);
 }
 
 void Error(const char *message) {
     cout << RED << "<ERROR> " << message << RESET << endl;
+    exit(0);
 }
 
 void Warning(const string& message) {
@@ -50,6 +53,14 @@ void Success(const string& message) {
 
 void Success(const char *message) {
     cout << GREEN << "<SUCCESS> " << message << RESET << endl;
+}
+
+void Verbose(const string& message, int verbose, int this_verbose) {
+    if (verbose >= this_verbose) cout << MAGENTA << "<VERBOSE " << verbose << ">" << message << RESET << endl;
+}
+
+void Verbose(Signal signal, int verbose, int this_verbose) {
+    if (verbose >= this_verbose) cout << MAGENTA << "<VERBOSE " << verbose << ">" << signal << RESET << endl;
 }
 
 void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, string Prefix = "")
@@ -93,6 +104,25 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
   }
 }
 
+void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "")
+{
+    cout << BLUE
+         << Form(("\r"+Prefix+" : ").c_str())
+         << cEntry
+         << " / "
+         << TotalEntries
+         << flush;
+
+  if (cEntry == TotalEntries-1)
+  {
+    cout << BLUE
+         << Form(("\r"+Prefix+" : ").c_str())
+         << "Completed "
+         << RESET
+         << endl;
+  }
+}
+
 string formatValueWithError(double value, double error) {
     // Calculate the number of decimal places in the error
     int errorDecimals = error > 0 ? -floor(log10(error)) : 0;
@@ -110,3 +140,4 @@ string formatValueWithError(double value, double error) {
 
     return ss.str();
 }
+

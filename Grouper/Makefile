@@ -20,7 +20,7 @@ EXE       = Grouper Matcher Merger
 all : $(EXE)
 
 $(EXE): $(OBJS) include/Detectors.hh include/Messenger.hh
-	${CC} -std=c++17 ${CFLAGS} ${LIBS} -lSpectrum obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so
+	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so
 
 obj/%.o: src/%.c++ include/%.hh
 	@mkdir -p obj

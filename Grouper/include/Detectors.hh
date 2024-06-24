@@ -48,17 +48,27 @@ int detSili[SILI_NUM][SILI_SIZE]; ///< Detector number of silicon signals
 int coderDetector[FDATA_MAX]; ///< Detector number of all coders
 
 /// Group
-double winGroupMin = -300;
-double winGroupMax = 350;
-int winGroupN = (abs(winGroupMin) + winGroupMax) / 8;
+int mini = -300;
+int maxi = 350;
+
+int n_Sili = 8;
+int n_Beta = 2;
+
+double winGroupMin_Sili = mini - n_Sili + mini % n_Sili;
+double winGroupMax_Sili = maxi + n_Sili - maxi % n_Sili;
+int winGroupN_Sili = (abs(winGroupMin_Sili) + winGroupMax_Sili) / n_Sili;
+
+double winGroupMin_Beta = mini - n_Beta + mini % n_Beta;
+double winGroupMax_Beta = maxi + n_Beta - maxi % n_Beta;
+int winGroupN_Beta = (abs(winGroupMin_Beta) + winGroupMax_Beta) / n_Beta;
 
 /// Silicon ///
 double winSiliMin = -50;
 double winSiliMax = 50;
 int winSiliN = (abs(winSiliMin) + winSiliMax) / 8;
 double eSiliMin = 0;
-double eSiliMax = 80000;
-int eSiliN = 8000;
+double eSiliMax = 100000;
+int eSiliN = 10000;
 
 double eSiliMin_cal = 0;
 double eSiliMax_cal = 10000;
@@ -70,16 +80,16 @@ double winHighMin = 0;
 double winHighMax = 250;
 int winHighN = (abs(winHighMin) + winHighMax) / 2;
 double eHighMin = 0;
-double eHighMax = 8000000;
-int eHighN = 8000;
+double eHighMax = 6000000;
+int eHighN = 6000;
 
 /// Low
 double winLowMin = 0;
 double winLowMax = 250;
 int winLowN = (abs(winLowMin) + winLowMax) / 2;
 double eLowMin = 0;
-double eLowMax = 2000000;
-int eLowN = 2000;
+double eLowMax = 1200000;
+int eLowN = 2400;
 
 /// TOTAL WINDOW ///
 double tabMIN[3] = {winSiliMin, winHighMin, winLowMin};
@@ -143,7 +153,6 @@ inline int HighLowLabelConversion(int det)
   if (!IsDetectorBeta(det))
   {
     Error("Using HighLowLabelConversion for non-beta detector");
-    exit(0);
   }
   if (IsDetectorBetaLow(det))
   {
@@ -176,7 +185,6 @@ inline void InitDetectors(const string &fname)
   if (!file.is_open())
   {
     Error("Impossible to open " + fname + "file");
-    exit(0);
   }
 
   string line;
@@ -236,16 +244,23 @@ string SearchFiles(const string &directory, const string &run_number)
         return filename;
       }
     }
-    Info(("No file found for run: " + run_number).c_str());
+    Error(("No file found for run: " + run_number).c_str());
     closedir(dir);
     return "";
   }
   else
   {
     Error(("Could not open directory: " + directory).c_str());
-    exit(0);
     return "";
   }
 }
 
+int ConvertBase5ToBase10(int base5_int) {
+    string base5 = to_string(base5_int);
+    int num = 0;
+    for (char digit : base5) {
+        num = num * 5 + (digit - '0');
+    }
+    return num;
+}
 #endif

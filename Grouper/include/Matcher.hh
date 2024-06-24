@@ -48,7 +48,7 @@ int range_high;
 int guess_high = 0.9;
 int guess_low = 1.1;
 
-int Verbose = 0;
+// int Verbose = 0;
 
 bool Calibration = false;
 bool Peaks = false;

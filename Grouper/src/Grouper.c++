@@ -3,13 +3,12 @@
 
 int main(int argc, char *argv[])
 {
-    clock_t start = clock(), Current;
+    
     string Run_string;
 
     if (argc == 1)
     {
         Error("No Run Number Given");
-        exit(0);
     }
     else
     {
@@ -30,65 +29,133 @@ int main(int argc, char *argv[])
     TTreeReader *Reader = new TTreeReader(Tree);
     TTreeReaderArray<Signal> signals(*Reader, "Signal");
 
-    // ///////////////////////////////////  DELETE OLD FILE ///////////////////////////////////
-    // int status = remove((dirNameGrouped+baseFileName+"_grouped.root").c_str());
-    // status = remove((dirNameCleaned+baseFileName+"_cleaned.root").c_str());
-
     ///////////////////////////////////  Grouped ///////////////////////////////////
     GROUPED_File = new TFile((DIR_ROOT_DATA_GROUPED+ROOT_basefilename+"_grouped.root").c_str(), "RECREATE");
     
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
     InitDetectors("Config_Files/sample.pid");
-
     InitHistograms_Grouped();
-    InitTree_Grouped();
-    
-    ///////////////////////////////////  PROCESSING TREE ///////////////////////////////////
-    Verbose = 0;
-    ULong64_t TotalEntries = Tree->GetEntries();
+
+    /////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////  SELECTING TREE /////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////
+    clock_t start = clock(), Current;
+    GROUPED_Tree = new TTree("GROUPED_Tree", "GROUPED_Tree");
+    GROUPED_Tree->Branch("GROUPED_Tree_Silicon", &GROUPED_Tree_Silicon);
+    GROUPED_Tree->Branch("GROUPED_Tree_SiPMHigh", &GROUPED_Tree_SiPMHigh);
+    GROUPED_Tree->Branch("GROUPED_Tree_SiPMLow", &GROUPED_Tree_SiPMLow);
+    ULong64_t TotalEntries = Reader->GetEntries();
     while (Reader->Next())
     {
         ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Selecting Groups : ");
         
-        if (Verbose > 0)
-        {
-            for (int i = 0; i < signals.GetSize(); i++)
-            {
-                cout << signals[i] << endl;
-            }
-        }
+        // for (int i = 0; i < signals.GetSize(); i++)
+        //     Verbose(signals[i], VERBOSE, 2);
 
         SearchForCoincidence(signals);    
     }
 
-    Info("Writting Histograms");
-
-    ProcessCuttingGroups();
     WriteHistograms_Grouped();
+    /////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////  CUTTING GROUPS ///////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////
+    start = clock(), Current;
 
+    CUTTED_Tree = new TTree("CUTTED_Tree", "CUTTED_Tree");
+    CUTTED_Tree->Branch("CUTTED_Tree_Silicon", &CUTTED_Tree_Silicon);
+    CUTTED_Tree->Branch("CUTTED_Tree_SiPMHigh", &CUTTED_Tree_SiPMHigh);
+    CUTTED_Tree->Branch("CUTTED_Tree_SiPMLow", &CUTTED_Tree_SiPMLow);
+    
+    Reader = new TTreeReader(GROUPED_Tree);
+    Silicon = new TTreeReaderArray<Signal>(*Reader, "GROUPED_Tree_Silicon");
+    SiPM_High = new TTreeReaderArray<Signal>(*Reader, "GROUPED_Tree_SiPMHigh");
+    SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "GROUPED_Tree_SiPMLow");
 
     Reader->Restart();
+    TotalEntries = Reader->GetEntries();
     while (Reader->Next())
     {
         ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Cutting Groups : ");
         
-        if (Verbose > 0)
-        {
-            for (int i = 0; i < signals.GetSize(); i++)
-                cout << signals[i] << endl;
-        }
-        CuttingGroups(signals);    
+        // for (int i = 0; i < signals.GetSize(); i++)
+        //     Verbose(signals[i], VERBOSE, 2);
+
+        CuttingGroups();    
     }
 
-    Info("Writting Histograms");
     WriteHistograms_Cutted();
-    
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////// SILICON WALK GROUPS /////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////
+    start = clock(), Current;
 
-    // WriteTree_Grouped();
+    SILICON_WALK_Tree = new TTree("SILICON_WALK_Tree", "SILICON_WALK_Tree");
+    SILICON_WALK_Tree->Branch("SILICON_WALK_Tree_Silicon", &SILICON_WALK_Tree_Silicon);
+    SILICON_WALK_Tree->Branch("SILICON_WALK_Tree_SiPMHigh", &SILICON_WALK_Tree_SiPMHigh);
+    SILICON_WALK_Tree->Branch("SILICON_WALK_Tree_SiPMLow", &SILICON_WALK_Tree_SiPMLow);
+
+    Reader = new TTreeReader(CUTTED_Tree);
+    Silicon = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_Silicon");
+    SiPM_High = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_SiPMHigh");
+    SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_SiPMLow");
+       
+    Reader->Restart();
+    TotalEntries = Reader->GetEntries();
+    while (Reader->Next())
+    {
+        ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Removing Silicon walk : ");
+        
+        // for (int i = 0; i < signals.GetSize(); i++)
+        //     Verbose(signals[i], VERBOSE, 2);
+
+        SiliconWalkCorrection();
+    }
+
+    WriteHistograms_SiliconWalk();
+    /////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////// SiPM WALK GROUPS ////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////
+    start = clock(), Current;
+    Reader->Restart();
+    while (Reader->Next())
+    {
+        ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Removing SiPM walk : ");
+
+        // for (int i = 0; i < signals.GetSize(); i++)
+        //     Verbose(signals[i], VERBOSE, 2);
+
+        SiPMWalkCorrection();
+    }
+
+    WriteHistograms_SiPMWalk();
+    /////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////  FINAL CLEANING /////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////
+    start = clock(), Current;
+    CLEANED_Tree = new TTree("CLEANED_Tree", "CLEANED_Tree");
+    CLEANED_Tree->Branch("CLEANED_Tree_Silicon", &CLEANED_Tree_Silicon);
+    CLEANED_Tree->Branch("CLEANED_Tree_SiPMHigh", &CLEANED_Tree_SiPMHigh);
+    CLEANED_Tree->Branch("CLEANED_Tree_SiPMLow", &CLEANED_Tree_SiPMLow);
+
+    Reader->Restart();
+    while (Reader->Next())
+    {
+        ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Final Cleaning : ");
+
+        // for (int i = 0; i < signals.GetSize(); i++)
+        //     Verbose(signals[i], VERBOSE, 2);
+
+        CleaningGroups();
+    }
+
+    WriteHistograms_Cleaned();
+
+    delete GROUPED_Tree;
+    delete CUTTED_Tree;
+    delete SILICON_WALK_Tree;
+    CLEANED_Tree->Write();
     // WriteTime(ROOT_File, GROUPED_File);
     GROUPED_File->Close();
     ROOT_File->Close();
-    cout << "Grouped File Created" << endl;
-
-
+    Success("Grouped File Created");
 }
