@@ -1734,17 +1734,25 @@ inline void WriteHistograms_Cleaned()
       H_SiPM_Time_IAS_Cleaned[i]->Draw("SAME");
 
       H_SiPM_Time_IAS_UnCleaned[i]->GetXaxis()->SetRangeUser(-200, 300);
-      TH1D* BGK = (TH1D*)H_SiPM_Time_IAS_UnCleaned[i]->ShowBackground(20);
-      cout << SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].first << "  " << SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].second << endl;
-      double integral_bgk = BGK->Integral(SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].first, SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].second);
-      double integral_tot = H_SiPM_Time_IAS_UnCleaned[i]->Integral(SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].first, SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].second);
+      TH1D* BKG = (TH1D*)H_SiPM_Time_IAS_UnCleaned[i]->ShowBackground(20);
 
-      cout << integral_bgk << "  " << integral_tot << endl;
+
+      //// COMPUTING SIGNAL/NOISE
+      double integral_tot = 0;
+      double integral_BKG = 0;
+      for (int bin = 0; bin < H_SiPM_Time_IAS_UnCleaned[i]->GetNbinsX(); bin++)
+      {
+        if (H_SiPM_Time_IAS_UnCleaned[i]->GetBinCenter(bin) > SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].first && H_SiPM_Time_IAS_UnCleaned[i]->GetBinCenter(bin) < SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].second)
+        {
+          integral_tot += H_SiPM_Time_IAS_UnCleaned[i]->GetBinContent(bin);
+          integral_BKG += BKG->GetBinContent(bin);
+        }
+      }
 
       TLatex *text = new TLatex();
       text->SetNDC();
       text->SetTextSize(0.03);
-      text->DrawLatex(0.1, 0.8, ("Signal/Noise: " + to_string((integral_tot - integral_bgk) / integral_tot)).c_str());
+      text->DrawLatex(0.2, 0.8, ("Fake events: " + to_string(integral_BKG*100 / integral_tot) + " %").c_str());
       text->Draw("SAME");
 
       C_IAS_Time_Cleaned->Write();
@@ -1759,6 +1767,40 @@ inline void WriteHistograms_Cleaned()
       H_SiPM_Mulitplicity_Cleaned[i]->Write();
       H_SiPM_Time_IAS_Cleaned[i]->Write();
       H_SiPM_Time_IAS_UnCleaned[i]->Write();
+
+      dir_Cleaned->cd();
+      TCanvas* C_IAS_Time_Cleaned = new TCanvas(("C_IAS_Time_Cleaned_" + detectorName[i]).c_str(), ("C_IAS_Time_Cleaned_" + detectorName[i]).c_str(), 800, 400);
+      C_IAS_Time_Cleaned->cd();
+      C_IAS_Time_Cleaned->SetLogy();
+      H_SiPM_Time_IAS_UnCleaned[i]->SetFillColor(0);
+      H_SiPM_Time_IAS_UnCleaned[i]->SetLineColor(kBlack);
+      H_SiPM_Time_IAS_UnCleaned[i]->Draw("HIST");
+      H_SiPM_Time_IAS_Cleaned[i]->SetFillStyle(3244);
+      H_SiPM_Time_IAS_Cleaned[i]->SetFillColor(kRed);
+      H_SiPM_Time_IAS_Cleaned[i]->Draw("SAME");
+
+      H_SiPM_Time_IAS_UnCleaned[i]->GetXaxis()->SetRangeUser(-200, 300);
+      TH1D* BKG = (TH1D*)H_SiPM_Time_IAS_UnCleaned[i]->ShowBackground(20);
+
+      //// COMPUTING SIGNAL/NOISE
+      double integral_tot = 0;
+      double integral_BKG = 0;
+      for (int bin = 0; bin < H_SiPM_Time_IAS_UnCleaned[i]->GetNbinsX(); bin++)
+      {
+        if (H_SiPM_Time_IAS_UnCleaned[i]->GetBinCenter(bin) > SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].first && H_SiPM_Time_IAS_UnCleaned[i]->GetBinCenter(bin) < SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)].second)
+        {
+          integral_tot += H_SiPM_Time_IAS_UnCleaned[i]->GetBinContent(bin);
+          integral_BKG += BKG->GetBinContent(bin);
+        }
+      }
+
+      TLatex *text = new TLatex();
+      text->SetNDC();
+      text->SetTextSize(0.03);
+      text->DrawLatex(0.2, 0.8, ("Fake events: " + to_string(integral_BKG*100 / integral_tot) + " %").c_str());
+      text->Draw("SAME");
+
+      C_IAS_Time_Cleaned->Write();
     }
   } 
   dir_SiPMHigh_Multiplicity->cd();
