@@ -31,7 +31,8 @@ int main(int argc, char *argv[])
 
     ///////////////////////////////////  Grouped ///////////////////////////////////
     GROUPED_File = new TFile((DIR_ROOT_DATA_GROUPED+ROOT_basefilename+"_grouped.root").c_str(), "RECREATE");
-    
+    GROUPED_File->cd();
+    WriteTime(ROOT_File, GROUPED_File);
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
     InitDetectors("Config_Files/sample.pid");
     InitHistograms_Grouped();
@@ -137,6 +138,15 @@ int main(int argc, char *argv[])
     CLEANED_Tree->Branch("CLEANED_Tree_SiPMHigh", &CLEANED_Tree_SiPMHigh);
     CLEANED_Tree->Branch("CLEANED_Tree_SiPMLow", &CLEANED_Tree_SiPMLow);
 
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorSiliStrip(i))
+        {
+            CLEANED_Tree_detector[i] = new TTree(("CLEANED_Tree_" + detectorName[i]).c_str(), ("CLEANED_Tree_" + detectorName[i]).c_str());
+            CLEANED_Tree_detector[i]->Branch("Channel", &Tree_Channel_detector);
+        }
+    }
+
     Reader->Restart();
     while (Reader->Next())
     {
@@ -153,8 +163,8 @@ int main(int argc, char *argv[])
     delete GROUPED_Tree;
     delete CUTTED_Tree;
     delete SILICON_WALK_Tree;
-    CLEANED_Tree->Write();
-    // WriteTime(ROOT_File, GROUPED_File);
+    WriteTree_Grouped();
+    
     GROUPED_File->Close();
     ROOT_File->Close();
     Success("Grouped File Created");

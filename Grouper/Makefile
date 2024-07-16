@@ -2,7 +2,7 @@ FASTERAC_CFLAGS = $(shell pkg-config  --cflags libfasterac)
 FASTERAC_LIBS   = $(shell pkg-config  --libs   libfasterac)
 
 ROOT_CFLAGS     = $(shell root-config --cflags)
-ROOT_LIBS       = $(shell root-config --libs)
+ROOT_LIBS       = $(shell root-config --libs) -lSpectrum
 
 GSL_CFLAGS      = $(shell gsl-config --cflags)
 GSL_LIBS        = $(shell gsl-config --libs)
@@ -15,7 +15,7 @@ LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_file
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Grouper Matcher Merger
+EXE       = Grouper Matcher Merger Calibration Defect
 
 all : $(EXE)
 

@@ -34,6 +34,7 @@ string DIR_ROOT_DATA_GROUPED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETEC
 string DIR_ROOT_DATA_CLEANED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
 string DIR_ROOT_DATA_MATCHED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
 string DIR_ROOT_DATA_MERGED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
+string DIR_ROOT_DATA_SIMULATED = "../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
 ///////////////
 
 string detectorFileName; ///< Detectors definition file name
@@ -72,7 +73,7 @@ int eSiliN = 10000;
 
 double eSiliMin_cal = 0;
 double eSiliMax_cal = 10000;
-int eSiliN_cal = 20000;
+int eSiliN_cal = 10000;
 
 /// SiPM ///
 /// High
@@ -209,18 +210,19 @@ inline void InitDetectors(const string &fname)
 
 void WriteTime(TFile* from_File, TFile* to_file)
 {
-  TObject* start = from_File->Get("Start_time");
-  TObject* stop = from_File->Get("Stop_time");
+  from_File->cd();
+  TObject* start = from_File->Get("Start_Time");
+  TObject* stop = from_File->Get("End_Time");
 
   to_file->cd();
-  TNamed("Start_time", start->GetTitle()).Write();
-  TNamed("Stop_time", stop->GetTitle()).Write();
+  TNamed("Start_Time", start->GetTitle()).Write();
+  TNamed("End_Time", stop->GetTitle()).Write();
 }
 
 pair<string, string> GetTime(TFile* File)
 {
-  TObject* start = File->Get("Start_time");
-  TObject* stop = File->Get("Stop_time");
+  TObject* start = File->Get("Start_Time");
+  TObject* stop = File->Get("End_Time");
 
   string str_start = start->GetTitle();
   string str_stop = stop->GetTitle(); 
