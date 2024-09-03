@@ -57,6 +57,8 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "histogram1.C": "cpp",
-        "set": "cpp"
+        "set": "cpp",
+        "alpha_generator.C": "cpp",
+        "PeakShape.C": "cpp"
     }
 }

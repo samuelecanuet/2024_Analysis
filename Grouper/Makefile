@@ -15,12 +15,12 @@ LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_file
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Grouper Matcher Merger Calibration Defect
+EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime
 
 all : $(EXE)
 
 $(EXE): $(OBJS) include/Detectors.hh include/Messenger.hh
-	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so
+	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so -lfftw3
 
 obj/%.o: src/%.c++ include/%.hh
 	@mkdir -p obj

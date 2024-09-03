@@ -1,5 +1,5 @@
-// #ifndef GROUPER_HH
-// #define GROUPER_HH
+#ifndef GROUPER_HH
+#define GROUPER_HH
 
 #include <iostream>
 #include <vector>
@@ -2411,4 +2411,4 @@ inline void CleaningGroups()
   }
 }
 
-// #endif
+#endif

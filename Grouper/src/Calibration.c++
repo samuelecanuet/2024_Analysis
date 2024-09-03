@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
     InitDetectors("Config_Files/sample.pid");
    
     ///////////////////////////////////  FILES //////////////////////////////////
-    GROUPED_File["32Ar"] = new TFile((DIR_ROOT_DATA_GROUPED+"run_114_multifast_32Ar_grouped.root").c_str(), "READ");
+    GROUPED_File["32Ar"] = new TFile((DIR_ROOT_DATA_GROUPED+"merge3.root").c_str(), "READ");
     GROUPED_File["33Ar"] = new TFile((DIR_ROOT_DATA_GROUPED+"run_078_multifast_33Ar_grouped.root").c_str(), "READ");
 
     SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED+"32ArRMATRIX__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     ///////////////////////////////////////////////////////////////////////////////
     string Nuclei[2] = {"32Ar", "33Ar"};
     int first = 11;
-    int last = 12;
+    int last = 15;
 
     FillingSimHitograms();
     InitAlphaPeaks();
@@ -87,6 +87,7 @@ int main(int argc, char *argv[])
             CHI2Minimization();
         }
     }
+
 
     PlottingWindows();
     
