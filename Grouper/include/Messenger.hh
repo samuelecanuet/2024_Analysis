@@ -123,7 +123,7 @@ void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "")
   }
 }
 
-string formatValueWithError(double value, double error) {
+string formatValueWithError(double value, double error, string type = "latex") {
     // Calculate the number of decimal places in the error
     int errorDecimals = error > 0 ? -floor(log10(error)) : 0;
 
@@ -133,10 +133,22 @@ string formatValueWithError(double value, double error) {
     // Round the error up to the next higher number with the same number of significant digits
     double roundedError = ceil(error * multiplier) / multiplier;
 
+    // Calculate the number of decimal places in the rounded error
+    int valueDecimals = roundedError > 1.0 ? 0 : errorDecimals;
+
     // Format the value and rounded error
+    stringstream ssValue, ssError;
+    ssValue.precision(valueDecimals);
+    ssValue << fixed << value;
+    ssError.precision(errorDecimals);
+    ssError << fixed << roundedError;
+
     stringstream ss;
-    ss.precision(errorDecimals);
-    ss << fixed << value << " #pm " << roundedError;
+    if (type == "latex") {
+        ss << ssValue.str() << " #pm " << ssError.str();
+    } else {
+        ss << ssValue.str() << " +/- " << ssError.str();
+    }
 
     return ss.str();
 }

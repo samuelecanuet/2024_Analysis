@@ -35,6 +35,7 @@ string DIR_ROOT_DATA_CLEANED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETEC
 string DIR_ROOT_DATA_MATCHED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
 string DIR_ROOT_DATA_MERGED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
 string DIR_ROOT_DATA_SIMULATED = "../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
+string DIR_DATA_ISOLDE = "../../../../../mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
 ///////////////
 
 string detectorFileName; ///< Detectors definition file name

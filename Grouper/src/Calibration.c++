@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     ///////////////////////////////////////////////////////////////////////////////
     string Nuclei[2] = {"32Ar", "33Ar"};
     int first = 11;
-    int last = 15;
+    int last = 86;
 
     FillingSimHitograms();
     InitAlphaPeaks();

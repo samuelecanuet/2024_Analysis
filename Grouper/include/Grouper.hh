@@ -1972,6 +1972,8 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
       }
     }
   }
+
+  Signal THIRD_ALPHA_PEAK_FLAG = Signal();
   ///////////////////////////////////////
   ///////// CASES A B C D E F G /////////
   ///////////////////////////////////////
@@ -2069,6 +2071,7 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
     {
       if (RearStrip_ASSOCIATED[0].second.Channel > 20000 && RearStrip_ASSOCIATED[0].second.Channel < 36000)
       {
+        THIRD_ALPHA_PEAK_FLAG = signals[index_other_strip];
         H_Channel_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
         H_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
         H_2Strip_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
@@ -2090,6 +2093,9 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
     //////////////////////// TREE ////////////////////////
     GROUPED_Tree_Silicon.push_back(RearStrip_ASSOCIATED[0].first);
     GROUPED_Tree_Silicon.push_back(RearStrip_ASSOCIATED[0].second);
+    if (THIRD_ALPHA_PEAK_FLAG.isValid)
+      GROUPED_Tree_Silicon.push_back(THIRD_ALPHA_PEAK_FLAG);
+    
     for (int index_h = 0; index_h < SiPM_High_Position.size(); index_h++)
     {
       GROUPED_Tree_SiPMHigh.push_back(signals[SiPM_High_Position[index_h]]);
