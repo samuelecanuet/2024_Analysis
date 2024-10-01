@@ -59,6 +59,11 @@
         "histogram1.C": "cpp",
         "set": "cpp",
         "alpha_generator.C": "cpp",
-        "PeakShape.C": "cpp"
+        "PeakShape.C": "cpp",
+        "TEST.C": "cpp",
+        "cutter.C": "cpp",
+        "Merger.C": "cpp",
+        "ChannelTime.C": "cpp",
+        "script.C": "cpp"
     }
 }

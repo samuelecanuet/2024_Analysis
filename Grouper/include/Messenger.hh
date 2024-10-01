@@ -63,9 +63,17 @@ void Verbose(Signal signal, int verbose, int this_verbose) {
     if (verbose >= this_verbose) cout << MAGENTA << "<VERBOSE " << verbose << ">" << signal << RESET << endl;
 }
 
+void Start(const string& message) {
+    cout << CYAN << "<START> " << message << RESET << endl;
+}
+
+void Start(const char *message) {
+    cout << CYAN << "<START> " << message << RESET << endl;
+}
+
 void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, string Prefix = "")
 {
-  if (cEntry % 100000 == 0 && cEntry > 2 * 100000)
+  if (cEntry % 100000 == 0 && cEntry > 2 * 1000)
   {
     Current = clock();
     const Char_t *Color;

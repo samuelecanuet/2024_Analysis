@@ -1,52 +1,9 @@
-
-
-
 #ifndef DEFECT_HH
 #define DEFECT_HH
 
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <fstream>
-#include <random>
-#include <ctime>
-#include <cstdlib>
-#include <algorithm>
-#include <map>
-#include <string>
-
-#include "TFile.h"
-#include "TCanvas.h"
-#include "TH1D.h"
-#include "TF1.h"
-#include "TCanvas.h"
-#include "TFitResult.h"
-#include "TMatrixD.h"
-#include "TLegend.h"
-#include "TGraphErrors.h"
-#include "TMultiGraph.h"
-#include "Math/Minimizer.h"
-#include "Math/Functor.h"
-#include "Math/Factory.h"
-#include "TTree.h"
-#include "TTreeReader.h"
-#include "TTreeReaderArray.h"
-#include "TTreeReaderValue.h"
-using namespace std;
-using namespace ROOT::Math;
+#include "../../../lib/SignalDict/Signal.h"
+#include "Detectors.hh"
 default_random_engine generator;
-
-/// FOLDERS ///
-string DIR_FAST_DATA = "../../../../../run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/DATA/";
-string DIR_ROOT_DATA = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ROOT/";
-string DIR_ROOT_DATA_GROUPED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/GROUPED/";
-string DIR_ROOT_DATA_CLEANED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
-string DIR_ROOT_DATA_MATCHED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
-string DIR_ROOT_DATA_MERGED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
-string DIR_ROOT_DATA_SIMULATED = "../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
-///////////////
-
-
 
 map<string, TFile*> GROUPED_File;
 map<string, TFile*> SIMULATED_File;
@@ -171,9 +128,9 @@ double triplegaussBortelsCollaers(double *x, double *p)
 double fullgaussBortelsCollaers(double *x, double *p)
 {
     // nine fucntions
-    double p1[6] = {p[0], p[1], p[2], p[3], p[4], p[5]};
-    double p2[6] = {p[6], p[7], p[2], p[3], p[4], p[5]};
-    double p3[6] = {p[8], p[9], p[2], p[3], p[4], p[5]};
+    double p1[6] = {p[0], p[1], p[2], p[3], p[4], p[5]};    // Gd
+    double p2[6] = {p[6], p[7], p[2], p[3], p[4], p[5]};    // Pu_1
+    double p3[6] = {p[8], p[9], p[2], p[3], p[4], p[5]};    // Pu_2
     double p4[6] = {p[10], p[11], p[2], p[3], p[4], p[5]};
     double p5[6] = {p[12], p[13], p[2], p[3], p[4], p[5]};
     double p6[6] = {p[14], p[15], p[2], p[3], p[4], p[5]};

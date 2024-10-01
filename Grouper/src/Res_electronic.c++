@@ -27,8 +27,8 @@ int main()
             // gaus->SetParLimits(0, 100, 10000);
             // gaus->SetParameter(0, 1800);
             // gaus->SetParLimits(1, 45000, max);
-            // // gaus->SetParameter(1, channel[i]->GetMean());
-            gaus->SetParLimits(2, 10, 300);
+            gaus->SetParameter(1, channel[i]->GetMean());
+            gaus->SetParLimits(2, 20, 150);
             // gaus->SetParameter(2, 50);
 
             channel[i]->Fit(gaus, "RN", "", 45000, max);

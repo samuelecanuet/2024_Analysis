@@ -7,7 +7,7 @@ int main()
     ReadAllRunsDate();
     ReadISOLDE();
 
-    fTime = new TFile("Time.root", "RECREATE");
+    fTime = new TFile((DIR_ROOT_DATA_GROUPED + "../Time.root").c_str(), "RECREATE");
     Init();
 
     /////////// NUCLEI ANALYSIS //////////
@@ -205,7 +205,7 @@ int main()
             
 
         ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
-        fReleaseCurve[NUCLEUS] = new TF1(("fReleaseCurve_" + NUCLEUS).c_str(), ReleaseCurve, 0.1, group * Pulse_Period, 6);
+        fReleaseCurve[NUCLEUS] = new TF1(("fReleaseCurve_" + NUCLEUS).c_str(), ReleaseCurve, 0.01, group * Pulse_Period, 6);
         fReleaseCurve[NUCLEUS]->SetNpx(1000);
         fReleaseCurve[NUCLEUS]->SetParLimits(0, 0, 1);
         fReleaseCurve[NUCLEUS]->FixParameter(1, 0);
@@ -232,6 +232,7 @@ int main()
 
         // Printing results
         Success("Results for " + NUCLEUS);
+        Success("Realese Time  : " + formatValueWithError(fReleaseCurve[NUCLEUS]->GetParameter(2), fReleaseCurve[NUCLEUS]->GetParError(2), "nolatex") + "s");
         Success("Halflife : " + formatValueWithError(fReleaseCurve[NUCLEUS]->GetParameter(4) * 1000, fReleaseCurve[NUCLEUS]->GetParError(4) * 1000, "nolatex") + " ms");
         Success("Chi2 : " + to_string(fReleaseCurve[NUCLEUS]->GetChisquare() / fReleaseCurve[NUCLEUS]->GetNDF()));
 
@@ -293,6 +294,7 @@ int main()
 
     // Printing results
     Success("Results for third alpha peak of " + NUCLEUS);
+    Success("Realese Time  : " + formatValueWithError(fReleaseCurve[NUCLEUS]->GetParameter(2), fReleaseCurve[NUCLEUS]->GetParError(2), "nolatex") + "s");
     Success("Halflife : " + formatValueWithError(fReleaseCurve3a->GetParameter(4) * 1000, fReleaseCurve3a->GetParError(4) * 1000, "nolatex") + " ms");
     Success("Chi2 : " + to_string(fReleaseCurve3a->GetChisquare() / fReleaseCurve3a->GetNDF()));
 

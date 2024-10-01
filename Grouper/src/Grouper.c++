@@ -13,7 +13,9 @@ int main(int argc, char *argv[])
     else
     {
         Run = atoi(argv[1]);
-        if (Run < 100)
+        if (Run < 10)
+            Run_string = "00" + to_string(Run);
+        else if (Run < 100)
             Run_string = "0" + to_string(Run);
         else
             Run_string = to_string(Run);
@@ -36,6 +38,7 @@ int main(int argc, char *argv[])
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
     InitDetectors("Config_Files/sample.pid");
     InitHistograms_Grouped();
+    InitCalibration();
 
     /////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////  SELECTING TREE /////////////////////////////////////
@@ -159,6 +162,13 @@ int main(int argc, char *argv[])
     }
 
     WriteHistograms_Cleaned();
+
+    //////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////  Counting IAS losses /////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////
+
+    WriteIASLosses();
+
 
     delete GROUPED_Tree;
     delete CUTTED_Tree;

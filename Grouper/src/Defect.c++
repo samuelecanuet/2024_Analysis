@@ -9,10 +9,10 @@ int main()
     GROUPED_File["4alpha"] = new TFile((DIR_ROOT_DATA_GROUPED + "run_127_data_4alpha_grouped.root").c_str(), "READ");
 
     SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
-    SIMULATED_File["148Gd"] = new TFile((DIR_ROOT_DATA_SIMULATED + "148Gd.root").c_str(), "READ");
-    SIMULATED_File["239Pu"] = new TFile((DIR_ROOT_DATA_SIMULATED + "239Pu.root").c_str(), "READ");
-    SIMULATED_File["241Am"] = new TFile((DIR_ROOT_DATA_SIMULATED + "241Am.root").c_str(), "READ");
-    SIMULATED_File["244Cm"] = new TFile((DIR_ROOT_DATA_SIMULATED + "244Cm.root").c_str(), "READ");
+    SIMULATED_File["148Gd"] = new TFile((DIR_ROOT_DATA_SIMULATED + "148Gd_700nm_width_analysed.root").c_str(), "READ");
+    SIMULATED_File["239Pu"] = new TFile((DIR_ROOT_DATA_SIMULATED + "239Pu_700nm_width_analysed.root").c_str(), "READ");
+    SIMULATED_File["241Am"] = new TFile((DIR_ROOT_DATA_SIMULATED + "241Am_700nm_width_analysed.root").c_str(), "READ");
+    SIMULATED_File["244Cm"] = new TFile((DIR_ROOT_DATA_SIMULATED + "244Cm_700nm_width_analysed.root").c_str(), "READ");
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     DEFECT_File = new TFile((DIR_ROOT_DATA_MATCHED + "defect.root").c_str(), "RECREATE");
@@ -85,22 +85,104 @@ int main()
     delete c1;
 
 
+    // BRANCHING RATIO CHECK //
+    // 239Pu
+    TF1 *f_Pu239_1 = new TF1("f_Pu239_1", gaussBortelsCollaers, 0, 100000, 6);
+    f_Pu239_1->SetParameter(0, f1->GetParameter(6));
+    f_Pu239_1->SetParameter(1, f1->GetParameter(7));
+    f_Pu239_1->SetParameter(2, f1->GetParameter(2));
+    f_Pu239_1->SetParameter(3, f1->GetParameter(3));
+    f_Pu239_1->SetParameter(4, f1->GetParameter(4));
+    f_Pu239_1->SetParameter(5, f1->GetParameter(5));
+    double Pu239_1 = f_Pu239_1->Integral(0, 100000);
+
+    TF1 *f_Pu239_2 = new TF1("f_Pu239_2", gaussBortelsCollaers, 0, 100000, 6);
+    f_Pu239_2->SetParameter(0, f1->GetParameter(8));
+    f_Pu239_2->SetParameter(1, f1->GetParameter(9));
+    f_Pu239_2->SetParameter(2, f1->GetParameter(2));
+    f_Pu239_2->SetParameter(3, f1->GetParameter(3));
+    f_Pu239_2->SetParameter(4, f1->GetParameter(4));
+    f_Pu239_2->SetParameter(5, f1->GetParameter(5));
+    double Pu239_2 = f_Pu239_2->Integral(0, 100000);
+
+    TF1 *fPu239_3 = new TF1("fPu239_3", gaussBortelsCollaers, 0, 100000, 6);
+    fPu239_3->SetParameter(0, f1->GetParameter(10));
+    fPu239_3->SetParameter(1, f1->GetParameter(11));
+    fPu239_3->SetParameter(2, f1->GetParameter(2));
+    fPu239_3->SetParameter(3, f1->GetParameter(3));
+    fPu239_3->SetParameter(4, f1->GetParameter(4));
+    fPu239_3->SetParameter(5, f1->GetParameter(5));
+    double Pu239_3 = fPu239_3->Integral(0, 100000);
+
+    double BrPu239_1 = Pu239_1/Pu239_2;
+    double BrPu239_1_err = sqrt( pow(Pu239_1/pow(Pu239_2, 2) * sqrt(Pu239_2), 2 ) + pow(1/Pu239_2 * sqrt(Pu239_1), 2 ));
+    double BrPu239_2 = Pu239_3/Pu239_2;
+    double BrPu239_2_err = sqrt( pow(Pu239_3/pow(Pu239_2, 2) * sqrt(Pu239_2), 2 ) + pow(1/Pu239_2 * sqrt(Pu239_3), 2 ));
+
+    // 241Am
+    TF1 *f_Am241_1 = new TF1("f_Am241_1", gaussBortelsCollaers, 0, 100000, 6);
+    f_Am241_1->SetParameter(0, f1->GetParameter(12));
+    f_Am241_1->SetParameter(1, f1->GetParameter(13));
+    f_Am241_1->SetParameter(2, f1->GetParameter(2));
+    f_Am241_1->SetParameter(3, f1->GetParameter(3));
+    f_Am241_1->SetParameter(4, f1->GetParameter(4));
+    f_Am241_1->SetParameter(5, f1->GetParameter(5));
+    double Am241_1 = f_Am241_1->Integral(0, 100000);
+
+    TF1 *f_Am241_2 = new TF1("f_Am241_2", gaussBortelsCollaers, 0, 100000, 6);
+    f_Am241_2->SetParameter(0, f1->GetParameter(14));
+    f_Am241_2->SetParameter(1, f1->GetParameter(15));
+    f_Am241_2->SetParameter(2, f1->GetParameter(2));
+    f_Am241_2->SetParameter(3, f1->GetParameter(3));
+    f_Am241_2->SetParameter(4, f1->GetParameter(4));
+    f_Am241_2->SetParameter(5, f1->GetParameter(5));
+    double Am241_2 = f_Am241_2->Integral(0, 100000);
+
+    TF1 *f_Am241_3 = new TF1("f_Am241_3", gaussBortelsCollaers, 0, 100000, 6);
+    f_Am241_3->SetParameter(0, f1->GetParameter(16));
+    f_Am241_3->SetParameter(1, f1->GetParameter(17));
+    f_Am241_3->SetParameter(2, f1->GetParameter(2));
+    f_Am241_3->SetParameter(3, f1->GetParameter(3));
+    f_Am241_3->SetParameter(4, f1->GetParameter(4));
+    f_Am241_3->SetParameter(5, f1->GetParameter(5));
+    double Am241_3 = f_Am241_3->Integral(0, 100000);
+
+    double BrAm241_1 = Am241_1/Am241_3;
+    double BrAm241_1_err = sqrt( pow(Am241_1/pow(Am241_3, 2) * sqrt(Am241_3), 2 ) + pow(1/Am241_3 * sqrt(Am241_1), 2 ));
+    double BrAm241_2 = Am241_2/Am241_3;
+    double BrAm241_2_err = sqrt( pow(Am241_2/pow(Am241_3, 2) * sqrt(Am241_3), 2 ) + pow(1/Am241_3 * sqrt(Am241_2), 2 ));
+
+    // 244Cm
+    TF1 *f_Cm244_1 = new TF1("f_Cm244_1", gaussBortelsCollaers, 0, 100000, 6);
+    f_Cm244_1->SetParameter(0, f1->GetParameter(18));
+    f_Cm244_1->SetParameter(1, f1->GetParameter(19));
+    f_Cm244_1->SetParameter(2, f1->GetParameter(2));
+    f_Cm244_1->SetParameter(3, f1->GetParameter(3));
+    f_Cm244_1->SetParameter(4, f1->GetParameter(4));
+    f_Cm244_1->SetParameter(5, f1->GetParameter(5));
+    double Cm244_1 = f_Cm244_1->Integral(0, 100000);
+
+    double BrCm244_1 = Cm244_1/Am241_3;
+    double BrCm244_1_err = sqrt( pow(Cm244_1/pow(Am241_3, 2) * sqrt(Am241_3), 2 ) + pow(1/Am241_3 * sqrt(Cm244_1), 2 ));
+
+
     cout << "----- 239Pu ----- " << endl;
-    cout << "Pu1 : " << f1->GetParameter(6)/f1->GetParameter(8) << " +/- " << sqrt( pow(f1->GetParameter(6)/pow(f1->GetParameter(8), 2) * f1->GetParError(8), 2 ) + pow(1/f1->GetParameter(8) * f1->GetParError(6), 2 )) << " : " << 11.94/70.77 << " +/- " << sqrt(pow(11.94/pow(70.77,2) * 0.14, 2) + pow(1/70.77 * 0.07, 2)) << endl;
-    cout << "Pu2 : " << f1->GetParameter(10)/f1->GetParameter(8) << " +/- " << sqrt( pow(f1->GetParameter(10)/pow(f1->GetParameter(8), 2) * f1->GetParError(8), 2 ) + pow(1/f1->GetParameter(8) * f1->GetParError(10), 2 )) << " : " << 17.11/70.77 << " +/- " << sqrt(pow(17.11/pow(70.77,2) * 0.14, 2) + pow(1/70.77 * 0.14, 2)) << endl;
+    cout << "Pu1 : " << BrPu239_1 << " +/- " << BrPu239_1_err << " : " << 11.94/70.77 << " +/- " << sqrt(pow(11.94/pow(70.77,2) * 0.14, 2) + pow(1/70.77 * 0.07, 2)) << endl;
+    cout << "Pu2 : " << BrPu239_2 << " +/- " << BrPu239_2_err << " : " << 17.11/70.77 << " +/- " << sqrt(pow(17.11/pow(70.77,2) * 0.14, 2) + pow(1/70.77 * 0.14, 2)) << endl;
 
     cout << "----- 241Am ----- " << endl;
-    cout << "Am1 : " << f1->GetParameter(12)/f1->GetParameter(16) << " +/- " << sqrt( pow(f1->GetParameter(12)/pow(f1->GetParameter(16), 2) * f1->GetParError(16), 2 ) + pow(1/f1->GetParameter(16) * f1->GetParError(12), 2 )) << " : " << 1.66/84.8 << " +/- " << sqrt(pow(1.66/pow(84.8,2) * 0.5, 2) + pow(1/84.8 * 0.2, 2)) << endl;
-    cout << "Am2 : " << f1->GetParameter(14)/f1->GetParameter(16) << " +/- " << sqrt( pow(f1->GetParameter(14)/pow(f1->GetParameter(16), 2) * f1->GetParError(16), 2 ) + pow(1/f1->GetParameter(16) * f1->GetParError(14), 2 )) << " : " << 13.1/84.8 << " +/- " << sqrt(pow(13.1/pow(84.8,2) * 0.5, 2) + pow(1/84.8 * 0.3, 2)) << endl;
+    cout << "Am1 : " << BrAm241_1 << " +/- " << BrAm241_1_err << " : " << 1.66/84.8 << " +/- " << sqrt(pow(1.66/pow(84.8,2) * 0.5, 2) + pow(1/84.8 * 0.2, 2)) << endl;
+    cout << "Am2 : " << BrAm241_2 << " +/- " << BrAm241_2_err << " : " << 13.1/84.8 << " +/- " << sqrt(pow(13.1/pow(84.8,2) * 0.5, 2) + pow(1/84.8 * 0.3, 2)) << endl;
 
     cout << "----- 244Cm ----- " << endl;
-    cout << "Cm1 : " << f1->GetParameter(18)/f1->GetParameter(20) << " +/- " << sqrt( pow(f1->GetParameter(18)/pow(f1->GetParameter(20), 2) * f1->GetParError(20), 2 ) + pow(1/f1->GetParameter(20) * f1->GetParError(18), 2 )) << " : " << 23.1/76.9 <<  " +/- " << sqrt(pow(23.1/pow(76.9,2) * 0.1, 2) + pow(1/76.9 * 0.1, 2)) << endl;
+    cout << "Cm1 : " << BrCm244_1 << " +/- " << BrCm244_1_err << " : " << 23.1/76.9 << " +/- " << sqrt(pow(23.1/pow(76.9,2) * 0.1, 2) + pow(1/76.9 * 0.1, 2)) << endl;
+
 
     TGraphErrors *G_AlphaBR_Pu = new TGraphErrors();
-    G_AlphaBR_Pu->SetPoint(0, 1, f1->GetParameter(6)/f1->GetParameter(8));
-    G_AlphaBR_Pu->SetPointError(0, 0, sqrt( pow(f1->GetParameter(6)/pow(f1->GetParameter(8), 2) * f1->GetParError(8), 2 ) + pow(1/f1->GetParameter(8) * f1->GetParError(6), 2 )));
-    G_AlphaBR_Pu->SetPoint(1, 2, f1->GetParameter(10)/f1->GetParameter(8));
-    G_AlphaBR_Pu->SetPointError(1, 0, sqrt( pow(f1->GetParameter(10)/pow(f1->GetParameter(8), 2) * f1->GetParError(8), 2 ) + pow(1/f1->GetParameter(8) * f1->GetParError(10), 2 )));
+    G_AlphaBR_Pu->SetPoint(0, 1, BrPu239_1);
+    G_AlphaBR_Pu->SetPointError(0, 0, BrPu239_1_err);
+    G_AlphaBR_Pu->SetPoint(1, 2, BrPu239_2);
+    G_AlphaBR_Pu->SetPointError(1, 0, BrPu239_2_err);
     TGraphErrors *G_AlphaBR_Pu_Lit = new TGraphErrors();
     G_AlphaBR_Pu_Lit->SetPoint(0, 1, 11.94/70.77);
     G_AlphaBR_Pu_Lit->SetPointError(0, 0, sqrt(pow(11.94/pow(70.77,2) * 0.14, 2) + pow(1/70.77 * 0.07, 2)));
@@ -108,10 +190,10 @@ int main()
     G_AlphaBR_Pu_Lit->SetPointError(1, 0, sqrt(pow(17.11/pow(70.77,2) * 0.14, 2) + pow(1/70.77 * 0.14, 2)));
 
     TGraphErrors *G_AlphaBr_Am = new TGraphErrors();
-    G_AlphaBr_Am->SetPoint(0, 3, f1->GetParameter(12)/f1->GetParameter(16));
-    G_AlphaBr_Am->SetPointError(0, 0, sqrt( pow(f1->GetParameter(12)/pow(f1->GetParameter(16), 2) * f1->GetParError(16), 2 ) + pow(1/f1->GetParameter(16) * f1->GetParError(12), 2 )));
-    G_AlphaBr_Am->SetPoint(1, 4, f1->GetParameter(14)/f1->GetParameter(16));
-    G_AlphaBr_Am->SetPointError(1, 0, sqrt( pow(f1->GetParameter(14)/pow(f1->GetParameter(16), 2) * f1->GetParError(16), 2 ) + pow(1/f1->GetParameter(16) * f1->GetParError(14), 2 )));
+    G_AlphaBr_Am->SetPoint(0, 3, BrAm241_1);
+    G_AlphaBr_Am->SetPointError(0, 0, BrAm241_1_err);
+    G_AlphaBr_Am->SetPoint(1, 4, BrAm241_2);
+    G_AlphaBr_Am->SetPointError(1, 0, BrAm241_2_err);
     TGraphErrors *G_AlphaBr_Am_Lit = new TGraphErrors();
     G_AlphaBr_Am_Lit->SetPoint(0, 3, 1.66/84.8);
     G_AlphaBr_Am_Lit->SetPointError(0, 0, sqrt(pow(1.66/pow(84.8,2) * 0.5, 2) + pow(1/84.8 * 0.2, 2)));
@@ -119,8 +201,8 @@ int main()
     G_AlphaBr_Am_Lit->SetPointError(1, 0, sqrt(pow(13.1/pow(84.8,2) * 0.5, 2) + pow(1/84.8 * 0.3, 2)));
 
     TGraphErrors *G_AlphaBr_Cm = new TGraphErrors();
-    G_AlphaBr_Cm->SetPoint(0, 5, f1->GetParameter(18)/f1->GetParameter(20));
-    G_AlphaBr_Cm->SetPointError(0, 0, sqrt( pow(f1->GetParameter(18)/pow(f1->GetParameter(20), 2) * f1->GetParError(20), 2 ) + pow(1/f1->GetParameter(20) * f1->GetParError(18), 2 )));
+    G_AlphaBr_Cm->SetPoint(0, 5, BrCm244_1);
+    G_AlphaBr_Cm->SetPointError(0, 0, BrCm244_1_err);
     TGraphErrors *G_AlphaBr_Cm_Lit = new TGraphErrors();
     G_AlphaBr_Cm_Lit->SetPoint(0, 5, 23.1/76.9);
     G_AlphaBr_Cm_Lit->SetPointError(0, 0, sqrt(pow(23.1/pow(76.9,2) * 0.1, 2) + pow(1/76.9 * 0.1, 2)));
@@ -190,26 +272,32 @@ int main()
     /////////////////   
     //// SOURCES ////
     /////////////////
-    TH1D* H_Sim_Gd = (TH1D*)SIMULATED_File["148Gd"]->Get((DET+"_single").c_str());
-    H_Sim_Gd->Add((TH1D*)SIMULATED_File["148Gd"]->Get("D6.1_single"));
-    H_Sim_Gd->Add((TH1D*)SIMULATED_File["148Gd"]->Get("D7.1_single"));
-    H_Sim_Gd->Add((TH1D*)SIMULATED_File["148Gd"]->Get("D8.1_single"));
-    H_Sim_Gd->Rebin(2);
-    TH1D* H_Sim_Pu = (TH1D*)SIMULATED_File["239Pu"]->Get((DET+"_single").c_str());
-    H_Sim_Pu->Add((TH1D*)SIMULATED_File["239Pu"]->Get("D6.1_single"));
-    H_Sim_Pu->Add((TH1D*)SIMULATED_File["239Pu"]->Get("D7.1_single"));
-    H_Sim_Pu->Add((TH1D*)SIMULATED_File["239Pu"]->Get("D8.1_single"));
-    H_Sim_Pu->Rebin(2);
-    TH1D* H_Sim_Am = (TH1D*)SIMULATED_File["241Am"]->Get((DET+"_single").c_str());
-    H_Sim_Am->Add((TH1D*)SIMULATED_File["241Am"]->Get("D6.1_single"));
-    H_Sim_Am->Add((TH1D*)SIMULATED_File["241Am"]->Get("D7.1_single"));
-    H_Sim_Am->Add((TH1D*)SIMULATED_File["241Am"]->Get("D8.1_single"));
-    H_Sim_Am->Rebin(2);
-    TH1D* H_Sim_Cm = (TH1D*)SIMULATED_File["244Cm"]->Get((DET+"_single").c_str());
-    H_Sim_Cm->Add((TH1D*)SIMULATED_File["244Cm"]->Get("D6.1_single"));
-    H_Sim_Cm->Add((TH1D*)SIMULATED_File["244Cm"]->Get("D7.1_single"));
-    H_Sim_Cm->Add((TH1D*)SIMULATED_File["244Cm"]->Get("D8.1_single"));
-    H_Sim_Cm->Rebin(2);
+    TH1D* H_Sim_Gd = (TH1D*)SIMULATED_File["148Gd"]->Get(("Silicon_Detector_Energy_Deposit_"+DET+"_All").c_str());
+    H_Sim_Gd->Reset();
+    for (int i = 1; i <= 8; i++)
+    {
+        H_Sim_Gd->Add((TH1D*)SIMULATED_File["148Gd"]->Get(("Silicon_Detector_Energy_Deposit_D"+to_string(i)+".1_All").c_str()));
+    }
+    TH1D* H_Sim_Pu = (TH1D*)SIMULATED_File["239Pu"]->Get(("Silicon_Detector_Energy_Deposit_"+DET+"_All").c_str());
+    H_Sim_Pu->Reset();
+    for (int i = 1; i <= 8; i++)
+    {
+        H_Sim_Pu->Add((TH1D*)SIMULATED_File["239Pu"]->Get(("Silicon_Detector_Energy_Deposit_D"+to_string(i)+".1_All").c_str()));
+    }
+
+    TH1D* H_Sim_Am = (TH1D*)SIMULATED_File["241Am"]->Get(("Silicon_Detector_Energy_Deposit_"+DET+"_All").c_str());
+    H_Sim_Am->Reset();
+    for (int i = 1; i <= 8; i++)
+    {
+        H_Sim_Am->Add((TH1D*)SIMULATED_File["241Am"]->Get(("Silicon_Detector_Energy_Deposit_D"+to_string(i)+".1_All").c_str()));
+    }
+
+    TH1D* H_Sim_Cm = (TH1D*)SIMULATED_File["244Cm"]->Get(("Silicon_Detector_Energy_Deposit_"+DET+"_All").c_str());
+    H_Sim_Cm->Reset();
+    for (int i = 1; i <= 8; i++)
+    {
+        H_Sim_Cm->Add((TH1D*)SIMULATED_File["244Cm"]->Get(("Silicon_Detector_Energy_Deposit_D"+to_string(i)+".1_All").c_str()));
+    }
 
 
     H_Sim_Gd->GetXaxis()->SetRangeUser(Peaks_Sim["148Gd"][0]-50, Peaks_Sim["148Gd"][0]+50);
@@ -220,17 +308,19 @@ int main()
     double peak_uncertainty = 10;
     TF1 *fGd = new TF1("fGd", gauss, 0, 10000, 3);
     fGd->SetNpx(1000000);
-    fGd->SetParLimits(0, 1, 1e3);
+    fGd->SetParLimits(0, 1, 1e7);
+    fGd->SetParameter(0, 5.6e3);
     fGd->SetParameter(1, Peaks_Sim["148Gd"][0]);
     fGd->SetParLimits(1, Peaks_Sim["148Gd"][0]-peak_uncertainty, Peaks_Sim["148Gd"][0]+peak_uncertainty);
-    fGd->SetParLimits(2, 1, 50);
+    fGd->SetParLimits(2, 2, 5);
+    fGd->SetParameter(2, 3.7);
     H_Sim_Gd->Fit("fGd", "LR", "", Peaks_Sim["148Gd"][0]-peak_uncertainty, Peaks_Sim["148Gd"][0]+peak_uncertainty);
 
     TF1 *fPu = new TF1("fPu", triplegauss, 0, 10000, 7);
     fPu->SetNpx(1000000);   
-    fPu->SetParLimits(0, 1, 50); 
-    fPu->SetParLimits(3, 1, 50); 
-    fPu->SetParLimits(5, 1, 1e3); 
+    fPu->SetParLimits(0, 1, 5000); 
+    fPu->SetParLimits(3, 1, 5000); 
+    fPu->SetParLimits(5, 1, 1e6); 
     fPu->SetParameter(1, Peaks_Sim["239Pu"][0]);
     fPu->SetParLimits(1, Peaks_Sim["239Pu"][0]-peak_uncertainty, Peaks_Sim["239Pu"][0]+peak_uncertainty);
     fPu->SetParameter(4, Peaks_Sim["239Pu"][1]);
@@ -242,9 +332,9 @@ int main()
 
     TF1 *fAm = new TF1("fAm", triplegauss, 0, 10000, 7);
     fAm->SetNpx(1000000);
-    fAm->SetParLimits(0, 0.1, 1e3);
-    fAm->SetParLimits(3, 0.1, 1e3);
-    fAm->SetParLimits(5, 0.1, 1e3);
+    fAm->SetParLimits(0, 0.1, 1e5);
+    fAm->SetParLimits(3, 0.1, 1e5);
+    fAm->SetParLimits(5, 0.1, 1e5);
     fAm->SetParameter(1, Peaks_Sim["241Am"][0]);
     fAm->SetParLimits(1, Peaks_Sim["241Am"][0]-peak_uncertainty, Peaks_Sim["241Am"][0]+peak_uncertainty);
     fAm->SetParameter(4, Peaks_Sim["241Am"][1]);
@@ -256,8 +346,8 @@ int main()
 
     TF1 *fCm = new TF1("fCm", doublegauss, 0, 10000, 5);
     fCm->SetNpx(1000000);
-    fCm->SetParLimits(0, 0.1, 1e3); 
-    fCm->SetParLimits(3, 0.1, 1e3); 
+    fCm->SetParLimits(0, 0.1, 1e6); 
+    fCm->SetParLimits(3, 0.1, 1e6); 
     fCm->SetParameter(1, Peaks_Sim["244Cm"][0]);
     fCm->SetParLimits(1, Peaks_Sim["244Cm"][0]-peak_uncertainty, Peaks_Sim["244Cm"][0]+peak_uncertainty);
     fCm->SetParameter(4, Peaks_Sim["244Cm"][1]);
@@ -290,86 +380,86 @@ int main()
     // G_Calibration->SetPointError(2, f1->GetParError(9), fPu->GetParError(4));
     // G_Calibration->SetPoint(3, f1->GetParameter(11), fPu->GetParameter(6));
     // G_Calibration->SetPointError(3, f1->GetParError(11), fPu->GetParError(6));
-    // G_Calibration->SetPoint(4, f1->GetParameter(13), fAm->GetParameter(1));
-    // G_Calibration->SetPointError(4, f1->GetParError(13), fAm->GetParError(1));
-    // G_Calibration->SetPoint(5, f1->GetParameter(15), fAm->GetParameter(4));
-    // G_Calibration->SetPointError(5, f1->GetParError(15), fAm->GetParError(4));
-    // G_Calibration->SetPoint(6, f1->GetParameter(17), fAm->GetParameter(6));
-    // G_Calibration->SetPointError(6, f1->GetParError(17), fAm->GetParError(6));
-    // G_Calibration->SetPoint(7, f1->GetParameter(19), fCm->GetParameter(1));
-    // G_Calibration->SetPointError(7, f1->GetParError(19), fCm->GetParError(1));
-    // G_Calibration->SetPoint(8, f1->GetParameter(21), fCm->GetParameter(4));
-    // G_Calibration->SetPointError(8, f1->GetParError(21), fCm->GetParError(4));
+    G_Calibration->SetPoint(4-3, f1->GetParameter(13), fAm->GetParameter(1));
+    G_Calibration->SetPointError(4-3, f1->GetParError(13), fAm->GetParError(1));
+    G_Calibration->SetPoint(5-3, f1->GetParameter(15), fAm->GetParameter(4));
+    G_Calibration->SetPointError(5-3, f1->GetParError(15), fAm->GetParError(4));
+    G_Calibration->SetPoint(6-3, f1->GetParameter(17), fAm->GetParameter(6));
+    G_Calibration->SetPointError(6-3, f1->GetParError(17), fAm->GetParError(6));
+    G_Calibration->SetPoint(7-3, f1->GetParameter(19), fCm->GetParameter(1));
+    G_Calibration->SetPointError(7-3, f1->GetParError(19), fCm->GetParError(1));
+    G_Calibration->SetPoint(8-3, f1->GetParameter(21), fCm->GetParameter(4));
+    G_Calibration->SetPointError(8-3, f1->GetParError(21), fCm->GetParError(4));
 
 
-    /////////////
-    //// 18N ////
-    /////////////
-    TH1D* H_Exp_18N = (TH1D*)GROUPED_File["32Ar"]->Get(("Strip/Strip_Channel/"+DET+"/Channel_Cleaned_"+DET).c_str());
-    H_Exp_18N->GetXaxis()->SetRangeUser(0, 20000);
+    // /////////////
+    // //// 18N ////
+    // /////////////
+    // TH1D* H_Exp_18N = (TH1D*)GROUPED_File["32Ar"]->Get(("Strip/Strip_Channel/"+DET+"/Channel_Cleaned_"+DET).c_str());
+    // H_Exp_18N->GetXaxis()->SetRangeUser(0, 20000);
 
-    peak_uncertainty = 500;
-    TF1 *f2BKG = new TF1("BKG_function", "( gaus(0) + gaus(3) + gaus(10) + [6]*exp([7] * x) ) * 0.5*(1+TMath::Erf((x-[8])/[9]))", 0, 20000);
-    f2BKG->SetNpx(1000000);
-    f2BKG->SetParameters(1e5, Peaks_Exp["18N"][0], 100, 5000, Peaks_Exp["18N"][1], 100, 1e5, -0.003, Peaks_Exp["18N"][0]-100, 5000);
-    f2BKG->SetParLimits(0, 5, 3000);
-    f2BKG->SetParLimits(1, Peaks_Exp["18N"][0]-peak_uncertainty, Peaks_Exp["18N"][0]+peak_uncertainty);
-    f2BKG->SetParLimits(2, 1, 500);
-    f2BKG->SetParLimits(3, 5, 3000);
-    f2BKG->SetParLimits(4, Peaks_Exp["18N"][1]-peak_uncertainty, Peaks_Exp["18N"][1]+peak_uncertainty);
-    f2BKG->SetParLimits(5, 1, 500);
-    f2BKG->SetParLimits(6, 1, 1e7);
-    f2BKG->SetParLimits(7, -0.001, 0);
-    f2BKG->SetParLimits(8, 4000, Peaks_Exp["18N"][0]);
-    f2BKG->SetParLimits(9, 150, 10000);
-    f2BKG->SetParameter(10, 5000);
-    f2BKG->SetParameter(11, 8000);
-    f2BKG->SetParLimits(12, 1, 100);
+    // peak_uncertainty = 500;
+    // TF1 *f2BKG = new TF1("BKG_function", "( gaus(0) + gaus(3) + gaus(10) + [6]*exp([7] * x) ) * 0.5*(1+TMath::Erf((x-[8])/[9]))", 0, 20000);
+    // f2BKG->SetNpx(1000000);
+    // f2BKG->SetParameters(1e5, Peaks_Exp["18N"][0], 100, 5000, Peaks_Exp["18N"][1], 100, 1e5, -0.003, Peaks_Exp["18N"][0]-100, 5000);
+    // f2BKG->SetParLimits(0, 5, 3000);
+    // f2BKG->SetParLimits(1, Peaks_Exp["18N"][0]-peak_uncertainty, Peaks_Exp["18N"][0]+peak_uncertainty);
+    // f2BKG->SetParLimits(2, 1, 500);
+    // f2BKG->SetParLimits(3, 5, 3000);
+    // f2BKG->SetParLimits(4, Peaks_Exp["18N"][1]-peak_uncertainty, Peaks_Exp["18N"][1]+peak_uncertainty);
+    // f2BKG->SetParLimits(5, 1, 500);
+    // f2BKG->SetParLimits(6, 1, 1e7);
+    // f2BKG->SetParLimits(7, -0.001, 0);
+    // f2BKG->SetParLimits(8, 4000, Peaks_Exp["18N"][0]);
+    // f2BKG->SetParLimits(9, 150, 10000);
+    // f2BKG->SetParameter(10, 5000);
+    // f2BKG->SetParameter(11, 8000);
+    // f2BKG->SetParLimits(12, 1, 100);
 
-    H_Exp_18N->Fit("BKG_function", "RL", "", 0, 20000);
+    // H_Exp_18N->Fit("BKG_function", "RL", "", 0, 20000);
 
-    TCanvas *c18N = new TCanvas("c18N", "c18N", 800, 600);
-    c18N->cd();
-    H_Exp_18N->Draw("HIST");
-    f2BKG->Draw("SAME");
-    c18N->Write();
+    // TCanvas *c18N = new TCanvas("c18N", "c18N", 800, 600);
+    // c18N->cd();
+    // H_Exp_18N->Draw("HIST");
+    // f2BKG->Draw("SAME");
+    // c18N->Write();
     
 
-    TH1D* H_Sim_18N = (TH1D*)SIMULATED_File["18N"]->Get((DET+"_single").c_str());
-    H_Sim_18N->Add((TH1D*)SIMULATED_File["18N"]->Get("D6.1_single"));
-    H_Sim_18N->Add((TH1D*)SIMULATED_File["18N"]->Get("D7.1_single"));
-    H_Sim_18N->Add((TH1D*)SIMULATED_File["18N"]->Get("D8.1_single"));
-    H_Sim_18N->Rebin(10);
+    // TH1D* H_Sim_18N = (TH1D*)SIMULATED_File["18N"]->Get((DET+"_single").c_str());
+    // H_Sim_18N->Add((TH1D*)SIMULATED_File["18N"]->Get("D6.1_single"));
+    // H_Sim_18N->Add((TH1D*)SIMULATED_File["18N"]->Get("D7.1_single"));
+    // H_Sim_18N->Add((TH1D*)SIMULATED_File["18N"]->Get("D8.1_single"));
+    // H_Sim_18N->Rebin(10);
 
-    H_Sim_18N->GetXaxis()->SetRangeUser(Peaks_Sim["18N"][0]-200, Peaks_Sim["18N"][1]+200);
+    // H_Sim_18N->GetXaxis()->SetRangeUser(Peaks_Sim["18N"][0]-200, Peaks_Sim["18N"][1]+200);
 
-    peak_uncertainty = 50;
-    TF1 *f18N = new TF1("f18N", "gaus(0) + gaus(3)", 0, 10000);
-    f18N->SetNpx(1000000);
-    f18N->SetParLimits(0, 10, 1e4);
-    f18N->SetParLimits(3, 10, 1e3);
-    f18N->SetParameter(1, Peaks_Sim["18N"][0]);
-    f18N->SetParLimits(1, Peaks_Sim["18N"][0]-peak_uncertainty, Peaks_Sim["18N"][0]+peak_uncertainty);
-    f18N->SetParameter(4, Peaks_Sim["18N"][1]);
-    f18N->SetParLimits(4, Peaks_Sim["18N"][1]-peak_uncertainty, Peaks_Sim["18N"][1]+peak_uncertainty);
-    f18N->SetParLimits(2, 10, 100);
-    f18N->SetParLimits(5, 10, 100);
-    H_Sim_18N->Fit("f18N", "RL", "", 0, 1400);
+    // peak_uncertainty = 50;
+    // TF1 *f18N = new TF1("f18N", "gaus(0) + gaus(3)", 0, 10000);
+    // f18N->SetNpx(1000000);
+    // f18N->SetParLimits(0, 10, 1e4);
+    // f18N->SetParLimits(3, 10, 1e3);
+    // f18N->SetParameter(1, Peaks_Sim["18N"][0]);
+    // f18N->SetParLimits(1, Peaks_Sim["18N"][0]-peak_uncertainty, Peaks_Sim["18N"][0]+peak_uncertainty);
+    // f18N->SetParameter(4, Peaks_Sim["18N"][1]);
+    // f18N->SetParLimits(4, Peaks_Sim["18N"][1]-peak_uncertainty, Peaks_Sim["18N"][1]+peak_uncertainty);
+    // f18N->SetParLimits(2, 10, 100);
+    // f18N->SetParLimits(5, 10, 100);
+    // H_Sim_18N->Fit("f18N", "RL", "", 0, 1400);
 
-    H_Sim_18N->GetXaxis()->SetRangeUser(Peaks_Sim["18N"][0]-100, Peaks_Sim["18N"][0]+100);
-    f18N->SetParameter(1, H_Sim_18N->GetMean());
-    f18N->SetParError(1, H_Sim_18N->GetRMS());
-    H_Sim_18N->GetXaxis()->SetRangeUser(Peaks_Sim["18N"][1]-100, Peaks_Sim["18N"][1]+100);
-    f18N->SetParameter(4, H_Sim_18N->GetMean());
-    f18N->SetParError(4, H_Sim_18N->GetRMS());
-
-
+    // H_Sim_18N->GetXaxis()->SetRangeUser(Peaks_Sim["18N"][0]-100, Peaks_Sim["18N"][0]+100);
+    // f18N->SetParameter(1, H_Sim_18N->GetMean());
+    // f18N->SetParError(1, H_Sim_18N->GetRMS());
+    // H_Sim_18N->GetXaxis()->SetRangeUser(Peaks_Sim["18N"][1]-100, Peaks_Sim["18N"][1]+100);
+    // f18N->SetParameter(4, H_Sim_18N->GetMean());
+    // f18N->SetParError(4, H_Sim_18N->GetRMS());
 
 
-    G_Calibration->SetPoint(1, f2BKG->GetParameter(1), f18N->GetParameter(1));
-    G_Calibration->SetPointError(1, f2BKG->GetParError(1), f18N->GetParError(1));
-    G_Calibration->SetPoint(2, f2BKG->GetParameter(4), f18N->GetParameter(4));
-    G_Calibration->SetPointError(2, f2BKG->GetParError(4), f18N->GetParError(4));
+
+
+    // G_Calibration->SetPoint(1, f2BKG->GetParameter(1), f18N->GetParameter(1));
+    // G_Calibration->SetPointError(1, f2BKG->GetParError(1), f18N->GetParError(1));
+    // G_Calibration->SetPoint(2, f2BKG->GetParameter(4), f18N->GetParameter(4));
+    // G_Calibration->SetPointError(2, f2BKG->GetParError(4), f18N->GetParError(4));
 
 
 
@@ -404,7 +494,7 @@ int main()
     G_Calibration->SetTitle("Calibration");
     TF1 *fit = new TF1("fit", "[0] + [1] *x", 0, 10000);
     fit->SetParameters(-20, 0.07);
-    fit->SetParLimits(0, -100, 100);
+    fit->SetParLimits(0, -1000, 1000);
     fit->SetParLimits(1, 0, 0.1);
     G_Calibration->Fit("fit");
     G_Calibration->GetFunction("fit")->Draw("SAME");
@@ -441,47 +531,173 @@ int main()
         H_Calib->Fill(Energy);
     }
 
+
+    H_Calib->Write();
+
     TCanvas *cCalib = new TCanvas("cCalib", "cCalib", 800, 600);
     cCalib->cd();
     H_Calib->Draw("HIST");
     cCalib->Write();
 
+    TCanvas *cCalibGd = new TCanvas("cCalibGd", "cCalibGd", 800, 600);
 
+    double sigma_g = 2.5;
 
-    TF1 *calibration_p = new TF1("calibration_p", "[0] + [1] *x + [2] *x*x", 0, 10000);
-    calibration_p->SetParameters(-20.213525, 72.591352, -0.006507);
-    TH1D* H_ExpCalib_18N = new TH1D("H_ExpCalib_18N", "H_ExpCalib_18N", 10000, 0, 10000);
+    TF1 *fsource148Gd = new TF1("fsource148Gd", "1-exp(-0.12*x)", 0, 200);
+    fsource148Gd->SetNpx(2000);
+    TH1D* hsource148Gd = (TH1D*)fsource148Gd->GetHistogram();
+    hsource148Gd->Write();
 
-
-    TCanvas *cCalib_18N = new TCanvas("cCalib_18N", "cCalib_18N", 800, 600);
-    cCalib_18N->cd();
-
-    TH1D* H_Calib_18N = new TH1D("H_Calib_18N", "H_Calib_18N", 10000, 0, 10000);
-    for (int i = 0; i < 1000000; i++)
+    TH1D* H_Sim_Gd_conv = new TH1D("H_Sim_Gd", "H_Sim_Gd", 10000, 0, 10000);
+    for (int i = 0; i < H_Sim_Gd->GetEntries(); i++)
     {
-        double value = H_Sim_18N->GetRandom();
-        // double x = (-fit->GetParameter(1)+ sqrt(pow(fit->GetParameter(1), 2) - 4*fit->GetParameter(2) * (fit->GetParameter(0)-value) ))/(2*fit->GetParameter(2));
-        double x = (value - fit->GetParameter(0))/fit->GetParameter(1);
-        double energy = calibration_p->Eval(x/1000);
-        H_Calib_18N->Fill(energy);
+        double value = H_Sim_Gd->GetRandom();
+        uniform_real_distribution<double> distribution1(0, 1);
+        double random = distribution1(generator);
+        // get value in the pdf of fsource148Gd
+        double x = 0;
+        double y = 0;
+        while (y < random)
+        {
+            x += 0.5;
+            y = fsource148Gd->Eval(x);
+        }
+        normal_distribution<double> distribution(value-x, sigma_g);
+        H_Sim_Gd_conv->Fill(distribution(generator));
     }
 
-    tree = (TTree*)GROUPED_File["32Ar"]->Get(("CLEANED_Tree_"+DET).c_str());
-    Reader = new TTreeReader(tree);
-    TTreeReaderValue<double> Channel_Cleaned1 = { *Reader, "Channel" };
-    Reader->Restart();
-    while (Reader->Next())
+    TH1D* H_Sim_Am_conv = new TH1D("H_Sim_Am", "H_Sim_Am", 10000, 0, 10000);
+    for (int i = 0; i < H_Sim_Am->GetEntries(); i++)
     {
-        double Channel = *Channel_Cleaned1;
-        double Energy = calibration_p->Eval(Channel/1000);
-        H_ExpCalib_18N->Fill(Energy);
+        
+        double value = H_Sim_Am->GetRandom();
+        uniform_real_distribution<double> distribution1(0, 1);
+        double random = distribution1(generator);
+        double x = 0;
+        double y = 0;
+        while (y < random)
+        {
+            x += 0.5;
+            y = fsource148Gd->Eval(x);
+        }
+        normal_distribution<double> distribution(value-x, sigma_g);
+        H_Sim_Am_conv->Fill(distribution(generator));
     }
 
-    H_ExpCalib_18N->Draw("HIST");
-    H_Calib_18N->Draw("HIST SAME");
-    H_Calib_18N->SetLineColor(kRed);
+    TH1D* H_Sim_Cm_conv = new TH1D("H_Sim_Cm", "H_Sim_Cm", 10000, 0, 10000);
+    for (int i = 0; i < H_Sim_Cm->GetEntries(); i++)
+    {
+        double value = H_Sim_Cm->GetRandom();
+        uniform_real_distribution<double> distribution1(0, 1);
+        double random = distribution1(generator);
+        double x = 0;
+        double y = 0;
+        while (y < random)
+        {
+            x += 0.5;
+            y = fsource148Gd->Eval(x);
+        }
+        normal_distribution<double> distribution(value-x, sigma_g);
+        H_Sim_Cm_conv->Fill(distribution(generator));
+    }
 
-    cCalib_18N->Write();
+    TH1D* H_Sim_Pu_conv = new TH1D("H_Sim_Pu", "H_Sim_Pu", 10000, 0, 10000);
+    for (int i = 0; i < H_Sim_Pu->GetEntries(); i++)
+    {
+        double value = H_Sim_Pu->GetRandom();
+        uniform_real_distribution<double> distribution1(0, 1);
+        double random = distribution1(generator);
+        // get value in the pdf of fsource148Gd
+        double x = 0;
+        double y = 0;
+        while (y < random)
+        {
+            x += 0.5;
+            y = fsource148Gd->Eval(x);
+        }
+        normal_distribution<double> distribution(value-x, sigma_g);
+        H_Sim_Pu_conv->Fill(distribution(generator));
+    }
+
+
+    cCalibGd->cd();
+    
+
+    H_Sim_Am_conv->GetXaxis()->SetRangeUser(Peaks_Sim["241Am"][0]-50, Peaks_Sim["241Am"][2]+50);
+    H_Calib->GetXaxis()->SetRangeUser(Peaks_Sim["241Am"][0]-50, Peaks_Sim["241Am"][2]+50);
+    H_Sim_Am_conv->Scale(H_Calib->GetMaximum()/H_Sim_Am_conv->GetMaximum());
+
+    H_Sim_Cm_conv->GetXaxis()->SetRangeUser(Peaks_Sim["244Cm"][0]-50, Peaks_Sim["244Cm"][1]+50);
+    H_Calib->GetXaxis()->SetRangeUser(Peaks_Sim["244Cm"][0]-50, Peaks_Sim["244Cm"][1]+50);
+    H_Sim_Cm_conv->Scale(H_Calib->GetMaximum()/H_Sim_Cm_conv->GetMaximum());
+
+    H_Sim_Pu_conv->GetXaxis()->SetRangeUser(Peaks_Sim["239Pu"][0]-50, Peaks_Sim["239Pu"][2]+50);
+    H_Calib->GetXaxis()->SetRangeUser(Peaks_Sim["239Pu"][0]-50, Peaks_Sim["239Pu"][2]+50);
+    H_Sim_Pu_conv->Scale(H_Calib->GetMaximum()/H_Sim_Pu_conv->GetMaximum());
+
+    H_Sim_Gd_conv->GetXaxis()->SetRangeUser(Peaks_Sim["148Gd"][0]-50, Peaks_Sim["148Gd"][0]+50);
+    H_Calib->GetXaxis()->SetRangeUser(Peaks_Sim["148Gd"][0]-50, Peaks_Sim["148Gd"][0]+50);
+    H_Sim_Gd_conv->Scale(H_Calib->GetMaximum()/H_Sim_Gd_conv->GetMaximum());
+
+    H_Calib->GetXaxis()->SetTitle("Energy [keV");
+    H_Calib->GetYaxis()->SetTitle("Counts / keV");
+    H_Calib->Draw("HIST");
+    H_Sim_Gd_conv->Draw("HIST SAME");
+    H_Sim_Am_conv->Draw("HIST SAME");
+    H_Sim_Cm_conv->Draw("HIST SAME");
+    H_Sim_Pu_conv->Draw("HIST SAME");
+    H_Sim_Gd_conv->SetLineColor(kCyan);
+    H_Sim_Am_conv->SetLineColor(kRed);
+    H_Sim_Cm_conv->SetLineColor(kGreen);
+    H_Sim_Pu_conv->SetLineColor(kBlack);
+
+    TLegend *legendCalib = new TLegend(0.1, 0.7, 0.48, 0.9);
+    legendCalib->AddEntry(H_Sim_Gd_conv, "148Gd", "l");
+    legendCalib->AddEntry(H_Sim_Pu_conv, "239Pu", "l");
+    legendCalib->AddEntry(H_Sim_Am_conv, "241Am", "l");
+    legendCalib->AddEntry(H_Sim_Cm_conv, "244Cm", "l");
+    legendCalib->Draw("SAME");
+    cCalibGd->Write();
+
+    
+
+
+
+    // TF1 *calibration_p = new TF1("calibration_p", "[0] + [1] *x + [2] *x*x", 0, 10000);
+    // calibration_p->SetParameters(-20.213525, 72.591352, -0.006507);
+    // TH1D* H_ExpCalib_18N = new TH1D("H_ExpCalib_18N", "H_ExpCalib_18N", 10000, 0, 10000);
+
+
+    // TCanvas *cCalib_18N = new TCanvas("cCalib_18N", "cCalib_18N", 800, 600);
+    // cCalib_18N->cd();
+
+    // TH1D* H_Calib_18N = new TH1D("H_Calib_18N", "H_Calib_18N", 10000, 0, 10000);
+    // for (int i = 0; i < 1000000; i++)
+    // {
+    //     double value = H_Sim_18N->GetRandom();
+    //     // double x = (-fit->GetParameter(1)+ sqrt(pow(fit->GetParameter(1), 2) - 4*fit->GetParameter(2) * (fit->GetParameter(0)-value) ))/(2*fit->GetParameter(2));
+    //     double x = (value - fit->GetParameter(0))/fit->GetParameter(1);
+    //     double energy = calibration_p->Eval(x/1000);
+    //     H_Calib_18N->Fill(energy);
+    // }
+
+    // tree = (TTree*)GROUPED_File["32Ar"]->Get(("CLEANED_Tree_"+DET).c_str());
+    // Reader = new TTreeReader(tree);
+    // TTreeReaderValue<double> Channel_Cleaned1 = { *Reader, "Channel" };
+    // Reader->Restart();
+    // while (Reader->Next())
+    // {
+    //     double Channel = *Channel_Cleaned1;
+    //     double Energy = calibration_p->Eval(Channel/1000);
+    //     H_ExpCalib_18N->Fill(Energy);
+    // }
+
+    // H_ExpCalib_18N->Draw("HIST");
+    // H_Calib_18N->Scale(7500/1600);
+    // H_Calib_18N->Draw("HIST SAME");
+    // H_Calib_18N->SetLineColor(kRed);
+
+    // cCalib_18N->Write();
 
 
     DEFECT_File->Close();
