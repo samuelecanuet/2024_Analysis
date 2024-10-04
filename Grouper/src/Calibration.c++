@@ -1,5 +1,4 @@
 #include "Calibration.hh"
-#include "CLHEP/Vector/ThreeVector.h"
 
 int main(int argc, char *argv[])
 {
@@ -10,8 +9,8 @@ int main(int argc, char *argv[])
     GROUPED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
     GROUPED_File["33Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
 
-    SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/17-09/32Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/17-09/32Ar_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["33Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/33Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
     // SIMULATED_File["18N"] = new TFile("../../WISArD/SAMPLE.root", "READ");
@@ -92,6 +91,7 @@ int main(int argc, char *argv[])
             Info(detectorName[i]);
             current_detector = i;
             CHI2Minimization();
+            Resolution_applied = true;
         }
     }
 
@@ -165,9 +165,6 @@ int main(int argc, char *argv[])
             if (IsDetectorSiliStrip(i))
             {
                 current_detector = i;
-                // Fitting_Calibration_E0();
-                // ApplyCalibration();
-                // CHI2Minimization();
                 H_Exp_All[Nucleus]->Add(H_Exp[Nucleus][i], 1.);
                 H_Sim_All[Nucleus]->Add(H_Sim_Conv[Nucleus][i], 1.);
             }

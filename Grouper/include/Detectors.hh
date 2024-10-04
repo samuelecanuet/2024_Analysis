@@ -123,7 +123,7 @@ double winHighMin = 0;
 double winHighMax = 250;
 int winHighN = (abs(winHighMin) + winHighMax) / 2;
 double eHighMin = 0;
-double eHighMax = 6000000;
+double eHighMax = 12000000;
 int eHighN = 6000;
 
 /// Low

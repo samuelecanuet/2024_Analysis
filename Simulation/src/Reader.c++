@@ -2,7 +2,7 @@
 
 int main()
 {
-    string name = "30-09/33Ar_CS0_CSP0_CV1_CVP1";
+    string name = "30-09/32Ar_100_6000_100_CS0_CSP0_CV1_CVP1";
     // name = "241Am_700nm_width";
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
     ANALYSIS_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + "_analysed.root").c_str(), "RECREATE");

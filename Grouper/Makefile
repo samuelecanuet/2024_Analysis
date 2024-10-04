@@ -10,19 +10,27 @@ GSL_LIBS        = $(shell gsl-config --libs)
 GTOOLS_L = $(shell gtools_lib)
 
 CC        = g++
-CFLAGS    = ${FASTERAC_CFLAGS} ${ROOT_CFLAGS} ${GSL_CFLAGS} -Iinclude -I/softs/clhep/2.4.6.2/include/ -I/softs/clhep/2.4.6.2/include/CLHEP
-LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_filesystem -lboost_system include/Detectors.hh include/Messenger.hh -lCLHEP -L/softs/clhep/2.4.6.2/lib
+CFLAGS    = ${FASTERAC_CFLAGS} ${ROOT_CFLAGS} ${GSL_CFLAGS} -Iinclude
+LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_filesystem -lboost_system include/Detectors.hh include/Messenger.hh 
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect ChannelTime
+EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207
 
 all : $(EXE)
 
 Grouper: obj/Grouper.o
+Calibration: obj/Calibration.o
+Matcher: obj/Matcher.o
+Merger: obj/Merger.o
+Res_electronic: obj/Res_electronic.o
+LifeTime: obj/LifeTime.o
+Defect: obj/Defect.o
+SIPM_Calibration: obj/SIPM_Calibration.o
+Bi207: obj/Bi207.o
 
 $(EXE): $(OBJS) include/Detectors.hh include/Messenger.hh
-	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so -lfftw3 ../Simulation/Merger/AutoDict_vector_CLHEP__Hep3Vector__cxx.so ../Simulation/Merger/AutoDict_vector_vector_CLHEP__Hep3Vector___cxx.so ../Simulation/Merger/AutoDict_vector_vector_int____cxx.so ../Simulation/Merger/AutoDict_vector_vector_vector_CLHEP__Hep3Vector____cxx.so ../Simulation/Merger/AutoDict_vector_vector_vector_double______cxx.so
+	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so -lfftw3 
 
 obj/%.o: src/%.c++ include/%.hh
 	@mkdir -p obj

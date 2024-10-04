@@ -310,7 +310,8 @@ void InitElectronicResolution()
         counter++;
         stringstream ss(line);
         ss >> code >> resolution >> err_resolution;
-        Detector_Resolution[code] = 30. / 1000.;
+
+        Detector_Resolution[code] = resolution / 1000.;
     }
 
     file.close();
@@ -416,6 +417,20 @@ void FillingSimHitograms()
                 {
                     H_Sim[pair.first][i]->Rebin(10);
                 }
+            }
+        }
+    }
+
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorSiliStrip(i))
+        {
+            TH1D* h = (TH1D*)H_Sim["33Ar"][i]->Clone();
+            for (int bin = 20; bin < H_Sim["33Ar"][i]->GetNbinsX(); bin++)
+            {
+                int content = h->GetBinContent(bin-20);
+
+                H_Sim["33Ar"][i]->SetBinContent(bin, H_Sim["33Ar"][i]->GetBinContent(bin) + content*0.025);
             }
         }
     }
@@ -734,7 +749,7 @@ double FunctionToMinimize(const double *par)
 
     H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].first, WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].second);
     H32Ar_thick->GetXaxis()->SetRangeUser(WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].first, WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].second);
-    H32Ar_thick->Scale(H_Exp[NUCLEUS][current_detector]->GetMaximum() / H32Ar_thick->GetMaximum());
+    H32Ar_thick->Scale(H_Exp[NUCLEUS][current_detector]->Integral() / H32Ar_thick->Integral());
     H_Sim_Conv[NUCLEUS][current_detector] = H32Ar_thick;
 
     /// 33Ar    
@@ -764,6 +779,8 @@ double FunctionToMinimize(const double *par)
         double value = H_Sim["33Ar"][current_detector]->GetRandom();
         normal_distribution<double> distribution(value, par[0] + par[1] * sqrt(value));
         H33Ar->Fill(distribution(generator));
+
+        // H33Ar->Fill(distribution(generator) + 20, 0.025);
     }
 
     H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].first, WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].second);
@@ -1153,8 +1170,8 @@ void Fitting_Calibration()
             dir_peak_detector[current_detector]->cd();
             c2->Write();
 
-            // if (peak == ScalerPeak[NUCLEUS])
-            // {
+            if (peak == ScalerPeak[NUCLEUS])
+            {
                 H_Exp_Channel[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].first), Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].second));
                 H_Simulation->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][peak][current_detector].first, WindowsMap[NUCLEUS][peak][current_detector].second);
                 G_Calibration[NUCLEUS][current_detector]->SetPoint(counter, H_Exp_Channel[NUCLEUS][current_detector]->GetMean(), H_Simulation->GetMean());
@@ -1163,13 +1180,13 @@ void Fitting_Calibration()
                 H_Simulation->GetXaxis()->SetRangeUser(-1111, -1111);
 
                 counter++;
-            // }
-            // else
-            // {
-            //     G_Calibration[NUCLEUS][current_detector]->SetPoint(counter, F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParameter(1), F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParameter(1));
-            //     G_Calibration[NUCLEUS][current_detector]->SetPointError(counter, F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParError(1), sqrt(pow(F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParError(1), 2) + pow(EnergyError[NUCLEUS][peak].second, 2)));
-            //     counter++;
-            // }
+            }
+            else
+            {
+                G_Calibration[NUCLEUS][current_detector]->SetPoint(counter, F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParameter(1), F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParameter(1));
+                G_Calibration[NUCLEUS][current_detector]->SetPointError(counter, F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParError(1), sqrt(pow(F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParError(1), 2) + pow(EnergyError[NUCLEUS][peak].second, 2)));
+                counter++;
+            }
         }
     }
 
@@ -1202,7 +1219,7 @@ void Fitting_Calibration()
     MG_Global_Calibration[current_detector]->GetYaxis()->SetTitle("Energy [keV]");
     TF1 *linear = new TF1("linear", "[0] + [1] * x", 0, 6500);
     TMultiGraph *g = (TMultiGraph *)MG_Global_Calibration[current_detector]->Clone();
-    g->Fit("linear", "Q");
+    g->Fit("linear", "QN");
     linear->SetLineColor(kGreen);
     linear->Draw("SAME");
     c1->cd(2);

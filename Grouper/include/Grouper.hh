@@ -1902,8 +1902,8 @@ inline void WriteHistograms_SiPMWalk()
       /////////////////////////////////
 
       /////// MANUAL CUTS ////////
-      range[0] = -100;
-      range[1] = 100;
+      range[0] = -30;
+      range[1] = 20;
       ////////////////////////////
 
       // DISPLAY SELECTION
