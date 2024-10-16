@@ -2,9 +2,11 @@
 #include "../../../lib/SignalDict/Signal.h"
 
 TH1D* H_SiPM[SIGNAL_MAX];
+TGraph* H2D_SiPM_HighLow  [SIGNAL_MAX];
 TF1* f_matching[SIGNAL_MAX];
 TF1* f_fitted[SIGNAL_MAX];   
 TGraph *g_calib[SIGNAL_MAX];
+TH2D *H_SiPM_time[SIGNAL_MAX];
 int det;
 
 double guess_mean[10] = {250e3, 0, 0, 0, 0, 0, 0, 0, 0, 0};

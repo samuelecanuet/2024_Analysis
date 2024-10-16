@@ -35,9 +35,11 @@
 #include "TLegend.h"
 #include "TCanvas.h"
 #include "TPaveText.h"
+#include "TPaveStats.h"
 #include "TLatex.h"
 #include "TMath.h"
 #include "TLine.h"
+#include "TStyle.h"
 //// functions ////
 #include "TF1.h"
 #include "TFitResult.h"

@@ -29,6 +29,10 @@ vector<vector<vector<Hep3Vector>>> *Tree_Silicon_Detector_InterStrip_Hit_Positio
 
 TTree * OutTree[SIGNAL_MAX];
 double e;
+TTree * PlasticIASTree;
+int sili_code;  
+double sili_e;
+double SiPM_e;
 
 double size_interstrip = 0.07;
 const int Particle_Size = 50;
@@ -71,6 +75,7 @@ TDirectory *dir_Silicon_Detector_Det[Particle_Size][SIGNAL_MAX];
 TDirectory *dir_Silicon_Detector_DL[Particle_Size];
 TDirectory *dir_Silicon_Detector_InterStrip[Particle_Size];
 
+double Plastic_Full_energy = 0;
 double Full_energy[SIGNAL_MAX];
 double InterStrip[SIGNAL_MAX];
 vector<string> Particle_Used_String = {"32Ar", "32Cl", "31S", "31P", "33Ar", "33Cl", "32S", "18N",
@@ -310,6 +315,9 @@ void InitHistograms()
         }
     }
 }
+
+
+
 
 void WriteHistograms()
 {

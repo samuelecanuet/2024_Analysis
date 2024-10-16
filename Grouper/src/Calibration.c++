@@ -10,12 +10,12 @@ int main(int argc, char *argv[])
     GROUPED_File["33Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
 
     SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_100_5700_100_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["33Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/33Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
     // SIMULATED_File["18N"] = new TFile("../../WISArD/SAMPLE.root", "READ");
 
-    CRADLE_File = new TFile((DIR_ROOT_DATA_SIMULATED + "/new/32ArRMATRIX__CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    CRADLE_File = new TFile((DIR_ROOT_DATA_SIMULATED + "/../../32Ar_CS0_CSP0_CV1_CVP1_1_00-1_analysed.root").c_str(), "READ");
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     CALIBRATED_File = new TFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated.root").c_str(), "RECREATE");
@@ -23,14 +23,18 @@ int main(int argc, char *argv[])
     // WriteTime(GROUPED_File[], CALIBRATED_File);
 
     ///////////////////////////////////////////////////////////////////////////////
-    int first = 11;
-    int last = 16;
+    int first = 51;
+    int last = 86;
+
+    Ar33Init();
 
     FillingSimHitograms();
     InitAlphaPeaks();
     InitWindows();
     InitManualCalibration();
     InitElectronicResolution();
+
+    
 
     // SET ALL EXPERIMENTAL TREE FOR EACH DETECTOR
     for (string Nucleus : Nuclei)

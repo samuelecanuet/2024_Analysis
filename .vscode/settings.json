@@ -64,6 +64,11 @@
         "cutter.C": "cpp",
         "Merger.C": "cpp",
         "ChannelTime.C": "cpp",
-        "script.C": "cpp"
+        "script.C": "cpp",
+        "Bi207_generator.C": "cpp",
+        "complex": "cpp",
+        "forward_list": "cpp",
+        "unordered_set": "cpp",
+        "future": "cpp"
     }
 }

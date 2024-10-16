@@ -63,6 +63,8 @@ double alpha1;
 double alpha1_error;
 double alpha2;
 double alpha2_error;
+double Ar33_shift[SIGNAL_MAX];
+double Ar33_Br[SIGNAL_MAX];
 
 // ARRAY
 pair<double, double> Alpha1_Up[6];
@@ -185,6 +187,33 @@ void InitAlphaPeaks()
         Alpha1_Down[counter] = make_pair(energy1, energy2);
         Alpha2_Down[counter] = make_pair(energy3, energy4);
     }
+}
+
+void Ar33Init()
+{
+    /// read txt file
+    // ifstream file("Config_Files/33Ar_shift.txt");
+    // string line;
+    // double energy;
+    // double br;
+    // string name;
+    // while (getline(file, line))
+    // {
+    //     stringstream ss(line);
+    //     ss >> name >> energy >> br;
+
+        for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            // if (detectorName[i] == name)
+            // {
+                Ar33_shift[i] = 20;
+                Ar33_Br[i] = 0.025;
+            // }
+        }
+    // }
+
+
+    // file.close();
 }
 
 vector<int> Dir2Det(string dir, int strip)
@@ -369,8 +398,8 @@ void FillingSimHitograms()
     ScalerPeak["33Ar"] = 21;
     ScalerPeak["18N"] = 1;
 
-    CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
-    CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
+    CalibrationPeaks["32Ar"] =  {};//{5, 8, 9, 14, 23, 25, 28, 29, 30};
+    CalibrationPeaks["32Ar_thick"] = {};//{5, 8, 14};
     CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
 
     for (auto &pair : SIMULATED_File)
@@ -421,16 +450,25 @@ void FillingSimHitograms()
         }
     }
 
+    // for (int i = 0; i < detectorNum; i++)
+    //     {
+    //         if (IsDetectorSiliStrip(i))
+    //         {
+    //             string h_name = "Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_All";
+    //             H_Sim["32Ar"][i]->Add((TH1D *)CRADLE_File->Get((h_name).c_str()));
+    //         }
+    //     }
+
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
         if (IsDetectorSiliStrip(i))
         {
             TH1D* h = (TH1D*)H_Sim["33Ar"][i]->Clone();
-            for (int bin = 20; bin < H_Sim["33Ar"][i]->GetNbinsX(); bin++)
+            for (int bin = Ar33_shift[i]; bin < H_Sim["33Ar"][i]->GetNbinsX(); bin++)
             {
-                int content = h->GetBinContent(bin-20);
+                int content = h->GetBinContent(bin-Ar33_shift[i]);
 
-                H_Sim["33Ar"][i]->SetBinContent(bin, H_Sim["33Ar"][i]->GetBinContent(bin) + content*0.025);
+                H_Sim["33Ar"][i]->SetBinContent(bin, H_Sim["33Ar"][i]->GetBinContent(bin) + content*Ar33_Br[i]);
             }
         }
     }
@@ -730,7 +768,8 @@ double FunctionToMinimize(const double *par)
     H_Sim_Conv[NUCLEUS][current_detector] = H;
 
      TH1D *h = (TH1D *)Background_function[current_detector]->GetHistogram();
-    H_Sim_Conv[NUCLEUS][current_detector]->Add(h, 1);
+    // H_Sim_Conv[NUCLEUS][current_detector]->Add(h, 1);
+    H_Exp[NUCLEUS][current_detector]->Add(h, -1);
 
 
     

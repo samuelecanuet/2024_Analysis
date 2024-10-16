@@ -1,8 +1,8 @@
-#include "Reader.hh"
+#include "Reader2.hh"
 
 int main()
 {
-    string name = "../../32Ar_CS0_CSP0_CV1_CVP1_1";
+    string name = "15-10/32Ar_CS0_CSP0_CV1_CVP1";
     // name = "241Am_700nm_width";
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
     ANALYSIS_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + "_analysed.root").c_str(), "RECREATE");
@@ -46,7 +46,7 @@ int main()
 
     Init();
     InitDetectors("../Grouper/Config_Files/sample.pid");
-    InitHistograms();
+    InitHistograms(0);
 
     Info("Starting Loop");
     while (Reader->Next())
@@ -57,6 +57,14 @@ int main()
         for (int part_i = 0; part_i < Tree_PDG->GetSize(); part_i++)
         {
             int PDG = Tree_PDG->At(part_i);
+            if (PDG > 1000000000)
+            {
+                PDG = (PDG / 10) * 10;
+            }
+            if (H_E0.find(PDG) == H_E0.end())
+                InitHistograms(PDG);
+
+            //// INITIAL ////
             double E0 = Tree_E0->At(part_i);
             double x = Tree_x->At(part_i);
             double y = Tree_y->At(part_i);
@@ -64,26 +72,23 @@ int main()
             double Catcher_Central_Energy_Deposit = Tree_Catcher_Central_Energy_Deposit->At(part_i);
             double Catcher_Side_Energy_Deposit = Tree_Catcher_Side_Energy_Deposit->At(part_i);
 
-            int index = PDGtoIndex[PDG];
-
-            H_E0[index]->Fill(E0);
-            H_x[index]->Fill(x);
-            H_y[index]->Fill(y);
-            H_z[index]->Fill(z);
-            H_Catcher_Central_Energy_Deposit[index]->Fill(Catcher_Central_Energy_Deposit);
-            H_Catcher_Side_Energy_Deposit[index]->Fill(Catcher_Side_Energy_Deposit);
+            H_E0[PDG]->Fill(E0);
+            H_x[PDG]->Fill(x);
+            H_y[PDG]->Fill(y);
+            H_z[PDG]->Fill(z);
+            H_Catcher_Central_Energy_Deposit[PDG]->Fill(Catcher_Central_Energy_Deposit);
+            H_Catcher_Side_Energy_Deposit[PDG]->Fill(Catcher_Side_Energy_Deposit);
             if (Tree_PlasticScintillator_Energy_Deposit->At(part_i) != 0)
             {
-                H_PlasticScintillator_Energy_Deposit[index]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-                H_PlasticScintillator_Hit_Position_x[index]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x());
-                H_PlasticScintillator_Hit_Position_y[index]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).y());
-                H_PlasticScintillator_Hit_Position_z[index]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).z());
-                H_PlasticScintillator_Hit_Position_xy[index]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
-                H_PlasticScintillator_Hit_Angle[index]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
+                H_PlasticScintillator_Energy_Deposit[PDG]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+                H_PlasticScintillator_Hit_Position_x[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x());
+                H_PlasticScintillator_Hit_Position_y[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).y());
+                H_PlasticScintillator_Hit_Position_z[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).z());
+                H_PlasticScintillator_Hit_Position_xy[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
+                H_PlasticScintillator_Hit_Angle[PDG]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
                 Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
             }
-
-
+        
             //// LOOP ON HITTED SILICON DETECTORS ////
             for (int sili_i = 0; sili_i < Tree_Silicon_Detector_Energy_Deposit->At(part_i).size(); sili_i++)
             {
@@ -92,20 +97,23 @@ int main()
                 double Z = Tree_Silicon_Detector_Hit_Position->At(part_i).at(sili_i).z();    
                 double THETA = Tree_Silicon_Detector_Hit_Angle->At(part_i).at(sili_i);
                 int Silicon_Detector_Code = Tree_Silicon_Detector_Code->At(part_i).at(sili_i);
-                H_Silicon_Detector_Hit_Position_x[index]->Fill(X);
-                H_Silicon_Detector_Hit_Position_y[index]->Fill(Y);
-                H_Silicon_Detector_Hit_Position_z[index]->Fill(Z);
-                H_Silicon_Detector_Hit_Position_xy[index]->Fill(X, Y);
-                H_Silicon_Detector_Hit_Position_xz[index]->Fill(X, Z);
-                H_Silicon_Detector_Hit_Position_yz[index]->Fill(Y, Z);
-                H_Silicon_Detector_Hit_Angle[index]->Fill(THETA);
-                H_Silicon_Detector_Hit_Anglez[index]->Fill(THETA, Z);
-                H_Silicon_Detector_Hit_Anglexy[index]->Fill(THETA, X);
-                H_Silicon_Detector_Code[index]->Fill(Silicon_Detector_Code);
+                H_Silicon_Detector_Hit_Position_x[PDG]->Fill(X);
+                H_Silicon_Detector_Hit_Position_y[PDG]->Fill(Y);
+                H_Silicon_Detector_Hit_Position_z[PDG]->Fill(Z);
+                H_Silicon_Detector_Hit_Position_xy[PDG]->Fill(X, Y);
+                H_Silicon_Detector_Hit_Position_xz[PDG]->Fill(X, Z);
+                H_Silicon_Detector_Hit_Position_yz[PDG]->Fill(Y, Z);
+                H_Silicon_Detector_Hit_Angle[PDG]->Fill(THETA);
 
-                H_Silicon_Detector_Energy_Deposit_Det[index][Silicon_Detector_Code]->Fill(Tree_Silicon_Detector_Energy_Deposit->At(part_i).at(sili_i));
+                H_Silicon_Detector_Hit_Anglez[PDG]->Fill(THETA, Z);
+                H_Silicon_Detector_Hit_Anglexy[PDG]->Fill(THETA, X);
+                H_Silicon_Detector_Code[PDG]->Fill(Silicon_Detector_Code);
+            
+                H_Silicon_Detector_Energy_Deposit_Det[PDG][Silicon_Detector_Code]->Fill(Tree_Silicon_Detector_Energy_Deposit->At(part_i).at(sili_i));
+
                 Full_energy[Silicon_Detector_Code] += Tree_Silicon_Detector_Energy_Deposit->At(part_i).at(sili_i);
-                H_Silicon_Detector_Hit_Angle_Det[index][Silicon_Detector_Code]->Fill(THETA);
+                Full_energy_without_interstrip[Silicon_Detector_Code] += Tree_Silicon_Detector_Energy_Deposit->At(part_i).at(sili_i);
+                H_Silicon_Detector_Hit_Angle_Det[PDG][Silicon_Detector_Code]->Fill(THETA);
             }
 
             for (int sili_inter_i = 0; sili_inter_i < Tree_Silicon_Detector_InterStrip_Code->At(part_i).size(); sili_inter_i++)
@@ -120,20 +128,15 @@ int main()
                     double X = Tree_Silicon_Detector_InterStrip_Hit_Position->at(part_i).at(sili_inter_i).at(step).x();
                     double Y = Tree_Silicon_Detector_InterStrip_Hit_Position->at(part_i).at(sili_inter_i).at(step).y();
                     double Z = Tree_Silicon_Detector_InterStrip_Hit_Position->at(part_i).at(sili_inter_i).at(step).z();
-                    H_Silicon_Detector_InterStrip_xy[index]->Fill(X, Y);
-                    H_Silicon_Detector_InterStrip_z[index]->Fill(Z);
+                    H_Silicon_Detector_InterStrip_xy[PDG]->Fill(X, Y);
+                    H_Silicon_Detector_InterStrip_z[PDG]->Fill(Z);
                     energy_interstrip += Tree_Silicon_Detector_InterStrip_Energy_Deposit->at(part_i).at(sili_inter_i).at(step);
 
                     // giving energy to strips
-
-                    // if (Z + (300 * 1e-3 ) / 2 > 300 * 1e-3 - 800 * 1e-6)
-                        // continue;
                     // new 
                     if (Z + (300 * 1e-3 + 800 * 1e-6) / 2 > 300 * 1e-3)
                         continue;
-                    double ratio = 1;//-abs(1/(9000*x)) + 1;
-                    // if (ratio < 0.5)
-                        // ratio = 0.5;
+                    double ratio = 1;
                     
                     if ( Y > 0)
                     {
@@ -149,55 +152,38 @@ int main()
                         Full_energy[code_strip_for] += (1-ratio) * Tree_Silicon_Detector_InterStrip_Energy_Deposit->at(part_i).at(sili_inter_i).at(step);
                         Full_energy[code_strip_for-1] += ratio * Tree_Silicon_Detector_InterStrip_Energy_Deposit->at(part_i).at(sili_inter_i).at(step);
                     }
-                    // double ratio = Y_real / size_interstrip;
-                    
+                   
                     // cout << "Code: " << Silicon_Detector_InterStrip_Code << " Strip: " << code_strip_for << " Ratio: " << ratio << endl;
-                    
-                    
                 }
-                // cout << energy << endl;
 
                 //energy deposit in the interstrip for each particle
                 if (energy_interstrip != 0)
-                    H_Silicon_Detector_InterStrip_Energy_Deposit_Det[index][Silicon_Detector_InterStrip_Code]->Fill(energy_interstrip);
+                    H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG][Silicon_Detector_InterStrip_Code]->Fill(energy_interstrip);
             }
         }
-
-        // energy despoit in the interstrip for all the particle
-        for (int i = 0; i < SIGNAL_MAX; i++)
-        {
-            if (IsDetectorSiliStrip(i))
-            {
-                if (InterStrip[i] != 0)
-                {
-                    H_Silicon_Detector_Energy_Deposit_Det[Particle_Size - 2][i]->Fill(InterStrip[i]);
-                    InterStrip[i] = 0;
-                }
-            }
-        }
-
 
         // counting if x strips triggered
-        int counter_strip_trigger = 0;
-        for (int i = 0; i < SIGNAL_MAX; i++)
-        {
-            if (IsDetectorSiliStrip(i))
-            {
-                if (Full_energy[i] > 400)
-                {
-                    counter_strip_trigger++;
-                }
-            }
-        }
+        // int counter_strip_trigger = 0;
+        // for (int i = 0; i < SIGNAL_MAX; i++)
+        // {
+        //     if (IsDetectorSiliStrip(i))
+        //     {
+        //         if (Full_energy[i] > 400)
+        //         {
+        //             counter_strip_trigger++;
+        //         }
+        //     }
+        // }
 
         // filling energy deposit by all particle 
         for (int i = 0; i < SIGNAL_MAX; i++)
         {
-            if (IsDetectorSiliStrip(i) && counter_strip_trigger == 1)
+            if (IsDetectorSiliStrip(i))
             {
-                if (Full_energy[i] > 400)
+                if (Full_energy[i] > 0)
                 {
-                    H_Silicon_Detector_Energy_Deposit_Det[Particle_Size-1][i]->Fill(Full_energy[i]);    
+                    H_Silicon_Detector_Energy_Deposit_Det[0][i]->Fill(Full_energy[i]); 
+                    H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[0][i]->Fill(Full_energy_without_interstrip[i]);   
                     e = Full_energy[i];
                     OutTree[i]->Fill();
                     sili_code = i;
@@ -205,6 +191,7 @@ int main()
                 }
             }
             Full_energy[i] = 0;
+            Full_energy_without_interstrip[i] = 0;
             e = 0;
         }
 

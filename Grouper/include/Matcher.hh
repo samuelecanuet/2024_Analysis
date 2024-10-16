@@ -89,7 +89,7 @@ double FunctionToMinimize(const double *par)
     if (par[0] == 0)
     {
         H_Run[Run][current_detector]->Reset();
-        TTreeReaderValue<double> ChannelDet(*Reader, "MERGED_Tree_Silicon");
+        TTreeReaderValue<double> ChannelDet(*Reader, "Channel");
         while (Reader->Next())
         {
             H_Run[Run][current_detector]->Fill(par[0] + *ChannelDet * par[1]);
@@ -98,7 +98,7 @@ double FunctionToMinimize(const double *par)
     else
     {
         H_Run_corr[Run][current_detector]->Reset();
-        TTreeReaderValue<double> ChannelDet(*Reader, "MERGED_Tree_Silicon");
+        TTreeReaderValue<double> ChannelDet(*Reader, "Channel");
         while (Reader->Next())
         {
             H_Run_corr[Run][current_detector]->Fill(par[0] + *ChannelDet * par[1]);
