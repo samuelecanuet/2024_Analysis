@@ -13,6 +13,9 @@ TTreeReaderArray<double> *Tree_E0;
 TTreeReaderArray<double> *Tree_x;
 TTreeReaderArray<double> *Tree_y;
 TTreeReaderArray<double> *Tree_z;
+TTreeReaderArray<double> *Tree_px;
+TTreeReaderArray<double> *Tree_py;
+TTreeReaderArray<double> *Tree_pz;
 TTreeReaderArray<double> *Tree_Catcher_Central_Energy_Deposit;
 TTreeReaderArray<double> *Tree_Catcher_Side_Energy_Deposit;
 TTreeReaderArray<double> *Tree_PlasticScintillator_Energy_Deposit;
@@ -40,6 +43,9 @@ map<int, TH1D *> H_E0;
 map<int, TH1D *> H_x;
 map<int, TH1D *> H_y;
 map<int, TH1D *> H_z;
+map<int, TH1D *> H_px;
+map<int, TH1D *> H_py;
+map<int, TH1D *> H_pz;
 map<int, TH1D *> H_Catcher_Central_Energy_Deposit;
 map<int, TH1D *> H_Catcher_Side_Energy_Deposit;
 map<int, TH1D *> H_PlasticScintillator_Energy_Deposit;
@@ -109,6 +115,7 @@ string SearchName(int PDG)
     }
 
     Error("No name found for PDG: " + to_string(PDG));
+    return "";
 }
 
 void Init()
@@ -151,6 +158,24 @@ void InitHistograms(int PDG_code)
     H_z[PDG_code]->GetYaxis()->SetTitle("Counts");
     H_z[PDG_code]->GetXaxis()->CenterTitle();
     H_z[PDG_code]->GetYaxis()->CenterTitle();
+
+    H_px[PDG_code] = new TH1D(("px_" + name).c_str(), ("px_" + name).c_str(), 1000, -1, 1);
+    H_px[PDG_code]->GetXaxis()->SetTitle("px");
+    H_px[PDG_code]->GetYaxis()->SetTitle("Counts");
+    H_px[PDG_code]->GetXaxis()->CenterTitle();
+    H_px[PDG_code]->GetYaxis()->CenterTitle();
+
+    H_py[PDG_code] = new TH1D(("py_" + name).c_str(), ("py_" + name).c_str(), 1000, -1, 1);
+    H_py[PDG_code]->GetXaxis()->SetTitle("py");
+    H_py[PDG_code]->GetYaxis()->SetTitle("Counts");
+    H_py[PDG_code]->GetXaxis()->CenterTitle();
+    H_py[PDG_code]->GetYaxis()->CenterTitle();
+
+    H_pz[PDG_code] = new TH1D(("pz_" + name).c_str(), ("pz_" + name).c_str(), 1000, -1, 1);
+    H_pz[PDG_code]->GetXaxis()->SetTitle("pz");
+    H_pz[PDG_code]->GetYaxis()->SetTitle("Counts");
+    H_pz[PDG_code]->GetXaxis()->CenterTitle();
+    H_pz[PDG_code]->GetYaxis()->CenterTitle();
 
     H_Catcher_Central_Energy_Deposit[PDG_code] = new TH1D(("Catcher_Central_Energy_Deposit_" + name).c_str(), ("Catcher_Central_Energy_Deposit_" + name).c_str(), 15000, 0, 15000);
     H_Catcher_Central_Energy_Deposit[PDG_code]->GetXaxis()->SetTitle("Energy [keV]");
@@ -352,6 +377,9 @@ void WriteHistograms()
         H_x[PDG]->Write();
         H_y[PDG]->Write();
         H_z[PDG]->Write();
+        H_px[PDG]->Write();
+        H_py[PDG]->Write();
+        H_pz[PDG]->Write();
 
         dir_Catcher[PDG]->cd();
         H_Catcher_Central_Energy_Deposit[PDG]->Write();
@@ -444,7 +472,7 @@ void WriteHistograms()
         string name = SearchName(pair.first);
         counter++;
         int PDG = pair.first;
-        H_PlasticScintillator_Energy_Deposit[0]->Add(H_PlasticScintillator_Energy_Deposit[PDG], 1);
+        // H_PlasticScintillator_Energy_Deposit[0]->Add(H_PlasticScintillator_Energy_Deposit[PDG], 1);
     }
     counter = 1 ;
     H_PlasticScintillator_Energy_Deposit[0]->SetLineColor(counter);

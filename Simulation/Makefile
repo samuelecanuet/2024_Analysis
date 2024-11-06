@@ -15,7 +15,7 @@ LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_file
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Reader RMATRIX Reader2
+EXE       = Reader_CRADLE RMATRIX Reader2
 
 all : $(EXE)
 

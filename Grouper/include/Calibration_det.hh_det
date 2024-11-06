@@ -138,6 +138,14 @@ void InitHistograms()
 
             
         }
+        if (IsDetectorSiliBack(i))
+        {
+            G_Calibration[NUCLEUS][i] = new TGraphErrors();
+            if (NUCLEUS == "32Ar")
+            {
+                dir_detector[i] = CALIBRATED_File->mkdir(("D" + to_string(GetDetector(i))).c_str());
+            }
+        }
     }
 
     H_Exp_All[NUCLEUS] = new TH1D(("H_Exp_All_" + NUCLEUS).c_str(), ("H_Exp_All_" + NUCLEUS).c_str(), eSiliN_cal, eSiliMin_cal, eSiliMax_cal);
@@ -305,13 +313,16 @@ void InitManualCalibration()
         ss >> detname >> channel6 >> channel14 >> channel29 >> energy6 >> energy14 >> energy29;
         for (int i = 0; i < detectorNum; i++)
         {
-            if (IsDetectorSiliStrip(i))
+            if (IsDetectorSiliStrip(i) && GetDetectorChannel(i) == 1)
             {
                 if (detname == detectorName[i])
                 {
-                    ManualCalib[6][i] = make_pair(channel6, energy6);
-                    ManualCalib[14][i] = make_pair(channel14, energy14);
-                    ManualCalib[29][i] = make_pair(channel29, energy29);
+                    for (int det = 0; det <= 4; det++)
+                    {
+                        ManualCalib[6][i+det] = make_pair(channel6, energy6);
+                        ManualCalib[14][i+det] = make_pair(channel14, energy14);
+                        ManualCalib[29][i+det] = make_pair(channel29, energy29);
+                    }
                     break;
                 }
             }
@@ -521,8 +532,18 @@ TF1*InvertFunction(TF1 *f)
     }
 
 }
-TH1D *RemoveBKG(TH1D *H, bool finished)
+TH1D *RemoveBKG(TH1D *H, bool finished, int det=0)
 {
+    int detector;
+    if (det != 0)
+    {
+        detector = det;
+    }
+    else
+    {
+        detector = current_detector;
+    }
+
     double MINIMUM = 0;
     double MAXIMUM = 0;
     int N = 0;
@@ -554,19 +575,19 @@ TH1D *RemoveBKG(TH1D *H, bool finished)
     double Mean_A2_high;
     double Sigma_A2 = 25;
 
-    if (GetDetector(current_detector) <= 4)
+    if (GetDetector(detector) <= 4)
     {
-        Mean_A1_low = (WindowsMap["18N"][1][current_detector].first - offset) / coef;
-        Mean_A1_high = (WindowsMap["18N"][1][current_detector].second - offset) / coef;
-        Mean_A2_low = (WindowsMap["18N"][2][current_detector].first - offset) / coef;
-        Mean_A2_high = (WindowsMap["18N"][2][current_detector].second - offset) / coef;
+        Mean_A1_low = (WindowsMap["18N"][1][detector].first - offset) / coef;
+        Mean_A1_high = (WindowsMap["18N"][1][detector].second - offset) / coef;
+        Mean_A2_low = (WindowsMap["18N"][2][detector].first - offset) / coef;
+        Mean_A2_high = (WindowsMap["18N"][2][detector].second - offset) / coef;
     }
     else
     {
-        Mean_A1_low = (WindowsMap["18N"][1][current_detector].first - offset) / coef;
-        Mean_A1_high = (WindowsMap["18N"][1][current_detector].second - offset) / coef;
-        Mean_A2_low = (WindowsMap["18N"][2][current_detector].first - offset) / coef;
-        Mean_A2_high = (WindowsMap["18N"][2][current_detector].second - offset) / coef;
+        Mean_A1_low = (WindowsMap["18N"][1][detector].first - offset) / coef;
+        Mean_A1_high = (WindowsMap["18N"][1][detector].second - offset) / coef;
+        Mean_A2_low = (WindowsMap["18N"][2][detector].first - offset) / coef;
+        Mean_A2_high = (WindowsMap["18N"][2][detector].second - offset) / coef;
     }
 
     // BKG_function->SetParameters(1000, (Mean_A1_low+Mean_A1_high)/2, 25/coef, 500, (Mean_A2_low+Mean_A2_high)/2, 25/coef, 1000, -3e-3*coef, 500., 25.);
@@ -611,19 +632,19 @@ TH1D *RemoveBKG(TH1D *H, bool finished)
     Alpha3_function = new TF1("Alpha3_function", "gaus(0)", MINIMUM, MAXIMUM);
     Alpha3_function->SetParameters(BKG_function->GetParameter(10), BKG_function->GetParameter(11), BKG_function->GetParameter(12));
 
-    Background_function[current_detector] = new TF1(("BKG_function_sub_" + detectorName[current_detector]).c_str(), "[0]*exp([1] * x) * 0.5 * erfc((x-[2])/[3])", MINIMUM, MAXIMUM);
-    Background_function[current_detector]->SetNpx(N);
-    double mean_erfc = ManualCalibFitted[current_detector][0] + ManualCalibFitted[current_detector][1] * 24.1198 * 1.02 + ManualCalibFitted[current_detector][2] * 24.1198 * 24.1198 * 1.02 * 1.02;
-    double sigma_erfc = ManualCalibFitted[current_detector][0] + ManualCalibFitted[current_detector][1] * 3.821 + ManualCalibFitted[current_detector][2] * 3.821 * 3.821;
-    Background_function[current_detector]->SetParameters(BKG_function->GetParameter(6), BKG_function->GetParameter(7), mean_erfc, sigma_erfc);
-    Threshold_function[current_detector] = new TF1(("Threshold_function_" + detectorName[current_detector]).c_str(), "0.5*(1+TMath::Erf((x-[0])/[1]))", MINIMUM, MAXIMUM);
-    Threshold_function[current_detector]->SetNpx(N);
-    Threshold_function[current_detector]->SetParameters(BKG_function->GetParameter(8), BKG_function->GetParameter(9));
+    Background_function[detector] = new TF1(("BKG_function_sub_" + detectorName[detector]).c_str(), "[0]*exp([1] * x) * 0.5 * erfc((x-[2])/[3])", MINIMUM, MAXIMUM);
+    Background_function[detector]->SetNpx(N);
+    double mean_erfc = ManualCalibFitted[detector][0] + ManualCalibFitted[detector][1] * 24.1198 * 1.02 + ManualCalibFitted[detector][2] * 24.1198 * 24.1198 * 1.02 * 1.02;
+    double sigma_erfc = ManualCalibFitted[detector][0] + ManualCalibFitted[detector][1] * 3.821 + ManualCalibFitted[detector][2] * 3.821 * 3.821;
+    Background_function[detector]->SetParameters(BKG_function->GetParameter(6), BKG_function->GetParameter(7), mean_erfc, sigma_erfc);
+    Threshold_function[detector] = new TF1(("Threshold_function_" + detectorName[detector]).c_str(), "0.5*(1+TMath::Erf((x-[0])/[1]))", MINIMUM, MAXIMUM);
+    Threshold_function[detector]->SetNpx(N);
+    Threshold_function[detector]->SetParameters(BKG_function->GetParameter(8), BKG_function->GetParameter(9));
 
     /// PLOT//////////////////////////////
     if (finished)
     {
-        TCanvas *c = new TCanvas((detectorName[current_detector] + "BKG").c_str(), (detectorName[current_detector] + "BKG").c_str(), 1920, 1080);
+        TCanvas *c = new TCanvas((detectorName[detector] + "BKG").c_str(), (detectorName[detector] + "BKG").c_str(), 1920, 1080);
         c->Divide(1, 2);
         c->cd(1);
         Selection->GetXaxis()->SetRangeUser((400 - offset) / coef, (1900 - offset) / coef);
@@ -641,13 +662,13 @@ TH1D *RemoveBKG(TH1D *H, bool finished)
 
         c->cd(2);
         TH1D *H_SUB = (TH1D *)BKG_function_sub->GetHistogram()->Clone();
-        TH1D *h_sub = (TH1D *)Selection->Clone(("h_sub" + detectorName[current_detector]).c_str());
+        TH1D *h_sub = (TH1D *)Selection->Clone(("h_sub" + detectorName[detector]).c_str());
         h_sub->Add(H_SUB, -1);
         h_sub->SetLineColor(kBlack);
         h_sub->GetYaxis()->SetRangeUser(1, -1111);
         h_sub->GetXaxis()->SetRangeUser((400 - offset) / coef, (1900 - offset) / coef);
         h_sub->Draw("HIST");
-        dir_detector[current_detector]->cd();
+        dir_detector[detector]->cd();
         c->Write();
         delete BKG_function;
         delete H_SUB;
@@ -661,7 +682,7 @@ TH1D *RemoveBKG(TH1D *H, bool finished)
         BKG_function_sub->SetParameters(BKG_function->GetParameter(6), BKG_function->GetParameter(7), BKG_function->GetParameter(8), BKG_function->GetParameter(9));
         BKG_function_sub->SetNpx(N);
         TH1D *H_SUB = (TH1D *)BKG_function_sub->GetHistogram()->Clone();
-        TH1D *h_sub = (TH1D *)Selection->Clone(("h_sub" + detectorName[current_detector]).c_str());
+        TH1D *h_sub = (TH1D *)Selection->Clone(("h_sub" + detectorName[detector]).c_str());
         h_sub->Add(H_SUB, -1);
         delete BKG_function;
         delete H_SUB;
@@ -1105,7 +1126,7 @@ void Manual_Calibration()
         {
             H_Exp_Channel[Nucleus][current_detector]->Fill(*ChannelDet / 1000);
         }
-        dir_nuclei_detector[Nucleus][current_detector]->cd();
+        // dir_nuclei_detector[Nucleus][current_detector]->cd();
         H_Exp_Channel[Nucleus][current_detector]->Write();
     }
 
@@ -1131,8 +1152,9 @@ void Manual_Calibration()
     Info(detectorName[current_detector] + "   First Calibration : a = " + to_string(G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(0)) + " b = " + to_string(G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(1)));
 }
 
-void Fitting_Calibration()
+void Filling_Calibration()
 {
+    Info ("Filling Calibration");
     // SECOND FIT WITH GAUSSIANS IN WINDOWS
     double coef = ManualCalibLinear[current_detector].second;
     double offset = ManualCalibLinear[current_detector].first;
@@ -1147,9 +1169,11 @@ void Fitting_Calibration()
         for (int peak = 1; peak < CanvasMap[NUCLEUS].first * CanvasMap[NUCLEUS].second; peak++)
         {
 
+            // IF WINDOW WAS SET FOR PEAK
             if (WindowsMap[NUCLEUS][peak][current_detector].first == -1 || !WindowsMap[NUCLEUS][peak][current_detector].first)
                 continue;
-
+            
+            // IF SELECTED PEAK in INIT
             if (find(CalibrationPeaks[NUCLEUS].begin(), CalibrationPeaks[NUCLEUS].end(), peak) == CalibrationPeaks[NUCLEUS].end())
             {
                     continue;
@@ -1176,7 +1200,7 @@ void Fitting_Calibration()
                 F_Peak_Exp[NUCLEUS][peak][current_detector]->SetParLimits(1, Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].first), Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].second));
                 F_Peak_Exp[NUCLEUS][peak][current_detector]->SetParLimits(2, 0, 100);
                 H_Exp_Channel[NUCLEUS][current_detector]->Fit((detectorName[current_detector] + "_Exp" + to_string(peak) + NUCLEUS).c_str(), "QRN", "", Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].first), Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].second));
-            }
+            }          
 
             TCanvas *c2 = new TCanvas((detectorName[current_detector] + "_" + NUCLEUS + "_" + to_string(peak)).c_str(), (detectorName[current_detector] + "_" + NUCLEUS + "_" + to_string(peak)).c_str(), 1920, 1080);
             c2->Divide(2, 1);
@@ -1213,8 +1237,8 @@ void Fitting_Calibration()
             {
                 H_Exp_Channel[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].first), Calibration_BijectiveFunction->Eval(WindowsMap[NUCLEUS][peak][current_detector].second));
                 H_Simulation->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][peak][current_detector].first, WindowsMap[NUCLEUS][peak][current_detector].second);
-                G_Calibration[NUCLEUS][current_detector]->SetPoint(counter, H_Exp_Channel[NUCLEUS][current_detector]->GetMean(), H_Simulation->GetMean());
-                G_Calibration[NUCLEUS][current_detector]->SetPointError(counter, H_Exp_Channel[NUCLEUS][current_detector]->GetMeanError(), sqrt(pow(H_Simulation->GetMeanError(), 2) + pow(EnergyError[NUCLEUS][peak].second, 2)));
+                G_Calibration[NUCLEUS][GetDetector(current_detector)*10+6]->AddPoint(H_Exp_Channel[NUCLEUS][current_detector]->GetMean(), H_Simulation->GetMean());
+                G_Calibration[NUCLEUS][GetDetector(current_detector)*10+6]->SetPointError(G_Calibration[NUCLEUS][GetDetector(current_detector)*10+6]->GetN()-1, H_Exp_Channel[NUCLEUS][current_detector]->GetMeanError(), sqrt(pow(H_Simulation->GetMeanError(), 2) + pow(EnergyError[NUCLEUS][peak].second, 2)));
                 H_Exp_Channel[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
                 H_Simulation->GetXaxis()->SetRangeUser(-1111, -1111);
 
@@ -1222,13 +1246,17 @@ void Fitting_Calibration()
             }
             else
             {
-                G_Calibration[NUCLEUS][current_detector]->SetPoint(counter, F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParameter(1), F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParameter(1));
-                G_Calibration[NUCLEUS][current_detector]->SetPointError(counter, F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParError(1), sqrt(pow(F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParError(1), 2) + pow(EnergyError[NUCLEUS][peak].second, 2)));
+                G_Calibration[NUCLEUS][GetDetector(current_detector)*10+6]->AddPoint(F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParameter(1), F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParameter(1));
+                G_Calibration[NUCLEUS][GetDetector(current_detector)*10+6]->SetPointError(G_Calibration[NUCLEUS][GetDetector(current_detector)*10+6]->GetN()-1, F_Peak_Exp[NUCLEUS][peak][current_detector]->GetParError(1), sqrt(pow(F_Peak_Sim[NUCLEUS][peak][current_detector]->GetParError(1), 2) + pow(EnergyError[NUCLEUS][peak].second, 2)));
                 counter++;
             }
         }
     }
 
+}
+
+void Fitting_Calibration()
+{
     /////// FITTING ALL NUCLEI //////
     MG_Global_Calibration[current_detector] = new TMultiGraph();
     G_Calibration["32Ar"][current_detector]->SetMarkerColor(kBlue);
@@ -1319,116 +1347,130 @@ void Fitting_Calibration()
     dir_detector[current_detector]->cd();
     c1->Write();
 
-    Calibration_Function[current_detector] = MG_Global_Calibration[current_detector]->GetFunction("pol2");
-    vector<double> vec = {MG_Global_Calibration[current_detector]->GetFunction("pol2")->GetParameter(0), MG_Global_Calibration[current_detector]->GetFunction("pol2")->GetParameter(1), MG_Global_Calibration[current_detector]->GetFunction("pol2")->GetParameter(2)};
+    for (int strip = -5; strip <= -1; strip++)
+    {
+        Calibration_Function[current_detector+strip] = MG_Global_Calibration[current_detector]->GetFunction("pol2");
+        vector<double> vec = {MG_Global_Calibration[current_detector]->GetFunction("pol2")->GetParameter(0), MG_Global_Calibration[current_detector]->GetFunction("pol2")->GetParameter(1), MG_Global_Calibration[current_detector]->GetFunction("pol2")->GetParameter(2)};
+        ManualCalibFitted[current_detector+strip] = vec;
+        cout << strip << endl;
+    }
+    
     // vector<double> vec = {G_Calibration[current_detector]->GetFunction("pol2")->GetParameter(0), G_Calibration[current_detector]->GetFunction("pol2")->GetParameter(1)};
-    ManualCalibFitted[current_detector] = vec;
+    
 
     /// ALPHA
     NUCLEUS = "32Ar";
-    int counter = 0;
-    Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][current_detector]);
-    Reader->Restart();
-    H_Exp[NUCLEUS][current_detector]->Reset();
-    TTreeReaderValue<double> ChannelDet1(*Reader, "Channel");
-    while (Reader->Next())
+    for (int strip = -5; strip <= -1; strip ++)
     {
-        double value = *ChannelDet1 / 1000;
-        H_Exp[NUCLEUS][current_detector]->Fill(Calibration_Function[current_detector]->Eval(value));
-    }
-
-    RemoveBKG(H_Exp[NUCLEUS][current_detector], false);
-
-    for (int peak = 1; peak < CanvasMap["18N"].first * CanvasMap["18N"].second; peak++)
-    {
-        if (WindowsMap["18N"][peak][current_detector].first == -1 || !WindowsMap["18N"][peak][current_detector].first)
-            continue;
-
-        double alpha_low = 0;
-        double alpha_high = 0;
-        double alpha = 0;
-        double alpha_error = 0;
-        if (peak == 1)
+        cout << current_detector + strip << endl;
+        int counter = 0;    
+        Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][current_detector + strip]);
+        Reader->Restart();
+        H_Exp[NUCLEUS][current_detector + strip]->Reset();
+        TTreeReaderValue<double> ChannelDet1(*Reader, "Channel");
+        while (Reader->Next())
         {
-            if (GetDetector(current_detector) <= 4)
-            {
-                alpha_low = Alpha1_Up[GetDetectorChannel(current_detector)].first;
-                alpha_high = Alpha1_Up[GetDetectorChannel(current_detector)].second;
-                alpha = alpha1;
-                alpha_error = alpha1_error;
-            }
-            else
-            {
-                alpha_low = Alpha1_Down[GetDetectorChannel(current_detector)].first;
-                alpha_high = Alpha1_Down[GetDetectorChannel(current_detector)].second;
-                alpha = alpha1;
-                alpha_error = alpha1_error;
-            }
+            double value = *ChannelDet1 / 1000;
+            H_Exp[NUCLEUS][current_detector + strip]->Fill(Calibration_Function[current_detector + strip]->Eval(value));
         }
-        else if (peak == 2)
+        
+        cout << "pre" << endl;
+        RemoveBKG(H_Exp[NUCLEUS][current_detector + strip], false, current_detector+strip);
+        cout << "post" << endl;
+
+        for (int peak = 1; peak < CanvasMap["18N"].first * CanvasMap["18N"].second; peak++)
         {
-            if (GetDetector(current_detector) <= 4)
+            if (WindowsMap["18N"][peak][current_detector + strip].first == -1 || !WindowsMap["18N"][peak][current_detector + strip].first)
+                continue;
+
+            double alpha_low = 0;
+            double alpha_high = 0;
+            double alpha = 0;
+            double alpha_error = 0;
+            if (peak == 1)
             {
-                alpha_low = Alpha2_Up[GetDetectorChannel(current_detector)].first;
-                alpha_high = Alpha2_Up[GetDetectorChannel(current_detector)].second;
-                alpha = alpha2;
-                alpha_error = alpha2_error;
+                if (GetDetector(current_detector + strip) <= 4)
+                {
+                    alpha_low = Alpha1_Up[GetDetectorChannel(current_detector + strip)].first;
+                    alpha_high = Alpha1_Up[GetDetectorChannel(current_detector + strip)].second;
+                    alpha = alpha1;
+                    alpha_error = alpha1_error;
+                }
+                else
+                {
+                    alpha_low = Alpha1_Down[GetDetectorChannel(current_detector + strip)].first;
+                    alpha_high = Alpha1_Down[GetDetectorChannel(current_detector + strip)].second;
+                    alpha = alpha1;
+                    alpha_error = alpha1_error;
+                }
             }
-            else
+            else if (peak == 2)
             {
-                alpha_low = Alpha2_Down[GetDetectorChannel(current_detector)].first;
-                alpha_high = Alpha2_Down[GetDetectorChannel(current_detector)].second;
-                alpha = alpha2;
-                alpha_error = alpha2_error;
+                if (GetDetector(current_detector + strip) <= 4)
+                {
+                    alpha_low = Alpha2_Up[GetDetectorChannel(current_detector + strip)].first;
+                    alpha_high = Alpha2_Up[GetDetectorChannel(current_detector + strip)].second;
+                    alpha = alpha2;
+                    alpha_error = alpha2_error;
+                }
+                else
+                {
+                    alpha_low = Alpha2_Down[GetDetectorChannel(current_detector + strip)].first;
+                    alpha_high = Alpha2_Down[GetDetectorChannel(current_detector + strip)].second;
+                    alpha = alpha2;
+                    alpha_error = alpha2_error;
+                }
             }
+
+            cout << peak << endl;
+
+            // H_Sim["18N"][current_detector+strip]->Write();
+            TF1 *gauss2 = new TF1("gauss2", "gaus");
+            gauss2->SetParameter(1, (WindowsMap["18N"][peak][current_detector + strip].second - WindowsMap["18N"][peak][current_detector + strip].first) / 2);
+            H_Sim["18N"][current_detector + strip]->Fit("gauss2", "QRN", "", alpha_low, alpha_high);
+
+            double x = (-ManualCalibFitted[current_detector + strip][1] + sqrt(pow(ManualCalibFitted[current_detector + strip][1], 2) - 4 * ManualCalibFitted[current_detector + strip][2] * (ManualCalibFitted[current_detector + strip][0] - alpha))) / (2 * ManualCalibFitted[current_detector + strip][2]);
+            G_Calibration_Alpha[current_detector + strip]->SetPoint(counter, x, gauss2->GetParameter(1));
+            G_Calibration_Alpha[current_detector + strip]->SetPointError(counter, (alpha_error / 1), gauss2->GetParError(1));
+            counter++;
         }
 
-        // H_Sim["18N"][current_detector]->Write();
-        TF1 *gauss2 = new TF1("gauss2", "gaus");
-        gauss2->SetParameter(1, (WindowsMap["18N"][peak][current_detector].second - WindowsMap["18N"][peak][current_detector].first) / 2);
-        H_Sim["18N"][current_detector]->Fit("gauss2", "QRN", "", alpha_low, alpha_high);
+        TCanvas *c2 = new TCanvas((detectorName[current_detector + strip] + "_Calibration_Alpha").c_str(), (detectorName[current_detector + strip] + "_Calibration_Alpha").c_str(), 1920, 1080);
+        c2->Divide(1, 2);
+        c2->cd(1);
+        function = "pol1";
+        TF1 *fit_alpha = new TF1(function.c_str(), "[0] + [1] * x", 0, 6500);
+        G_Calibration_Alpha[current_detector + strip]->Fit(function.c_str(), "Q");
+        G_Calibration_Alpha[current_detector + strip]->GetFunction(function.c_str())->SetLineColor(kRed);
+        G_Calibration_Alpha[current_detector + strip]->Draw("*AP");
+        G_Calibration_Alpha[current_detector + strip]->GetXaxis()->SetTitle("Channel");
+        G_Calibration_Alpha[current_detector + strip]->GetYaxis()->SetTitle("Energy [keV]");
+        c2->cd(2);
+        // draw diff between fet and data
+        TGraphErrors *G_Calibration_diff_alpha = (TGraphErrors *)G_Calibration_Alpha[current_detector + strip]->Clone();
+        for (int i = 0; i < G_Calibration_diff_alpha->GetN(); i++)
+        {
+            double x, y;
+            G_Calibration_diff_alpha->GetPoint(i, x, y);
+            G_Calibration_diff_alpha->SetPoint(i, x, y - G_Calibration_Alpha[current_detector + strip]->GetFunction(function.c_str())->Eval(x));
+        }
+        G_Calibration_diff_alpha->Draw("*AP");
+        G_Calibration_diff_alpha->GetXaxis()->SetTitle("Channel");
+        G_Calibration_diff_alpha->GetYaxis()->SetTitle("Energy [keV]");
+        TLine *line_alpha = new TLine(G_Calibration_diff_alpha->GetXaxis()->GetXmin(), 0, G_Calibration_diff_alpha->GetXaxis()->GetXmax(), 0);
+        line_alpha->SetLineColor(kRed);
+        line_alpha->Draw();
 
-        double x = (-ManualCalibFitted[current_detector][1] + sqrt(pow(ManualCalibFitted[current_detector][1], 2) - 4 * ManualCalibFitted[current_detector][2] * (ManualCalibFitted[current_detector][0] - alpha))) / (2 * ManualCalibFitted[current_detector][2]);
-        G_Calibration_Alpha[current_detector]->SetPoint(counter, x, gauss2->GetParameter(1));
-        G_Calibration_Alpha[current_detector]->SetPointError(counter, (alpha_error / coef), gauss2->GetParError(1));
-        counter++;
+        dir_detector[current_detector + strip]->cd();
+        c2->Write();
+
+        vector<double> vec_alpha = {G_Calibration_Alpha[current_detector + strip]->GetFunction("pol1")->GetParameter(0), G_Calibration_Alpha[current_detector + strip]->GetFunction("pol1")->GetParameter(1)};
+
+        // cout << "ALPHA : " << vec_alpha[0] << " " << vec_alpha[1] << endl;
+        //  vector<double> vec_alpha = {-5.5938, 7.06253e-2*1000};
+
+        ManualCalibFitted_Alpha[current_detector + strip] = vec_alpha;
     }
-
-    TCanvas *c2 = new TCanvas((detectorName[current_detector] + "_Calibration_Alpha").c_str(), (detectorName[current_detector] + "_Calibration_Alpha").c_str(), 1920, 1080);
-    c2->Divide(1, 2);
-    c2->cd(1);
-    function = "pol1";
-    TF1 *fit_alpha = new TF1(function.c_str(), "[0] + [1] * x", 0, 6500);
-    G_Calibration_Alpha[current_detector]->Fit(function.c_str(), "Q");
-    G_Calibration_Alpha[current_detector]->GetFunction(function.c_str())->SetLineColor(kRed);
-    G_Calibration_Alpha[current_detector]->Draw("*AP");
-    G_Calibration_Alpha[current_detector]->GetXaxis()->SetTitle("Channel");
-    G_Calibration_Alpha[current_detector]->GetYaxis()->SetTitle("Energy [keV]");
-    c2->cd(2);
-    // draw diff between fet and data
-    TGraphErrors *G_Calibration_diff_alpha = (TGraphErrors *)G_Calibration_Alpha[current_detector]->Clone();
-    for (int i = 0; i < G_Calibration_diff_alpha->GetN(); i++)
-    {
-        double x, y;
-        G_Calibration_diff_alpha->GetPoint(i, x, y);
-        G_Calibration_diff_alpha->SetPoint(i, x, y - G_Calibration_Alpha[current_detector]->GetFunction(function.c_str())->Eval(x));
-    }
-    G_Calibration_diff_alpha->Draw("*AP");
-    G_Calibration_diff_alpha->GetXaxis()->SetTitle("Channel");
-    G_Calibration_diff_alpha->GetYaxis()->SetTitle("Energy [keV]");
-    TLine *line_alpha = new TLine(G_Calibration_diff_alpha->GetXaxis()->GetXmin(), 0, G_Calibration_diff_alpha->GetXaxis()->GetXmax(), 0);
-    line_alpha->SetLineColor(kRed);
-    line_alpha->Draw();
-
-    dir_detector[current_detector]->cd();
-    c2->Write();
-
-    vector<double> vec_alpha = {G_Calibration_Alpha[current_detector]->GetFunction("pol1")->GetParameter(0), G_Calibration_Alpha[current_detector]->GetFunction("pol1")->GetParameter(1)};
-
-    // cout << "ALPHA : " << vec_alpha[0] << " " << vec_alpha[1] << endl;
-    //  vector<double> vec_alpha = {-5.5938, 7.06253e-2*1000};
-
-    ManualCalibFitted_Alpha[current_detector] = vec_alpha;
 }
 
 void Fitting_Calibration_E0()

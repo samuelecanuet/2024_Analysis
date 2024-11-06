@@ -2,8 +2,9 @@
 
 int main()
 {
-    string name = "15-10/32Ar_CS0_CSP0_CV1_CVP1";
+    string name = "../90Sr_a1_b0";
     // name = "241Am_700nm_width";
+    Info("Reading File: " + name);
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
     ANALYSIS_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + "_analysed.root").c_str(), "RECREATE");
     TTree *tree = (TTree *)SIMULATED_File->Get("Tree");
@@ -14,6 +15,9 @@ int main()
     Tree_x = new TTreeReaderArray<double>(*Reader, "x");
     Tree_y = new TTreeReaderArray<double>(*Reader, "y");
     Tree_z = new TTreeReaderArray<double>(*Reader, "z");
+    Tree_px = new TTreeReaderArray<double>(*Reader, "px");
+    Tree_py = new TTreeReaderArray<double>(*Reader, "py");
+    Tree_pz = new TTreeReaderArray<double>(*Reader, "pz");
     Tree_Catcher_Central_Energy_Deposit = new TTreeReaderArray<double>(*Reader, "Catcher_Central_Energy_Deposit");
     Tree_Catcher_Side_Energy_Deposit = new TTreeReaderArray<double>(*Reader, "Catcher_Side_Energy_Deposit");
     Tree_PlasticScintillator_Energy_Deposit = new TTreeReaderArray<double>(*Reader, "PlasticScintillator_Energy_Deposit");
@@ -69,6 +73,9 @@ int main()
             double x = Tree_x->At(part_i);
             double y = Tree_y->At(part_i);
             double z = Tree_z->At(part_i);
+            double px = Tree_px->At(part_i);
+            double py = Tree_py->At(part_i);
+            double pz = Tree_pz->At(part_i);
             double Catcher_Central_Energy_Deposit = Tree_Catcher_Central_Energy_Deposit->At(part_i);
             double Catcher_Side_Energy_Deposit = Tree_Catcher_Side_Energy_Deposit->At(part_i);
 
@@ -76,8 +83,15 @@ int main()
             H_x[PDG]->Fill(x);
             H_y[PDG]->Fill(y);
             H_z[PDG]->Fill(z);
+            H_px[PDG]->Fill(px);
+            H_py[PDG]->Fill(py);
+            H_pz[PDG]->Fill(pz);
+
+            //// CATCHER ////
             H_Catcher_Central_Energy_Deposit[PDG]->Fill(Catcher_Central_Energy_Deposit);
             H_Catcher_Side_Energy_Deposit[PDG]->Fill(Catcher_Side_Energy_Deposit);
+
+            //// PLASTIC SCINTILLATOR ////
             if (Tree_PlasticScintillator_Energy_Deposit->At(part_i) != 0)
             {
                 H_PlasticScintillator_Energy_Deposit[PDG]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
@@ -87,6 +101,9 @@ int main()
                 H_PlasticScintillator_Hit_Position_xy[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
                 H_PlasticScintillator_Hit_Angle[PDG]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
                 Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
+                H_PlasticScintillator_Energy_Deposit[0]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+                SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
+                PlasticIASTree->Fill();
             }
         
             //// LOOP ON HITTED SILICON DETECTORS ////
@@ -195,10 +212,6 @@ int main()
             e = 0;
         }
 
-
-        SiPM_e = Plastic_Full_energy;
-        PlasticIASTree->Fill();
-
         sili_e = 0;
         sili_code = 0;
         SiPM_e = 0;
@@ -238,4 +251,6 @@ int main()
     }
     SIMULATED_File->Close();
     ANALYSIS_File->Close();
+
+    return 0;
 }

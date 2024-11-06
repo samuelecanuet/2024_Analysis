@@ -248,6 +248,22 @@ int main()
         pt->AddText(("Chi2 : " + to_string(fReleaseCurve[NUCLEUS]->GetChisquare() / fReleaseCurve[NUCLEUS]->GetNDF())).c_str());
         pt->Draw("SAME");
         cFit->Write();
+
+
+        /////// trying gaussan x exp //////
+        TF1 *f = new TF1("f", ConvRelease, 0, 4.6, 4);
+        f->SetParLimits(0, 0, 10000);
+        f->SetParLimits(1, 0, 4.6);
+        f->SetParLimits(2, 0, 5);
+        f->SetParameter(3, log(2)/MAP_LifeTime[NUCLEUS]);
+        H_Decay[NUCLEUS][group]->Fit(f, "MULTITHREAD R", "", 0, 4.6);
+        
+        TCanvas *cFitConv = new TCanvas(("cFitConv_" + NUCLEUS).c_str(), ("cFitConv_" + NUCLEUS).c_str(), 800, 600);
+        H_Decay[NUCLEUS][group]->Draw("HIST");
+        H_Decay[NUCLEUS][group]->GetXaxis()->SetTitle("Time [s]");
+        H_Decay[NUCLEUS][group]->GetYaxis()->SetTitle("Counts");
+        f->Draw("SAME");
+        cFitConv->Write();
     }
 
     fTime->cd();

@@ -73,7 +73,7 @@ void Start(const char *message) {
 
 void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, string Prefix = "")
 {
-  if (cEntry % 100000 == 0 && cEntry > 2 * 1000)
+  if (cEntry % 10000 == 0 && cEntry > 2 * 1000)
   {
     Current = clock();
     const Char_t *Color;

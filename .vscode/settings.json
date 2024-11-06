@@ -69,6 +69,8 @@
         "complex": "cpp",
         "forward_list": "cpp",
         "unordered_set": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "Plotting_points.C": "cpp",
+        "ReaderGamma.C": "cpp"
     }
 }

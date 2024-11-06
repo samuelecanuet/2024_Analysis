@@ -4,6 +4,8 @@
 #include "../../../lib/SignalDict/Signal.h"
 #include "Detectors.hh"
 
+#include "TF1Convolution.h"
+
 default_random_engine generator;
 
 TFile *GROUPED_File;
@@ -16,7 +18,7 @@ int run_number;
 pair<time_t, time_t> RunDate[1000];
 TH1D* H_Data[1000];
 
-vector<string> NUCLEI_LIST = {"18N", "32Ar", "33Ar"};
+vector<string> NUCLEI_LIST = {"32Ar"};
 string run_number_str;
 
 map<string, vector<double>> MAP_Delta_Time;
@@ -127,24 +129,26 @@ void Init()
       H_Time[NUCLEUS][i]->GetXaxis()->CenterTitle();
       H_Time[NUCLEUS][i]->GetYaxis()->CenterTitle();
 
-      H_Channel18N[i] = new TH1D(("H_Channel18N_" + detectorName[i]).c_str(), ("H_Channel18N_" + detectorName[i]).c_str(), 10000, 0, 100000);
-      H_Channel18N[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel18N[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel18N[i]->GetXaxis()->CenterTitle();
-      H_Channel18N[i]->GetYaxis()->CenterTitle();
+      if (NUCLEUS == "18N")
+      {
+        H_Channel18N[i] = new TH1D(("H_Channel18N_" + detectorName[i]).c_str(), ("H_Channel18N_" + detectorName[i]).c_str(), 10000, 0, 100000);
+        H_Channel18N[i]->GetXaxis()->SetTitle("Channel");
+        H_Channel18N[i]->GetYaxis()->SetTitle("Counts");
+        H_Channel18N[i]->GetXaxis()->CenterTitle();
+        H_Channel18N[i]->GetYaxis()->CenterTitle();
 
-      H_Channel18N_coinc[i] = new TH1D(("H_Channel18N_coinc_" + detectorName[i]).c_str(), ("H_Channel18N_coinc_" + detectorName[i]).c_str(), 10000, 0, 100000);
-      H_Channel18N_coinc[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel18N_coinc[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel18N_coinc[i]->GetXaxis()->CenterTitle();
-      H_Channel18N_coinc[i]->GetYaxis()->CenterTitle();
+        H_Channel18N_coinc[i] = new TH1D(("H_Channel18N_coinc_" + detectorName[i]).c_str(), ("H_Channel18N_coinc_" + detectorName[i]).c_str(), 10000, 0, 100000);
+        H_Channel18N_coinc[i]->GetXaxis()->SetTitle("Channel");
+        H_Channel18N_coinc[i]->GetYaxis()->SetTitle("Counts");
+        H_Channel18N_coinc[i]->GetXaxis()->CenterTitle();
+        H_Channel18N_coinc[i]->GetYaxis()->CenterTitle();
 
-      H_Channel18N_3a[i] = new TH1D(("H_Channel18N_3a_" + detectorName[i]).c_str(), ("H_Channel18N_3a_" + detectorName[i]).c_str(), 10000, 0, 100000);
-      H_Channel18N_3a[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel18N_3a[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel18N_3a[i]->GetXaxis()->CenterTitle();
-      H_Channel18N_3a[i]->GetYaxis()->CenterTitle();
-
+        H_Channel18N_3a[i] = new TH1D(("H_Channel18N_3a_" + detectorName[i]).c_str(), ("H_Channel18N_3a_" + detectorName[i]).c_str(), 10000, 0, 100000);
+        H_Channel18N_3a[i]->GetXaxis()->SetTitle("Channel");
+        H_Channel18N_3a[i]->GetYaxis()->SetTitle("Counts");
+        H_Channel18N_3a[i]->GetXaxis()->CenterTitle();
+        H_Channel18N_3a[i]->GetYaxis()->CenterTitle();
+      }
     }
   }
 }
@@ -653,6 +657,21 @@ double ReleaseCurve(double *x, double *par)
   double pre = 1/A * (1-exp(-lambda1*(x[0]-t0))) *(alpha * exp(-lambda2*(x[0]-t0)) + (1-alpha) * exp(-lambda3*(x[0]-t0)));
 
   return main+pre;
+}
+
+double ConvRelease(double *x, double *par)
+{
+  double A = par[0];
+  double mu = par[1];
+  double sigma = par[2];
+  double lambda = par[3];
+
+  double t = x[0];
+
+  double first = erfc((lambda*pow(sigma,2) + mu - t) / (sqrt(2)*sigma));
+  double second = exp(lambda*(lambda/2*pow(sigma,2) + mu - t));
+
+  return A/2 * first * second;
 }
 
 int Group_Determining(int i, string nucleus)

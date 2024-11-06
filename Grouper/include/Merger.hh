@@ -61,6 +61,11 @@ TFile *GROUPED_File;
 TF1* Matching_function[SIGNAL_MAX];
 TDirectory *dir_det[SIGNAL_MAX];
 TH1D *H[SIGNAL_MAX];
+TGraph *G_RearStrip[SIGNAL_MAX];
+TH2D *H_RearStrip[SIGNAL_MAX];
+TH2D *H_RearStrip_Matched[SIGNAL_MAX];
+int counter_graph[SIGNAL_MAX] = {0};
+TF1 *MatchingRearStrip[SIGNAL_MAX];
 
 vector<Signal> MERGED_Tree_Silicon;
 vector<Signal> MERGED_Tree_SiPMHigh;
@@ -85,6 +90,38 @@ void Init()
   Map_RunFiles["32Ar_thick"] = {"075", "076"};
 
   Map_RunFiles["33Ar"] = {"078"};
+}
+
+void InitGraph()
+{
+  for (int i = 0; i <= SIGNAL_MAX; i++)
+  {
+    if (IsDetectorSiliStrip(i))
+    {
+      G_RearStrip[i] = new TGraph();
+      G_RearStrip[i]->SetName(("G_RearStrip_" + detectorName[i]).c_str());
+      G_RearStrip[i]->SetTitle(("G_RearStrip_" + detectorName[i]).c_str());
+      G_RearStrip[i]->GetXaxis()->SetTitle("Rear Channel");
+      G_RearStrip[i]->GetYaxis()->SetTitle("Strip Channel");
+      G_RearStrip[i]->GetXaxis()->CenterTitle();
+      G_RearStrip[i]->GetYaxis()->CenterTitle();
+    }
+
+    if (IsDetectorSiliBack(i))
+    {
+      H_RearStrip[i] = new TH2D(("H_RearStrip_" + detectorName[i]).c_str(), ("H_RearStrip_" + detectorName[i]).c_str(), eSiliN/10, 0, eSiliMax, eSiliN/10, 0, eSiliMax);
+      H_RearStrip[i]->GetXaxis()->SetTitle("Rear Channel");
+      H_RearStrip[i]->GetYaxis()->SetTitle("Strip Channel");
+      H_RearStrip[i]->GetXaxis()->CenterTitle();
+      H_RearStrip[i]->GetYaxis()->CenterTitle();
+
+      H_RearStrip_Matched[i] = new TH2D(("H_RearStrip_Matched_" + detectorName[i]).c_str(), ("H_RearStrip_Matched_" + detectorName[i]).c_str(), eSiliN/10, 0, eSiliMax, eSiliN/10, 0, eSiliMax);
+      H_RearStrip_Matched[i]->GetXaxis()->SetTitle("Rear Channel");
+      H_RearStrip_Matched[i]->GetYaxis()->SetTitle("Strip Channel");
+      H_RearStrip_Matched[i]->GetXaxis()->CenterTitle();
+      H_RearStrip_Matched[i]->GetYaxis()->CenterTitle();
+    }
+  }
 }
 
 void LoadMatchingFunction(int Run)

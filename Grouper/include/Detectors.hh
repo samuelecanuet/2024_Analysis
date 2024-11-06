@@ -79,6 +79,7 @@ string DIR_ROOT_DATA_MERGED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETEC
 string DIR_ROOT_DATA_CALIBRATED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
 string DIR_ROOT_DATA_SIMULATED = "../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
 string DIR_DATA_ISOLDE = "../../../../../mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
+string DIR_DATA_HDD = "../../../../../run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
 ///////////////
 
 string detectorFileName; ///< Detectors definition file name

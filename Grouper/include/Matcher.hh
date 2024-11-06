@@ -140,7 +140,7 @@ void CHI2Minimization(int i)
     
     const double par[2] = {0, 1.0};
     // cout << par[0] << " " << par[1] << endl;
-    FunctionToMinimize(par);
+    // FunctionToMinimize(par);
 
     C_Det[i]->cd();
 

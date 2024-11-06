@@ -10,14 +10,18 @@ int main()
     ///////////////////////////////////  FILES //////////////////////////////////
     GROUPED_File["32Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
     GROUPED_File["207Bi"] = new TFile((DIR_ROOT_DATA + "run_137_multifast_207Bi.root").c_str(), "READ");
+    GROUPED_File["90Sr"] = new TFile((DIR_ROOT_DATA + "run_133_data_90Sr.root").c_str(), "READ");
     SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["207Bi"] = new TFile((DIR_ROOT_DATA_SIMULATED + "../../207Bi_a1_b0_1_analysed.root").c_str(), "READ");
+    SIMULATED_File["207Bi"] = new TFile((DIR_ROOT_DATA_SIMULATED + "../207Bi_a1_b0_analysed.root").c_str(), "READ");
+    SIMULATED_File["90Sr"] = new TFile((DIR_ROOT_DATA_SIMULATED + "../90Sr_a1_b0_analysed.root").c_str(), "READ");
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     CALIBRATED_File = new TFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
 
     NUCLEUS = "32Ar";
+    f_tree = new TFile((DIR_ROOT_DATA_CALIBRATED + "Matching_SiPM_trees.root").c_str(), "READ");
+
     InitWindows();
     InitSiliconCalibration();
     InitHistograms();
@@ -32,6 +36,8 @@ int main()
     // Reader for simulated
     for (string NUCLEUS : Nucleis)
     {
+        if (NUCLEUS == "32Ar")
+            continue;
         Tree_SIMULATED = (TTree *)SIMULATED_File[NUCLEUS]->Get("PlasticIAS");
         Reader_SIMULATED = new TTreeReader(Tree_SIMULATED);
         Silicon_code = new TTreeReaderValue<int>(*Reader_SIMULATED, "Code");
@@ -40,14 +46,14 @@ int main()
 
         clock_t start = clock(), Current;
         int Entries = Reader_SIMULATED->GetEntries();
-        while (Reader_SIMULATED->Next() && Reader_SIMULATED->GetCurrentEntry() < 1000000)
+        while (Reader_SIMULATED->Next())
         {
-            ProgressBar(Reader_SIMULATED->GetCurrentEntry(), 1000000, start, Current, "Reading Tree");
+            ProgressBar(Reader_SIMULATED->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
             int sili_code = **Silicon_code;
             double sili_e = **Silicon_energy;
             double SiPM_e = **SiPM_energy;
 
-            if (NUCLEUS == "207Bi")
+            if (NUCLEUS == "207Bi" || NUCLEUS == "90Sr")
             {
                 H_Sim[NUCLEUS][0]->Fill(SiPM_e);
             }
@@ -68,24 +74,10 @@ int main()
     }
 
     NUCLEUS = "32Ar";
+    ReadTree();    
 
-    FittingLowHigh();
-    FittingSiPMs();
-    WriteValues();
 
-    // Read values
-    // ReadValues();
-    MergingSiPMs();
-
-    // Bi207
-    NUCLEUS = "207Bi";
-    FittingLowHighBi207();
-    FittingSiPMsBi207();
-    MergingSiPMsBi207();
-
-    WriteTree();
-    // ReadTree();
-    for (int det  = 1; det <= 3; det++)
+    for (int det  = 1; det <= 9; det++)
     {
         current_detector = det;
         CalibrationSiPM();

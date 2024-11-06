@@ -23,8 +23,8 @@ int main(int argc, char *argv[])
     // WriteTime(GROUPED_File[], CALIBRATED_File);
 
     ///////////////////////////////////////////////////////////////////////////////
-    int first = 11;
-    int last = 46;
+    int first = 61;
+    int last = 67;
 
     Ar33Init();
 
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     {
         if (IsDetectorSiliStrip(i))
         {
-            Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][i]);
+            // Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][i]);
             current_detector = i;
             Manual_Calibration();
             ApplyCalibration();
@@ -74,10 +74,26 @@ int main(int argc, char *argv[])
     Info("Fitting Calibration Peaks");
     for (int i = first; i < last; i++)
     {
+        // filling calibration graph for each strip all peaks
         if (IsDetectorSiliStrip(i))
         {
             current_detector = i;
+            Filling_Calibration();
+        }
+        // all strip filled in the calibration graph fitting calibration for all the det
+        if (IsDetectorSiliBack(i))
+        {
+            current_detector = i;
             Fitting_Calibration();
+        }
+    }
+
+    for (int i = first; i < last; i++)
+    {
+        // applying the detector calibration on each strip
+        if (IsDetectorSiliStrip(i))
+        {
+            current_detector = i;
             ApplyCalibration();
         }
     }
