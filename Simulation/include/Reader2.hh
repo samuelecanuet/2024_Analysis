@@ -16,11 +16,13 @@ TTreeReaderArray<double> *Tree_z;
 TTreeReaderArray<double> *Tree_px;
 TTreeReaderArray<double> *Tree_py;
 TTreeReaderArray<double> *Tree_pz;
+TTreeReaderArray<double> *Tree_T0;
 TTreeReaderArray<double> *Tree_Catcher_Central_Energy_Deposit;
 TTreeReaderArray<double> *Tree_Catcher_Side_Energy_Deposit;
 TTreeReaderArray<double> *Tree_PlasticScintillator_Energy_Deposit;
 TTreeReaderArray<Hep3Vector> *Tree_PlasticScintillator_Hit_Position;
 TTreeReaderArray<double> *Tree_PlasticScintillator_Hit_Angle;
+TTreeReaderArray<double> *Tree_PlasticScintillator_Hit_Time;
 TTreeReaderArray<vector<double>> *Tree_Silicon_Detector_Energy_Deposit;
 TTreeReaderArray<vector<Hep3Vector>> *Tree_Silicon_Detector_Hit_Position;
 TTreeReaderArray<vector<double>> *Tree_Silicon_Detector_Hit_Angle;
@@ -46,6 +48,7 @@ map<int, TH1D *> H_z;
 map<int, TH1D *> H_px;
 map<int, TH1D *> H_py;
 map<int, TH1D *> H_pz;
+map<int, TH1D *> H_T0;
 map<int, TH1D *> H_Catcher_Central_Energy_Deposit;
 map<int, TH1D *> H_Catcher_Side_Energy_Deposit;
 map<int, TH1D *> H_PlasticScintillator_Energy_Deposit;
@@ -54,6 +57,7 @@ map<int, TH1D *> H_PlasticScintillator_Hit_Position_y;
 map<int, TH1D *> H_PlasticScintillator_Hit_Position_z;
 map<int, TH2D *> H_PlasticScintillator_Hit_Position_xy;
 map<int, TH1D *> H_PlasticScintillator_Hit_Angle;
+map<int, TH1D *> H_PlasticScintillator_Hit_Time;
 map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det;
 map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det_without_interstrip;
 map<int, TH1D *> H_Silicon_Detector_Hit_Position_x;
@@ -177,6 +181,12 @@ void InitHistograms(int PDG_code)
     H_pz[PDG_code]->GetXaxis()->CenterTitle();
     H_pz[PDG_code]->GetYaxis()->CenterTitle();
 
+    H_T0[PDG_code] = new TH1D(("T0_" + name).c_str(), ("T0_" + name).c_str(), 1000, 0, 1000);
+    H_T0[PDG_code]->GetXaxis()->SetTitle("#T_0 [ns]");
+    H_T0[PDG_code]->GetYaxis()->SetTitle("Counts");
+    H_T0[PDG_code]->GetXaxis()->CenterTitle();
+    H_T0[PDG_code]->GetYaxis()->CenterTitle();
+
     H_Catcher_Central_Energy_Deposit[PDG_code] = new TH1D(("Catcher_Central_Energy_Deposit_" + name).c_str(), ("Catcher_Central_Energy_Deposit_" + name).c_str(), 15000, 0, 15000);
     H_Catcher_Central_Energy_Deposit[PDG_code]->GetXaxis()->SetTitle("Energy [keV]");
     H_Catcher_Central_Energy_Deposit[PDG_code]->GetYaxis()->SetTitle("Counts");
@@ -224,6 +234,12 @@ void InitHistograms(int PDG_code)
     H_PlasticScintillator_Hit_Angle[PDG_code]->GetYaxis()->SetTitle("Counts");
     H_PlasticScintillator_Hit_Angle[PDG_code]->GetXaxis()->CenterTitle();
     H_PlasticScintillator_Hit_Angle[PDG_code]->GetYaxis()->CenterTitle();
+
+    H_PlasticScintillator_Hit_Time[PDG_code] = new TH1D(("PlasticScintillator_Time_" + name).c_str(), ("PlasticScintillator_Time_" + name).c_str(), 1000, 0, 1000);
+    H_PlasticScintillator_Hit_Time[PDG_code]->GetXaxis()->SetTitle("Time [ns]");
+    H_PlasticScintillator_Hit_Time[PDG_code]->GetYaxis()->SetTitle("Counts");
+    H_PlasticScintillator_Hit_Time[PDG_code]->GetXaxis()->CenterTitle();
+    H_PlasticScintillator_Hit_Time[PDG_code]->GetYaxis()->CenterTitle();
 
     H_Silicon_Detector_Hit_Position_x[PDG_code] = new TH1D(("Silicon_Detector_Hit_Position_x_" + name).c_str(), ("Silicon_Detector_Hit_Position_x_" + name).c_str(), 400, -20, 20);
     H_Silicon_Detector_Hit_Position_x[PDG_code]->GetXaxis()->SetTitle("X [mm]");
@@ -392,6 +408,7 @@ void WriteHistograms()
         H_PlasticScintillator_Hit_Position_z[PDG]->Write();
         H_PlasticScintillator_Hit_Position_xy[PDG]->Write();
         H_PlasticScintillator_Hit_Angle[PDG]->Write();
+        H_PlasticScintillator_Hit_Time[PDG]->Write();
 
         dir_Silicon_Detector[PDG]->cd();
         H_Silicon_Detector_Hit_Position_x[PDG]->Write();

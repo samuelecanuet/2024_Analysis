@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     TFile *File_Fit = new TFile((DIR_ROOT_DATA_MATCHED + "RearStrip_Fit.root").c_str(), "RECREATE");
     File_Fit->cd();
     InitGraph();
+    Info("Matching Rear Strip");
     // read all run and all nuclei to fill a grph and then fit with a linear fucntion the gain atching betweens strip and Rear
     for (string NUCLEUS : NUCLEI)
     {
@@ -58,36 +59,61 @@ int main(int argc, char *argv[])
         if (IsDetectorSiliStrip(i))
         {
             TCanvas *c = new TCanvas(("RearStrip_" + detectorName[i]).c_str(), ("RearStrip_" + detectorName[i]).c_str(), 1920, 1080);
-            G_RearStrip[i]->Fit("pol1");
+            TF1 *f = new TF1(("pol1_" + detectorName[i]).c_str(), "[0]*x", 0, 200000);
+            G_RearStrip[i]->Fit(f, "QR");
             G_RearStrip[i]->Draw("AP");
             c->Write();     
+
 
             // compute fucntion for matching rear strip for all strip except 1 (took as reference)
             if (GetDetectorChannel(i) != 1)
             {
                 // formula : 
-                // E_ref =   a1 * x + b1
-                // E     =   a2 * x + b2
-                // E_corrected = a1/a2 * x - a1/a2 * b2 + b1
+                // E_ref =   a1 * x
+                // E     =   a2 * x
+                // E_corrected = a1/a2 * x
 
-                double a1 = G_RearStrip[GetDetector(i)*10+1]->GetFunction("pol1")->GetParameter(1);
-                double b1 = G_RearStrip[GetDetector(i)*10+1]->GetFunction("pol1")->GetParameter(0);
-                double a2 = G_RearStrip[i]->GetFunction("pol1")->GetParameter(1);
-                double b2 = G_RearStrip[i]->GetFunction("pol1")->GetParameter(0);
+                double a1 = G_RearStrip[GetDetector(i)*10+1]->GetFunction(("pol1_D" + to_string(GetDetector(i)) + ".1").c_str())->GetParameter(0);
+                double a2 = G_RearStrip[i]->GetFunction(("pol1_" + detectorName[i]).c_str())->GetParameter(0);
 
                 double a_new = a1/a2;
-                double b_new = -a1/a2 * b2 + b1;
 
-                MatchingRearStrip[i] = new TF1(("MatchingRearStrip_" + detectorName[i]).c_str(), "pol1", 0, 200000);
-                MatchingRearStrip[i]->SetParameter(0, b_new);
-                MatchingRearStrip[i]->SetParameter(1, a_new);
+                MatchingRearStrip[i] = new TF1(("MatchingRearStrip_" + detectorName[i]).c_str(), "[0]*x", 0, 200000);
+                MatchingRearStrip[i]->SetParameter(0, a_new);
                 
             }   
             else
             {
-                MatchingRearStrip[i] = new TF1(("MatchingRearStrip_" + detectorName[i]).c_str(), "pol1", 0, 200000);
-                MatchingRearStrip[i]->SetParameters(0, 1);
+                MatchingRearStrip[i] = new TF1(("MatchingRearStrip_" + detectorName[i]).c_str(), "[0]*x", 0, 200000);
+                MatchingRearStrip[i]->SetParameter(0, 1);
             }   
+
+            // // compute fucntion for matching rear strip for all strip except 1 (took as reference)
+            // if (GetDetectorChannel(i) != 1)
+            // {
+            //     // formula : 
+            //     // E_ref =   a1 * x + b1
+            //     // E     =   a2 * x + b2
+            //     // E_corrected = a1/a2 * x - a1/a2 * b2 + b1
+
+            //     double a1 = G_RearStrip[GetDetector(i)*10+1]->GetFunction("pol1")->GetParameter(1);
+            //     double b1 = G_RearStrip[GetDetector(i)*10+1]->GetFunction("pol1")->GetParameter(0);
+            //     double a2 = G_RearStrip[i]->GetFunction("pol1")->GetParameter(1);
+            //     double b2 = G_RearStrip[i]->GetFunction("pol1")->GetParameter(0);
+
+            //     double a_new = a1/a2;
+            //     double b_new = -a1/a2 * b2 + b1;
+
+            //     MatchingRearStrip[i] = new TF1(("MatchingRearStrip_" + detectorName[i]).c_str(), "pol1", 0, 200000);
+            //     MatchingRearStrip[i]->SetParameter(0, b_new);
+            //     MatchingRearStrip[i]->SetParameter(1, a_new);
+                
+            // }   
+            // else
+            // {
+            //     MatchingRearStrip[i] = new TF1(("MatchingRearStrip_" + detectorName[i]).c_str(), "pol1", 0, 200000);
+            //     MatchingRearStrip[i]->SetParameters(0, 1);
+            // }   
         }
 
         if (IsDetectorSiliBack(i))
@@ -98,10 +124,12 @@ int main(int argc, char *argv[])
             }
         }
     }
-    ////////////////////////////////////////////////////////////
 
+
+    ////////////////////////////////////////////////////////////
     // using correction of run gaindrifting and correction from strip to strip and merge all the runs in a single file for each nucleus
     //////////////////// MERGING ////////////////////
+    Info("Merging");
     for (string NUCLEUS : NUCLEI)
     {
         pair<string, vector<string>> NUCLEUS_Run = make_pair(NUCLEUS, Map_RunFiles[NUCLEUS]);
@@ -159,6 +187,7 @@ int main(int argc, char *argv[])
                 // run matching correction
                 (*Silicon)[1].Channel = Matching_function[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
                 H_RearStrip[(*Silicon)[0].Label]->Fill((*Silicon)[0].Channel, (*Silicon)[1].Channel);
+                
                 // rear-strip matching correction
                 // (*Silicon)[1].Channel = MatchingRearStrip[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
                 MERGED_Tree_Silicon.push_back((*Silicon)[1]);
@@ -180,7 +209,34 @@ int main(int argc, char *argv[])
 
                 H[(*Silicon)[1].Label]->Fill((*Silicon)[1].Channel);
 
-                H_RearStrip_Matched[(*Silicon)[0].Label]->Fill((*Silicon)[0].Channel, (*Silicon)[1].Channel);
+                H_Strip_Matched[(*Silicon)[1].Label]->Fill(MatchingRearStrip[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel));
+                H_RearStrip_Matched[(*Silicon)[0].Label]->Fill((*Silicon)[0].Channel, MatchingRearStrip[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel));
+            }
+
+            /// adding histograms for fake coincidences
+            if (Run == "057")
+            {
+                for (int mul = 1; mul <= 9; mul++)
+                {
+                    H_SiPM_Full[mul] = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str());
+                    H_SiPM_Left[mul] = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_Left_M" + to_string(mul)).c_str());
+                    H_SiPM_Right[mul] = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_Right_M" + to_string(mul)).c_str());
+                    H_SiPM_Center[mul] = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_Centrer_M" + to_string(mul)).c_str());
+                }
+            }
+            else
+            {
+                for (int mul = 1; mul <= 9; mul++)
+                {
+                    TH1D * H = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str())->Clone();
+                    H_SiPM_Full[mul]->Add((TH1D*)H->Clone());
+                    TH1D *  H1 = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_Left_M" + to_string(mul)).c_str())->Clone();
+                    H_SiPM_Left[mul]->Add((TH1D*)H1->Clone());
+                    TH1D * H2 = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_Right_M" + to_string(mul)).c_str())->Clone();
+                    H_SiPM_Right[mul]->Add((TH1D*)H2->Clone());
+                    TH1D * H3 = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_Centrer_M" + to_string(mul)).c_str())->Clone();
+                    H_SiPM_Center[mul]->Add((TH1D*)H3->Clone());
+                }
             }
         }
 
@@ -199,21 +255,57 @@ int main(int argc, char *argv[])
             }
         }
 
-        MERGED_File->cd();
+       MERGED_File->cd();
+       ComputeFakeCoincidences();
+
+        
         MERGED_Tree->Write();
         MERGED_File->Close();
+
+        File_Fit->cd();
+        for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            if (IsDetectorSiliBack(i))
+            {
+                H_RearStrip[i]->Write();
+                H_RearStrip_Matched[i]->Write();
+
+                TCanvas *c = new TCanvas(("D" + to_string(GetDetector(i))).c_str(), ("D" + to_string(GetDetector(i))).c_str(), 1920, 1080);
+                TLegend *legend = new TLegend(0.1, 0.7, 0.48, 0.9);
+                for (int strip = 1; strip <= 5; strip ++)
+                {
+                    H_Strip_Matched[GetDetector(i)*10+strip]->SetLineColor(strip);
+                    H_Strip_Matched[GetDetector(i)*10+strip]->Draw("HIST SAME");
+                    legend->AddEntry(H_Strip_Matched[GetDetector(i)*10+strip], ("Strip " + to_string(strip)).c_str(), "l");
+                }
+                legend->Draw("SAME");
+                c->Write();
+            }
+        }
+        File_Fit->Close();
     }  
 
-    File_Fit->cd();
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorSiliBack(i))
-        {
-            H_RearStrip[i]->Write();
-            H_RearStrip_Matched[i]->Write();
-        }
-    }
-    File_Fit->Close();
+    // File_Fit->cd();
+    // for (int i = 0; i < SIGNAL_MAX; i++)
+    // {
+    //     if (IsDetectorSiliBack(i))
+    //     {
+    //         H_RearStrip[i]->Write();
+    //         H_RearStrip_Matched[i]->Write();
+
+    //         TCanvas *c = new TCanvas(("D" + to_string(GetDetector(i))).c_str(), ("D" + to_string(GetDetector(i))).c_str(), 1920, 1080);
+    //         TLegend *legend = new TLegend(0.1, 0.7, 0.48, 0.9);
+    //         for (int strip = 1; strip <= 5; strip ++)
+    //         {
+    //             H_Strip_Matched[GetDetector(i)*10+strip]->SetLineColor(strip);
+    //             H_Strip_Matched[GetDetector(i)*10+strip]->Draw("HIST SAME");
+    //             legend->AddEntry(H_Strip_Matched[GetDetector(i)*10+strip], ("Strip " + to_string(strip)).c_str(), "l");
+    //         }
+    //         legend->Draw("SAME");
+    //         c->Write();
+    //     }
+    // }
+    // File_Fit->Close();
 
     return 0;
 }

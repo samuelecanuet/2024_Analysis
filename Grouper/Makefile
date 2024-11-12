@@ -15,7 +15,7 @@ LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_file
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark
+EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark SiPM_Time
 
 all : $(EXE)
 
@@ -29,6 +29,7 @@ Defect: obj/Defect.o
 SIPM_Calibration: obj/SIPM_Calibration.o
 SIPM_Matching: obj/SIPM_Matching.o
 SIPM_Dark: obj/SIPM_Dark.o	
+SiPM_Time: obj/SiPM_Time.o
 Bi207: obj/Bi207.o
 
 $(EXE): $(OBJS) include/Detectors.hh include/Messenger.hh

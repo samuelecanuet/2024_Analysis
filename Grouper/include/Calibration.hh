@@ -768,8 +768,8 @@ double FunctionToMinimize(const double *par)
     H_Sim_Conv[NUCLEUS][current_detector] = H;
 
      TH1D *h = (TH1D *)Background_function[current_detector]->GetHistogram();
-    H_Sim_Conv[NUCLEUS][current_detector]->Add(h, 1);
-    // H_Exp[NUCLEUS][current_detector]->Add(h, -1);
+    // H_Sim_Conv[NUCLEUS][current_detector]->Add(h, 1);
+    H_Exp[NUCLEUS][current_detector]->Add(h, -1);
 
 
     

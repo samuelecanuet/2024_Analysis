@@ -71,6 +71,8 @@
         "unordered_set": "cpp",
         "future": "cpp",
         "Plotting_points.C": "cpp",
-        "ReaderGamma.C": "cpp"
+        "ReaderGamma.C": "cpp",
+        "EstimateCCDFfromHistogram.C": "cpp",
+        "extract_pdf_cdf.C": "cpp"
     }
 }

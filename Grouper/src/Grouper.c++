@@ -88,57 +88,54 @@ int main(int argc, char *argv[])
     }
 
     WriteHistograms_Cutted();
+
     /////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////// SILICON WALK GROUPS /////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////////////
     start = clock(), Current;
 
-    SILICON_WALK_Tree = new TTree("SILICON_WALK_Tree", "SILICON_WALK_Tree");
-    SILICON_WALK_Tree->Branch("SILICON_WALK_Tree_Silicon", &SILICON_WALK_Tree_Silicon);
-    SILICON_WALK_Tree->Branch("SILICON_WALK_Tree_SiPMHigh", &SILICON_WALK_Tree_SiPMHigh);
-    SILICON_WALK_Tree->Branch("SILICON_WALK_Tree_SiPMLow", &SILICON_WALK_Tree_SiPMLow);
-
     Reader = new TTreeReader(CUTTED_Tree);
     Silicon = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_Silicon");
     SiPM_High = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_SiPMHigh");
     SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_SiPMLow");
-       
+
     Reader->Restart();
     TotalEntries = Reader->GetEntries();
-    while (Reader->Next())
-    {
-        ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Removing Silicon walk : ");
-        
-        // for (int i = 0; i < signals.GetSize(); i++)
-        //     Verbose(signals[i], VERBOSE, 2);
-
-        SiliconWalkCorrection();
-    }
-
-    WriteHistograms_SiliconWalk();
-    /////////////////////////////////////////////////////////////////////////////////////////
-    /////////////////////////////////// SiPM WALK GROUPS ////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////
-    start = clock(), Current;
-    Reader->Restart();
-    while (Reader->Next())
-    {
-        ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Removing SiPM walk : ");
-
-        // for (int i = 0; i < signals.GetSize(); i++)
-        //     Verbose(signals[i], VERBOSE, 2);
-
-        SiPMWalkCorrection();
-    }
-
-    WriteHistograms_SiPMWalk();
-    /////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////  FINAL CLEANING /////////////////////////////////////
-    /////////////////////////////////////////////////////////////////////////////////////////
-
-    ///////// SAVING FIT PARMATER IF run 114 ELSE LOADING THEM
     if (Run == 114)
     {
+        while (Reader->Next())
+        {
+            ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Removing Silicon walk : ");
+
+            // for (int i = 0; i < signals.GetSize(); i++)
+            //     Verbose(signals[i], VERBOSE, 2);
+
+            SiliconWalkCorrection();
+        }
+
+        WriteHistograms_SiliconWalk();
+        /////////////////////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////// SiPM WALK GROUPS ////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////
+        start = clock(), Current;
+        Reader->Restart();
+        while (Reader->Next())
+        {
+            ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Removing SiPM walk : ");
+
+            // for (int i = 0; i < signals.GetSize(); i++)
+            //     Verbose(signals[i], VERBOSE, 2);
+
+            SiPMWalkCorrection();
+        }
+
+        WriteHistograms_SiPMWalk();
+        /////////////////////////////////////////////////////////////////////////////////////////
+        ///////////////////////////////////  FINAL CLEANING /////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////////////////
+
+        ///////// SAVING FIT PARMATER IF run 114 ELSE LOADING THEM
+
         SaveFitParameters();
     }
     else
@@ -183,7 +180,6 @@ int main(int argc, char *argv[])
 
     delete GROUPED_Tree;
     delete CUTTED_Tree;
-    delete SILICON_WALK_Tree;
     WriteTree_Grouped();
     
     GROUPED_File->Close();
