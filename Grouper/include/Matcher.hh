@@ -82,7 +82,6 @@ void InitHistograms(string Run_string)
 
 double FunctionToMinimize(const double *par)
 {
-
     // cout << setprecision(5) << "PAR : " << par[0] << " " << par[1] << endl;
 
     Reader->Restart();
@@ -372,26 +371,6 @@ void InitManualCalibration()
     file.close();
 
     
-}
-
-vector<int> Dir2Det(string dir, int strip)
-{
-    vector<int> detectors;
-    for (int i = 0; i < detectorNum; i++)
-    {
-        if (IsDetectorSiliStrip(i))
-        {
-            if (GetDetectorChannel(i) == strip && dir == "Up" && GetDetector(i) <= 4)
-            {
-                detectors.push_back(i);
-            }
-            else if (GetDetectorChannel(i) == strip && dir == "Down" && GetDetector(i) >= 5)
-            {
-                detectors.push_back(i);
-            }
-        }
-    }
-    return detectors;
 }
 
 

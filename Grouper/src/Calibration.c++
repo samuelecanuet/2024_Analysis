@@ -5,11 +5,11 @@ int main(int argc, char *argv[])
     InitDetectors("Config_Files/sample.pid");
 
     ///////////////////////////////////  FILES //////////////////////////////////
-    GROUPED_File["32Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
-    GROUPED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
-    GROUPED_File["33Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
+    MERGED_File["32Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+    MERGED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
+    MERGED_File["33Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
 
-    SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma_analysed.root").c_str(), "READ");
     SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_100_5700_100_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["33Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/33Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
@@ -18,15 +18,13 @@ int main(int argc, char *argv[])
     // CRADLE_File = new TFile((DIR_ROOT_DATA_SIMULATED + "/../../32Ar_CS0_CSP0_CV1_CVP1_1_00-1_analysed.root").c_str(), "READ");
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
-    CALIBRATED_File = new TFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_Up.root").c_str(), "RECREATE");
+    CALIBRATED_File = new TFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
-    // WriteTime(GROUPED_File[], CALIBRATED_File);
+    // WriteTime(MERGED_File[], CALIBRATED_File);
 
     ///////////////////////////////////////////////////////////////////////////////
     int first = 11;
-    int last = 46;
-
-    Ar33Init();
+    int last = 86;
 
     FillingSimHitograms();
     InitAlphaPeaks();
@@ -34,7 +32,6 @@ int main(int argc, char *argv[])
     InitManualCalibration();
     InitElectronicResolution();
 
-    
 
     // SET ALL EXPERIMENTAL TREE FOR EACH DETECTOR
     for (string Nucleus : Nuclei)
@@ -50,7 +47,7 @@ int main(int argc, char *argv[])
         {
             if (IsDetectorSiliStrip(i))
             {
-                GROUPED_Tree_Detectors[NUCLEUS][i] = (TTree *)GROUPED_File[NUCLEUS]->Get(("MERGED_Tree_" + detectorName[i]).c_str());
+                MERGED_Tree_Detectors[NUCLEUS][i] = (TTree *)MERGED_File[NUCLEUS]->Get(("MERGED_Tree_" + detectorName[i]).c_str());
             }
         }
     }
@@ -62,7 +59,7 @@ int main(int argc, char *argv[])
     {
         if (IsDetectorSiliStrip(i))
         {
-            Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][i]);
+            Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][i]);
             current_detector = i;
             Manual_Calibration();
             ApplyCalibration();
@@ -104,7 +101,7 @@ int main(int argc, char *argv[])
 
     // for (string Nucleus : Nuclei)
     // {
-    //     TTreeReader *Reader = new TTreeReader((TTree *)GROUPED_File[Nucleus]->Get("MERGED_Tree"));
+    //     TTreeReader *Reader = new TTreeReader((TTree *)MERGED_File[Nucleus]->Get("MERGED_Tree"));
     //     TTreeReaderArray<Signal> *Silicon_Detector = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_Silicon");
     //     TTreeReaderArray<Signal> *SIPM_High = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_SiPMHigh");
 
@@ -182,11 +179,20 @@ int main(int argc, char *argv[])
         c1->Write();
 
     }
+
+    for (int i = first; i < last; i++)
+    {
+        if (IsDetectorSiliStrip(i))
+        {
+            Calibration_Function[i]->SetName(("Calibration_" + detectorName[i]).c_str());
+            Calibration_Function[i]->Write();
+        }
+    }
     
 
     CALIBRATED_File->Close();
-    GROUPED_File["32Ar"]->Close();
-    GROUPED_File["32Ar_thick"]->Close();
-    GROUPED_File["33Ar"]->Close();
+    MERGED_File["32Ar"]->Close();
+    MERGED_File["32Ar_thick"]->Close();
+    MERGED_File["33Ar"]->Close();
     return 0;
 }

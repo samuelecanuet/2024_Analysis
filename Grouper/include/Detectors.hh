@@ -76,6 +76,7 @@ string DIR_ROOT_DATA_GROUPED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETEC
 string DIR_ROOT_DATA_CLEANED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
 string DIR_ROOT_DATA_MATCHED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
 string DIR_ROOT_DATA_MERGED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
+string DIR_ROOT_DATA_ANALYSED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ANALYSED/";
 string DIR_ROOT_DATA_CALIBRATED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
 string DIR_ROOT_DATA_SIMULATED = "../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
 string DIR_DATA_ISOLDE = "../../../../../mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
@@ -223,6 +224,26 @@ inline bool IsDetectorSiliInterStrip(int det1, int det2)
   return false;
 }
 
+vector<int> Dir2Det(string dir, int strip)
+{
+    vector<int> detectors;
+    for (int i = 0; i < detectorNum; i++)
+    {
+        if (IsDetectorSiliStrip(i))
+        {
+            if (GetDetectorChannel(i) == strip && dir == "Up" && GetDetector(i) <= 4)
+            {
+                detectors.push_back(i);
+            }
+            else if (GetDetectorChannel(i) == strip && dir == "Down" && GetDetector(i) >= 5)
+            {
+                detectors.push_back(i);
+            }
+        }
+    }
+    return detectors;
+}
+
 inline void InitDetectors(const string &fname)
 {
   ifstream file(fname.c_str());
@@ -314,6 +335,25 @@ int ConvertBase5ToBase10(int base5_int)
 		num = num * 5 + (digit - '0');
 	}
 	return num;
+}
+double computeMedian(std::vector<double> &values)
+{
+	if (values.empty())
+		Error("Cannot compute median of an empty list");
+	
+
+	std::sort(values.begin(), values.end());
+	size_t size = values.size();
+	size_t mid = size / 2;
+
+	if (size % 2 == 0)
+	{
+		return (values[mid - 1] + values[mid]) / 2.0;
+	}
+	else
+	{
+		return values[mid];
+	}
 }
 
 const map<string, int> NametoCode_map = {

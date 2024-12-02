@@ -2,7 +2,7 @@
 
 int main()
 {
-    string name = "../../../../../../../mnt/hgfs/shared-2/test";
+    string name = "../../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/fe/fe/test";
     // name = "241Am_700nm_width";
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
     ANALYSIS_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + "_analysed.root").c_str(), "RECREATE");

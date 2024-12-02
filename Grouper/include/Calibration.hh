@@ -7,15 +7,15 @@
 default_random_engine generator;
 
 /// FILE ///
-string GROUPED_filename;
-string GROUPED_basefilename;
+string MERGED_filename;
+string MERGED_basefilename;
 TFile *CALIBRATED_File;
 map<string, TFile *> SIMULATED_File;
-map<string, TFile *> GROUPED_File;
+map<string, TFile *> MERGED_File;
 TFile *CRADLE_File;
 string NUCLEUS;
 
-map<string, TTree *[SIGNAL_MAX]> GROUPED_Tree_Detectors;
+map<string, TTree *[SIGNAL_MAX]> MERGED_Tree_Detectors;
 TTreeReader *Reader;
 TTreeReaderArray<Signal> *Silicon;
 double Channel;
@@ -63,8 +63,6 @@ double alpha1;
 double alpha1_error;
 double alpha2;
 double alpha2_error;
-double Ar33_shift[SIGNAL_MAX];
-double Ar33_Br[SIGNAL_MAX];
 
 // ARRAY
 pair<double, double> Alpha1_Up[6];
@@ -187,53 +185,6 @@ void InitAlphaPeaks()
         Alpha1_Down[counter] = make_pair(energy1, energy2);
         Alpha2_Down[counter] = make_pair(energy3, energy4);
     }
-}
-
-void Ar33Init()
-{
-    /// read txt file
-    ifstream file("Config_Files/33Ar_shift.txt");
-    string line;
-    double energy;
-    double br;
-    string name;
-    while (getline(file, line))
-    {
-        stringstream ss(line);
-        ss >> name >> energy >> br;
-
-        for (int i = 0; i < SIGNAL_MAX; i++)
-        {
-            if (detectorName[i] == name)
-            {
-                Ar33_shift[i] = 20;
-                Ar33_Br[i] = 0.025;
-            }
-        }
-    }
-
-
-    file.close();
-}
-
-vector<int> Dir2Det(string dir, int strip)
-{
-    vector<int> detectors;
-    for (int i = 0; i < detectorNum; i++)
-    {
-        if (IsDetectorSiliStrip(i))
-        {
-            if (GetDetectorChannel(i) == strip && dir == "Up" && GetDetector(i) <= 4)
-            {
-                detectors.push_back(i);
-            }
-            else if (GetDetectorChannel(i) == strip && dir == "Down" && GetDetector(i) >= 5)
-            {
-                detectors.push_back(i);
-            }
-        }
-    }
-    return detectors;
 }
 
 void InitWindows()
@@ -399,8 +350,8 @@ void FillingSimHitograms()
     ScalerPeak["18N"] = 1;
 
     CalibrationPeaks["32Ar"] =  {5, 8, 9, 14, 23, 25, 28, 29, 30};
-    CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
-    CalibrationPeaks["33Ar"] = {2, 12, 26, 35, 37, 40};
+    CalibrationPeaks["32Ar_thick"] = {};//{5, 8, 14};
+    CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
 
     for (auto &pair : SIMULATED_File)
     {
@@ -458,20 +409,6 @@ void FillingSimHitograms()
     //             H_Sim["32Ar"][i]->Add((TH1D *)CRADLE_File->Get((h_name).c_str()));
     //         }
     //     }
-
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorSiliStrip(i))
-        {
-            TH1D* h = (TH1D*)H_Sim["33Ar"][i]->Clone();
-            for (int bin = Ar33_shift[i]; bin < H_Sim["33Ar"][i]->GetNbinsX(); bin++)
-            {
-                int content = h->GetBinContent(bin-Ar33_shift[i]);
-
-                H_Sim["33Ar"][i]->SetBinContent(bin, H_Sim["33Ar"][i]->GetBinContent(bin) + content*Ar33_Br[i]);
-            }
-        }
-    }
 }
 
 void WriteCalibInFile()
@@ -679,7 +616,7 @@ void ApplyCalibration()
     NUCLEUS = "32Ar";
     H_Sim_Conv[NUCLEUS][current_detector] = (TH1D *)H_Sim["32Ar"][current_detector]->Clone();
     H_Sim_Conv[NUCLEUS][current_detector]->Reset();
-    Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][current_detector]);
+    Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
     Reader->Restart();
 
     H_Exp[NUCLEUS][current_detector]->Reset();
@@ -697,7 +634,7 @@ void ApplyCalibration()
     NUCLEUS = "32Ar_thick";
     H_Sim_Conv[NUCLEUS][current_detector] = (TH1D *)H_Sim["32Ar_thick"][current_detector]->Clone();
     H_Sim_Conv[NUCLEUS][current_detector]->Reset();
-    Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][current_detector]);
+    Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
     Reader->Restart();
     TTreeReaderValue<double> ChannelDet32Ar_thick(*Reader, "Channel");
     H_Exp["32Ar_thick"][current_detector]->Reset();
@@ -711,7 +648,7 @@ void ApplyCalibration()
     NUCLEUS = "33Ar";
     H_Sim_Conv[NUCLEUS][current_detector] = (TH1D *)H_Sim["33Ar"][current_detector]->Clone();
     H_Sim_Conv[NUCLEUS][current_detector]->Reset();
-    Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][current_detector]);
+    Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
     Reader->Restart();
     TTreeReaderValue<double> ChannelDet33(*Reader, "Channel");
     H_Exp["33Ar"][current_detector]->Reset();
@@ -768,13 +705,10 @@ double FunctionToMinimize(const double *par)
     H_Sim_Conv[NUCLEUS][current_detector] = H;
 
      TH1D *h = (TH1D *)Background_function[current_detector]->GetHistogram();
-    // H_Sim_Conv[NUCLEUS][current_detector]->Add(h, 1);
-    H_Exp[NUCLEUS][current_detector]->Add(h, -1);
+    H_Sim_Conv[NUCLEUS][current_detector]->Add(h, 1);
+    // H_Exp[NUCLEUS][current_detector]->Add(h, -1);
 
-
-    
-
-    // /// 32Ar_thick
+    // 32Ar_thick
     NUCLEUS = "32Ar_thick";
 
     TH1D *H32Ar_thick = (TH1D *)H_Sim["32Ar_thick"][current_detector]->Clone();
@@ -791,25 +725,6 @@ double FunctionToMinimize(const double *par)
     H32Ar_thick->Scale(H_Exp[NUCLEUS][current_detector]->Integral() / H32Ar_thick->Integral());
     H_Sim_Conv[NUCLEUS][current_detector] = H32Ar_thick;
 
-    /// 33Ar    
-    // for (int i = 0; i < H_Sim["33Ar"][current_detector]->GetNbinsX(); i++)
-    // {
-    //     double value = H_Sim["33Ar"][current_detector]->GetBinCenter(i);
-    //     TF1 *g_res = new TF1(to_string(i).c_str(), "gaus(0)", 0, 10000);
-    //     double sigma = par[0] + par[1] * sqrt(value);
-    //     g_res->SetParameters(1 / (sigma * sqrt(2 * M_PI)), value, sigma);
-    //     for (int j = i-1000; j < i+1000; j++)
-    //     {
-    //         if (j < 0 || j > H_Sim["33Ar"][current_detector]->GetNbinsX())
-    //         {
-    //             continue;
-    //         }
-    //         if (H_Sim["33Ar"][current_detector]->GetBinContent(i) != 0)
-    //             H_Sim_Conv[NUCLEUS][current_detector]->SetBinContent(j, H_Sim_Conv[NUCLEUS][current_detector]->GetBinContent(j) + g_res->Eval(H_Sim_Conv[NUCLEUS][current_detector]->GetBinCenter(j))*H_Sim["33Ar"][current_detector]->GetBinContent(i));
-    //     }
-    // }
-
-
     NUCLEUS = "33Ar";
     TH1D *H33Ar = (TH1D *)H_Sim["33Ar"][current_detector]->Clone();
     H33Ar->Reset();
@@ -818,8 +733,6 @@ double FunctionToMinimize(const double *par)
         double value = H_Sim["33Ar"][current_detector]->GetRandom();
         normal_distribution<double> distribution(value, par[0] + par[1] * sqrt(value));
         H33Ar->Fill(distribution(generator));
-
-        // H33Ar->Fill(distribution(generator) + 20, 0.025);
     }
 
     H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].first, WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].second);
@@ -1097,7 +1010,7 @@ void Manual_Calibration()
 {
     for (string Nucleus : Nuclei)
     {
-        Reader = new TTreeReader(GROUPED_Tree_Detectors[Nucleus][current_detector]);
+        Reader = new TTreeReader(MERGED_Tree_Detectors[Nucleus][current_detector]);
         Reader->Restart();
         TTreeReaderValue<double> ChannelDet(*Reader, "Channel");
         H_Exp_Channel[Nucleus][current_detector]->Reset();
@@ -1327,7 +1240,7 @@ void Fitting_Calibration()
     /// ALPHA
     NUCLEUS = "32Ar";
     int counter = 0;
-    Reader = new TTreeReader(GROUPED_Tree_Detectors[NUCLEUS][current_detector]);
+    Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
     Reader->Restart();
     H_Exp[NUCLEUS][current_detector]->Reset();
     TTreeReaderValue<double> ChannelDet1(*Reader, "Channel");

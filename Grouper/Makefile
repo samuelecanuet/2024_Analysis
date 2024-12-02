@@ -15,7 +15,7 @@ LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_file
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark SiPM_Time
+EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark SiPM_Time Analyser
 
 all : $(EXE)
 
@@ -31,6 +31,7 @@ SIPM_Matching: obj/SIPM_Matching.o
 SIPM_Dark: obj/SIPM_Dark.o	
 SiPM_Time: obj/SiPM_Time.o
 Bi207: obj/Bi207.o
+Analyser: obj/Analyser.o
 
 $(EXE): $(OBJS) include/Detectors.hh include/Messenger.hh
 	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so -lfftw3 

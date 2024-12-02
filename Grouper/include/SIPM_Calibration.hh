@@ -88,25 +88,7 @@ map<string, TF1 *[SIGNAL_MAX]> MatchingLowHigh_erf;
 map<string, TF1 *[SIGNAL_MAX]> MatchingSiPM;
 map<string, pair<double, double>> SiPM_Range;
 
-vector<int> Dir2Det(string dir, int strip)
-{
-    vector<int> detectors;
-    for (int i = 0; i < detectorNum; i++)
-    {
-        if (IsDetectorSiliStrip(i))
-        {
-            if (GetDetectorChannel(i) == strip && dir == "Up" && GetDetector(i) <= 4)
-            {
-                detectors.push_back(i);
-            }
-            else if (GetDetectorChannel(i) == strip && dir == "Down" && GetDetector(i) >= 5)
-            {
-                detectors.push_back(i);
-            }
-        }
-    }
-    return detectors;
-}
+
 
 void InitWindows()
 {

@@ -9,6 +9,7 @@ using namespace std;
 
 int VERBOSE = 0;
 int Run;
+bool FULL = false;
 
 /// FILE ///
 string ROOT_filename;
@@ -38,6 +39,11 @@ TTreeReaderArray<Signal> *SiPM_High;
 TTreeReaderArray<Signal> *SiPM_Low;
 
 ////////////// HISTOGRAMS ////////////////
+
+// Group 
+TH1D* H_Group_Time[SIGNAL_MAX];
+TH2D* H_Group_ChannelTime[SIGNAL_MAX];
+TH1D* H_Channel_Group[SIGNAL_MAX];
 // RAW
 TH1D *H_Strip_Mulitplicity_RAW;
 TH1D *H_Rear_Mulitplicity_RAW;
@@ -90,35 +96,11 @@ TH2D *H_RearSiPM_ChannelTime_Cleaned[SIGNAL_MAX];
 TH2D *H_SiPM_ChannelTime_Cleaned[SIGNAL_MAX];
 TH1D *H_SiPMHigh_Mulitplicity_Cleaned;
 TH1D *H_SiPMLow_Mulitplicity_Cleaned;
-TH1D *H_SiPM_Mulitplicity_Cleaned[SIGNAL_MAX];
 pair<int, int> Rear_IAS[9] = {make_pair(0, 0), make_pair(40000, 44500), make_pair(36000, 39500), make_pair(36000, 39500), make_pair(33000, 36500), make_pair(36000, 39000), make_pair(33000, 36500), make_pair(35500, 38500), make_pair(35000, 38500)};
 pair<int, int> peaks_window_F[SIGNAL_MAX];
 TH1D *H_Rear_Channel_IAS_Cleaned[SIGNAL_MAX];
 TH1D *H_Rear_Channel_IAScoinc_Cleaned[SIGNAL_MAX];
-vector<int> CoincidenceTime;
-int CoincidenceTime_MAX = 26;
-int CoincidenceTime_BIN = 26;
-int CoincidenceTime_Left_Window = -50;
-int CoincidenceTime_Right_Window = 50;
-TH1D *H_HighSiPM_Time_IAS_Cleaned[99][99][SIGNAL_MAX];
-TH1D *H_HighSiPM_Time_IAS_UnCleaned[99][99][SIGNAL_MAX];
-TH1D *H_Energy_IAS;
-TH1D *H_Energy_IAS_Cleaned[99][99][SIGNAL_MAX];
-TH1D *H_Energy_IAS_UnCleaned[99][99][SIGNAL_MAX];
-TH1D *H_LowSiPM_Time_IAS_Cleaned[99][99][SIGNAL_MAX];
-TH1D *H_LowSiPM_Time_IAS_UnCleaned[99][99][SIGNAL_MAX];
 TCanvas *C_IAS_Channel_Cleaned;
-TH2D *H_2SiPM_Channel_Cleaned[SIGNAL_MAX];
-// TGraphErrors *G_HighSiPM_FakeEvent_Multiplicity[SIGNAL_MAX];
-// TGraphErrors *G_LowSiPM_FakeEvent_Multiplicity[SIGNAL_MAX];
-// TGraphErrors *G_HighSiPM_Losses_Multiplicity[SIGNAL_MAX];
-// TGraphErrors *G_LowSiPM_Losses_Multiplicity[SIGNAL_MAX];
-TH2D *H_HighSiPM_FakeEvent_Multiplicity[SIGNAL_MAX];
-TH2D *H_LowSiPM_FakeEvent_Multiplicity[SIGNAL_MAX];
-TH2D *H_HighSiPM_Losses_Multiplicity[SIGNAL_MAX];
-TH2D *H_LowSiPM_Losses_Multiplicity[SIGNAL_MAX];
-int counter_graph_fake_events = 0;
-TH1D* H_2SiPM_Time_IAS_Cleaned[SIGNAL_MAX];
 TH1D* H_SiPMLowHigh_Time_One[SIGNAL_MAX];
 TH1D* H_SiPMLowHigh_Time_Multiple[SIGNAL_MAX];
 TH2D* H_SiPMLowHigh_TimeChannel_One[SIGNAL_MAX];
@@ -129,11 +111,9 @@ TH2D* H_RearSiPM_Channel_Nearest_Group[SIGNAL_MAX][SIGNAL_MAX];
 TH1D* H_2SiPM_Time_Next[SIGNAL_MAX][SIGNAL_MAX];
 TH1D* H_RearSiPM_Time_New_Nearest[SIGNAL_MAX];
 TH1D* H_RearSiPM_Time_New_Mean[SIGNAL_MAX];
-TH1D* H_RearSiPM_Time_New_Nearest_Centrer[SIGNAL_MAX];
-TH1D* H_RearSiPM_Time_New_Nearest_Right[SIGNAL_MAX];
-TH1D* H_RearSiPM_Time_New_Nearest_Left[SIGNAL_MAX];
-int counter_graph_fake_events_multiplicity = 0;
-
+TH1D* H_SiPM_Channel_Alone[SIGNAL_MAX];
+TH1D* H_SiPM_Channel_Couple[SIGNAL_MAX];
+TH2D* H_2SiPM_Channel_Couple[SIGNAL_MAX];
 
 // FITS
 TCanvas *C_Strip_Cutting_Fits;
@@ -180,6 +160,8 @@ TH1D *H_RearStrip_Time_G;
 TH2D *H_RearStrip_Label_G;
 // H
 TH1D *H_Channel_H[SIGNAL_MAX];
+//check
+TH2D *H_2Strip_Label_Check;
 //////////////////////////////////////
 
 TGraphErrors *spread_up[SIGNAL_MAX];
@@ -187,6 +169,10 @@ TGraphErrors *spread_down[SIGNAL_MAX];
 TGraphErrors *maximum[SIGNAL_MAX];
 
 ///// DIRECTORY //////////////////
+//Group 
+TDirectory *dir_Group;
+TDirectory *dir_Group_Strip;
+TDirectory *dir_Group_Rear;
 // Detector
 TDirectory *dir_Strip;
 TDirectory *dir_Strip_Channel;
@@ -205,7 +191,6 @@ TDirectory *dir_Rear_Time_Detector[SIGNAL_MAX];
 TDirectory *dir_SiPM_High;
 TDirectory *dir_SiPMHigh_Channel;
 TDirectory *dir_SiPMHigh_Time;
-TDirectory *dir_SiPMHighRear_TimeChannel;
 TDirectory *dir_SiPMHigh_Multiplicity;
 TDirectory *dir_SiPMHigh_Channel_Detector[SIGNAL_MAX];
 TDirectory *dir_SiPMHigh_Time_Detector[SIGNAL_MAX];
@@ -213,7 +198,6 @@ TDirectory *dir_SiPMHigh_Time_Detector[SIGNAL_MAX];
 TDirectory *dir_SiPMLow;
 TDirectory *dir_SiPMLow_Channel;
 TDirectory *dir_SiPMLow_Time;
-TDirectory *dir_SiPMLowRear_TimeChannel;
 TDirectory *dir_SiPMLow_Multiplicity;
 TDirectory *dir_SiPMLow_Channel_Detector[SIGNAL_MAX];
 TDirectory *dir_SiPMLow_Time_Detector[SIGNAL_MAX];
@@ -239,12 +223,16 @@ TDirectory *dir_Matching_Cleaned;
 TDirectory *dir_Fits;
 TDirectory *dirCoincidences;
 
+// FASTER GROUP //
+double lastGroupTime[SIGNAL_MAX];
+double LastrealSignalTime[SIGNAL_MAX];
+Signal LastrealSignal;
+
 ///////// FUCNTION ARRAY /////////////
 TF1 *SpreadAcceptance[SIGNAL_MAX];
 double MeanAcceptance[SIGNAL_MAX];
 TF1 *MeanAcceptance_Walk_Silicon[SIGNAL_MAX];
 TF1 *MeanAcceptance_Walk_SiPM[SIGNAL_MAX];
-pair<double, double> SpreadAcceptance_Walk_SiPM[SIGNAL_MAX];
 
 //////// calibration from Calibration.cc  ////////
 double ManualCalibFitted[SIGNAL_MAX][3];
@@ -354,11 +342,87 @@ void InitCalibration()
   }
 }
 
+void SaveFitParameters()
+{
+  TFile *file = new TFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters.root").c_str(), "RECREATE");
+
+  TGraph *MeanAcceptance_Graph = new TGraph();
+  for (int i = 0; i < detectorNum; i++)
+  {
+    if (IsDetectorBeta(i))
+    {
+      MeanAcceptance_Walk_SiPM[i]->SetName(("MeanAcceptance_Walk_SiPM_" + detectorName[i]).c_str());
+      MeanAcceptance_Walk_SiPM[i]->Write();
+    }
+    else if (IsDetectorSiliBack(i))
+    {
+      MeanAcceptance_Walk_Silicon[i]->SetName(("MeanAcceptance_Walk_Silicon_" + detectorName[i]).c_str());
+      MeanAcceptance_Walk_Silicon[i]->Write();
+    }
+    else if (IsDetectorSiliStrip(i))
+    {
+      SpreadAcceptance[i]->SetName(("SpreadAcceptance_" + detectorName[i]).c_str());
+      SpreadAcceptance[i]->Write();
+
+      MeanAcceptance_Graph->SetPoint(i, i, MeanAcceptance[i]);
+    }
+  }
+  MeanAcceptance_Graph->SetName("MeanAcceptance");
+  MeanAcceptance_Graph->Write();
+
+  file->Close();
+}
+
+void LoadFitParameters()
+{
+  TFile *file = new TFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters.root").c_str(), "READ");
+  for (int i = 0; i < detectorNum; i++)
+  {
+    if (IsDetectorBeta(i))
+    {
+      MeanAcceptance_Walk_SiPM[i] = (TF1 *)file->Get(("MeanAcceptance_Walk_SiPM_" + detectorName[i]).c_str());
+      if (MeanAcceptance_Walk_SiPM[i] == nullptr)
+      {
+        Error(("MeanAcceptance_Walk_SiPM_" + detectorName[i]));
+      }
+    }
+    else if (IsDetectorSiliBack(i))
+    {
+      MeanAcceptance_Walk_Silicon[i] = (TF1 *)file->Get(("MeanAcceptance_Walk_Silicon_" + detectorName[i]).c_str());
+      if (MeanAcceptance_Walk_Silicon[i] == nullptr)
+      {
+        Error(("MeanAcceptance_Walk_Silicon_" + detectorName[i]));
+      }
+    }
+    else if (IsDetectorSiliStrip(i))
+    {
+      SpreadAcceptance[i] = (TF1 *)file->Get(("SpreadAcceptance_" + detectorName[i]).c_str());
+      MeanAcceptance[i] = ((TGraph *)file->Get("MeanAcceptance"))->GetY()[i];
+      if (SpreadAcceptance[i] == nullptr)
+      {
+        Error(("SpreadAcceptance_" + detectorName[i]).c_str());
+      }
+      if (MeanAcceptance[i] == 0.)
+      {
+        Error(("MeanAcceptance_" + detectorName[i]).c_str());
+      }
+    }
+  }
+  file->Close();
+  GROUPED_File->cd();
+  Success("Fit parameters loaded");
+}
+
 //////////////////////////////////////
 
 inline int InitHistograms_Grouped()
 {
+ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
 
+  // Group
+  dir_Group = GROUPED_File->mkdir("Group");
+  dir_Group_Strip = dir_Group->mkdir("Strip");
+  dir_Group_Rear = dir_Group->mkdir("Rear");
   /// STRIP
   dir_Strip = GROUPED_File->mkdir("Strip");
   dir_Strip_Channel = dir_Strip->mkdir("Strip_Channel");
@@ -375,14 +439,12 @@ inline int InitHistograms_Grouped()
   dir_SiPM_High = GROUPED_File->mkdir("SiPM_High");
   dir_SiPMHigh_Channel = dir_SiPM_High->mkdir("SiPMHigh_Channel");
   dir_SiPMHigh_Time = dir_SiPM_High->mkdir("SiPMHigh_Time");
-  dir_SiPMHighRear_TimeChannel = dir_SiPM_High->mkdir("SiPMHighRear_TimeChannel");
   dir_SiPMHigh_Multiplicity = dir_SiPM_High->mkdir("SiPMHigh_Multiplicity");
 
   ////SiPM Low
   dir_SiPMLow = GROUPED_File->mkdir("SiPMLow");
   dir_SiPMLow_Channel = dir_SiPMLow->mkdir("SiPMLow_Channel");
   dir_SiPMLow_Time = dir_SiPMLow->mkdir("SiPMLow_Time");
-  dir_SiPMLowRear_TimeChannel = dir_SiPMLow->mkdir("SiPMLowRear_TimeChannel");
   dir_SiPMLow_Multiplicity = dir_SiPMLow->mkdir("SiPMLow_Multiplicity");
 
   /// CASES
@@ -406,15 +468,6 @@ inline int InitHistograms_Grouped()
   C_IAS_Channel_Cleaned = new TCanvas("C_IAS_Channel_Cleaned", "C_IAS_Channel_Cleaned", 800, 800);
   C_IAS_Channel_Cleaned->Divide(4, 2);
   
-  for (int i = 0; i <= MAX_MULTIPLICTY; i++)
-  {
-    dir_Cleaned_HighSiPM_TimeCoincidence_Mulitplicity[i] = dir_Cleaned->mkdir(("HighSiPM_TimeCoincidence_M" + to_string(i)).c_str());
-    dir_Cleaned_LowSiPM_TimeCoincidence_Mulitplicity[i] = dir_Cleaned->mkdir(("LowSiPM_TimeCoincidence_M" + to_string(i)).c_str());
-  }
-
-  for (int i = CoincidenceTime_BIN; i <= CoincidenceTime_MAX; i += CoincidenceTime_BIN) {
-    CoincidenceTime.push_back(i);
-  }
 
   // FIT RESULTS
   dir_Fits = GROUPED_File->mkdir("Fits");
@@ -435,6 +488,24 @@ inline int InitHistograms_Grouped()
     {
       dir_Strip_Channel_Detector[i] = dir_Strip_Channel->mkdir(detectorName[i].c_str());
       dir_Strip_Time_Detector[i] = dir_Strip_Time->mkdir(detectorName[i].c_str());
+
+      H_Group_Time[i] = new TH1D(("Group_Time_" + detectorName[i]).c_str(), ("Group_Time_" + detectorName[i]).c_str(), 1e4, 0, 1e9); // 1 ms      
+      H_Group_Time[i]->GetXaxis()->SetTitle("Time (ns)");
+      H_Group_Time[i]->GetYaxis()->SetTitle("Counts");
+      H_Group_Time[i]->GetXaxis()->CenterTitle();
+      H_Group_Time[i]->GetYaxis()->CenterTitle();
+
+      H_Group_ChannelTime[i] = new TH2D(("Group_ChannelTime_" + detectorName[i]).c_str(), ("Group_ChannelTime_" + detectorName[i]).c_str(), 1e4, 0, 1e8, 1.5e3, 35e3, 50e3);
+      H_Group_ChannelTime[i]->GetXaxis()->SetTitle("Time (ns)");
+      H_Group_ChannelTime[i]->GetYaxis()->SetTitle("Channel");
+      H_Group_ChannelTime[i]->GetXaxis()->CenterTitle();
+      H_Group_ChannelTime[i]->GetYaxis()->CenterTitle();
+
+      H_Channel_Group[i] = new TH1D(("Channel_Group_" + detectorName[i]).c_str(), ("Channel_Group_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
+      H_Channel_Group[i]->GetXaxis()->SetTitle("Channel");
+      H_Channel_Group[i]->GetYaxis()->SetTitle("Counts");
+      H_Channel_Group[i]->GetXaxis()->CenterTitle();
+      H_Channel_Group[i]->GetYaxis()->CenterTitle();
 
       H_Channel_RAW[i] = new TH1D(("Channel_RAW_" + detectorName[i]).c_str(), ("Channel_RAW_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
       H_Channel_RAW[i]->GetXaxis()->SetTitle("Channel");
@@ -520,7 +591,7 @@ inline int InitHistograms_Grouped()
       H_RearStrip_Channel_RAW[i]->GetXaxis()->CenterTitle();
       H_RearStrip_Channel_RAW[i]->GetYaxis()->CenterTitle();
 
-      H_RearStrip_Channel_A[i] = new TH2D(("RearStrip_Channel_A_" + detectorName[i]).c_str(), ("RearStrip_Channel_A_" + detectorName[i]).c_str(), eSiliN / 10, 40e3, 50e3, eSiliN / 10, 30e3, 40e3);
+      H_RearStrip_Channel_A[i] = new TH2D(("RearStrip_Channel_A_" + detectorName[i]).c_str(), ("RearStrip_Channel_A_" + detectorName[i]).c_str(), eSiliN / 10, eSiliMin, eSiliMax, eSiliN / 10, eSiliMin, eSiliMax);
       H_RearStrip_Channel_A[i]->GetXaxis()->SetTitle("Rear Channel");
       H_RearStrip_Channel_A[i]->GetYaxis()->SetTitle("Strip Channel");
       H_RearStrip_Channel_A[i]->GetXaxis()->CenterTitle();
@@ -658,6 +729,23 @@ inline int InitHistograms_Grouped()
 
       dir_Rear_Channel_Detector[i] = dir_Rear_Channel->mkdir(detectorName[i].c_str());
       dir_Rear_Time_Detector[i] = dir_Rear_Time->mkdir(detectorName[i].c_str());
+
+      H_Group_Time[i] = new TH1D(("Group_Time_" + detectorName[i]).c_str(), ("Group_Time_" + detectorName[i]).c_str(), 1e4, 0, 1e9); // 1 ms            H_Group_Time[i]->GetXaxis()->SetTitle("Time (ns)");
+      H_Group_Time[i]->GetYaxis()->SetTitle("Counts");
+      H_Group_Time[i]->GetXaxis()->CenterTitle();
+      H_Group_Time[i]->GetYaxis()->CenterTitle();
+
+      H_Group_ChannelTime[i] = new TH2D(("Group_ChannelTime_" + detectorName[i]).c_str(), ("Group_ChannelTime_" + detectorName[i]).c_str(), 1e4, 0, 1e9, eSiliN/10, 20e3, 60e3);
+      H_Group_ChannelTime[i]->GetYaxis()->SetTitle("Channel");
+      H_Group_ChannelTime[i]->GetXaxis()->SetTitle("Time (ns)");
+      H_Group_ChannelTime[i]->GetXaxis()->CenterTitle();
+      H_Group_ChannelTime[i]->GetYaxis()->CenterTitle();
+
+      H_Channel_Group[i] = new TH1D(("Channel_Group_" + detectorName[i]).c_str(), ("Channel_Group_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);  
+      H_Channel_Group[i]->GetXaxis()->SetTitle("Channel");
+      H_Channel_Group[i]->GetYaxis()->SetTitle("Counts");
+      H_Channel_Group[i]->GetXaxis()->CenterTitle();
+      H_Channel_Group[i]->GetYaxis()->CenterTitle();
 
       H_Channel_RAW[i] = new TH1D(("Channel_RAW_" + detectorName[i]).c_str(), ("Channel_RAW_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
       H_Channel_RAW[i]->GetXaxis()->SetTitle("Channel");
@@ -918,24 +1006,6 @@ inline int InitHistograms_Grouped()
       H_SiPM_ChannelTime_Cleaned[i]->GetXaxis()->CenterTitle();
       H_SiPM_ChannelTime_Cleaned[i]->GetYaxis()->CenterTitle();
 
-      H_SiPM_Mulitplicity_Cleaned[i] = new TH1D(("SiPM_Mulitplicity_Cleaned_" + detectorName[i]).c_str(), ("SiPM_Mulitplicity_Cleaned_" + detectorName[i]).c_str(), 20, 0, 20);
-      H_SiPM_Mulitplicity_Cleaned[i]->GetXaxis()->SetTitle("Multiplicity");
-      H_SiPM_Mulitplicity_Cleaned[i]->GetYaxis()->SetTitle("Counts");
-      H_SiPM_Mulitplicity_Cleaned[i]->GetXaxis()->CenterTitle();
-      H_SiPM_Mulitplicity_Cleaned[i]->GetYaxis()->CenterTitle();
-
-      H_2SiPM_Channel_Cleaned[i] = new TH2D(("2SiPM_Channel_Cleaned_" + detectorName[i]).c_str(), ("2SiPM_Channel_Cleaned_" + detectorName[i]).c_str(), eHighN / 10, eHighMin, eHighMax, eHighN / 10, eHighMin, eHighMax);
-      H_2SiPM_Channel_Cleaned[i]->GetXaxis()->SetTitle("SiPM 1 Channel");
-      H_2SiPM_Channel_Cleaned[i]->GetYaxis()->SetTitle(("SiPM " + to_string(GetDetectorChannel(i)) + " Channel").c_str());
-      H_2SiPM_Channel_Cleaned[i]->GetXaxis()->CenterTitle();
-      H_2SiPM_Channel_Cleaned[i]->GetYaxis()->CenterTitle();
-
-      H_2SiPM_Time_IAS_Cleaned[i] = new TH1D(("2SiPM_Time_IAS_Cleaned_" + detectorName[i]).c_str(), ("2SiPM_Time_IAS_Cleaned_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-      H_2SiPM_Time_IAS_Cleaned[i]->GetXaxis()->SetTitle("Time between 2 SiPMs (ns)");
-      H_2SiPM_Time_IAS_Cleaned[i]->GetYaxis()->SetTitle("Counts");
-      H_2SiPM_Time_IAS_Cleaned[i]->GetXaxis()->CenterTitle();
-      H_2SiPM_Time_IAS_Cleaned[i]->GetYaxis()->CenterTitle();
-
       H_SiPMLowHigh_Time_One[i] = new TH1D(("SiPMLowHigh_Time_One_" + detectorName[i]).c_str(), ("SiPMLowHigh_Time_One_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
       H_SiPMLowHigh_Time_One[i]->GetXaxis()->SetTitle("Time between LowHigh (ns)");
       H_SiPMLowHigh_Time_One[i]->GetYaxis()->SetTitle("Counts");
@@ -953,6 +1023,31 @@ inline int InitHistograms_Grouped()
       H_SiPMLowHigh_Time_Multiple[i]->GetYaxis()->SetTitle("Counts");
       H_SiPMLowHigh_Time_Multiple[i]->GetXaxis()->CenterTitle();
       H_SiPMLowHigh_Time_Multiple[i]->GetYaxis()->CenterTitle();
+
+      H_SiPM_Channel_Alone[i] = new TH1D(("SiPM_Channel_Alone_" + detectorName[i]).c_str(), ("SiPM_Channel_Alone_" + detectorName[i]).c_str(), eHighN, eHighMin, eHighMax);
+      H_SiPM_Channel_Alone[i]->GetXaxis()->SetTitle("SiPM High Channel");
+      H_SiPM_Channel_Alone[i]->GetYaxis()->SetTitle("Counts");
+      H_SiPM_Channel_Alone[i]->GetXaxis()->CenterTitle();
+      H_SiPM_Channel_Alone[i]->GetYaxis()->CenterTitle();
+
+      H_SiPM_Channel_Couple[i] = new TH1D(("SiPM_Channel_Couple_" + detectorName[i]).c_str(), ("SiPM_Channel_Couple_" + detectorName[i]).c_str(), eHighN, eHighMin, eHighMax);
+      H_SiPM_Channel_Couple[i]->GetXaxis()->SetTitle("SiPM High Channel");
+      H_SiPM_Channel_Couple[i]->GetYaxis()->SetTitle("Counts");
+      H_SiPM_Channel_Couple[i]->GetXaxis()->CenterTitle();
+      H_SiPM_Channel_Couple[i]->GetYaxis()->CenterTitle();
+
+      H_2SiPM_Channel_Couple[i] = new TH2D(("2SiPM_Channel_Couple_" + detectorName[i]).c_str(), ("2SiPM_Channel_Couple_" + detectorName[i]).c_str(), eLowN / 10, eLowMin, eLowMax, eHighN / 10, eHighMin, eHighMax);
+      H_2SiPM_Channel_Couple[i]->GetXaxis()->SetTitle("SiPM Low Channel");
+      H_2SiPM_Channel_Couple[i]->GetYaxis()->SetTitle("SiPM HIgh Channel");
+      H_2SiPM_Channel_Couple[i]->GetXaxis()->CenterTitle();
+      H_2SiPM_Channel_Couple[i]->GetYaxis()->CenterTitle();
+
+      H_Channel_Cleaned[i] = new TH1D(("Channel_Cleaned_" + detectorName[i]).c_str(), ("Channel_Cleaned_" + detectorName[i]).c_str(), eHighN, eHighMin, eHighMax);
+      H_Channel_Cleaned[i]->GetXaxis()->SetTitle("Channel");
+      H_Channel_Cleaned[i]->GetYaxis()->SetTitle("Counts");
+      H_Channel_Cleaned[i]->GetXaxis()->CenterTitle();
+      H_Channel_Cleaned[i]->GetYaxis()->CenterTitle();
+
 
       for (int j = i; j < SIGNAL_MAX; j++)
       {
@@ -1026,131 +1121,41 @@ inline int InitHistograms_Grouped()
       H_SiPM_ChannelTime_Cleaned[i]->GetXaxis()->CenterTitle();
       H_SiPM_ChannelTime_Cleaned[i]->GetYaxis()->CenterTitle();
 
-      H_SiPM_Mulitplicity_Cleaned[i] = new TH1D(("SiPM_Mulitplicity_Cleaned_" + detectorName[i]).c_str(), ("SiPM_Mulitplicity_Cleaned_" + detectorName[i]).c_str(), 20, 0, 20);
-      H_SiPM_Mulitplicity_Cleaned[i]->GetXaxis()->SetTitle("Multiplicity");
-      H_SiPM_Mulitplicity_Cleaned[i]->GetYaxis()->SetTitle("Counts");
-      H_SiPM_Mulitplicity_Cleaned[i]->GetXaxis()->CenterTitle();
-      H_SiPM_Mulitplicity_Cleaned[i]->GetYaxis()->CenterTitle();
-    }
+      H_SiPM_Channel_Alone[i] = new TH1D(("SiPM_Channel_Alone_" + detectorName[i]).c_str(), ("SiPM_Channel_Alone_" + detectorName[i]).c_str(), eLowN, eLowMin, eLowMax);  
+      H_SiPM_Channel_Alone[i]->GetXaxis()->SetTitle("SiPM Low Channel");
+      H_SiPM_Channel_Alone[i]->GetYaxis()->SetTitle("Counts");
+      H_SiPM_Channel_Alone[i]->GetXaxis()->CenterTitle();
+      H_SiPM_Channel_Alone[i]->GetYaxis()->CenterTitle();
 
-    
-  }
+      H_SiPM_Channel_Couple[i] = new TH1D(("SiPM_Channel_Couple_" + detectorName[i]).c_str(), ("SiPM_Channel_Couple_" + detectorName[i]).c_str(), eLowN, eLowMin, eLowMax);
+      H_SiPM_Channel_Couple[i]->GetXaxis()->SetTitle("SiPM Low Channel");
+      H_SiPM_Channel_Couple[i]->GetYaxis()->SetTitle("Counts");
+      H_SiPM_Channel_Couple[i]->GetXaxis()->CenterTitle();
+      H_SiPM_Channel_Couple[i]->GetYaxis()->CenterTitle();
 
-  // for each coinc time and multiplicity HIGH
-  for (int index_time = 0; index_time < CoincidenceTime.size(); index_time++)
-  {
-    for (int index_time1 = 0; index_time1 < CoincidenceTime.size(); index_time1++)
-    {
-      for (int mul = 0; mul < SIGNAL_MAX; mul++)
-      {
-        H_HighSiPM_Time_IAS_Cleaned[index_time][index_time1][mul] = new TH1D(("HighSiPM_Time_IAS_Cleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), ("HighSiPM_Time_IAS_Cleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-        H_HighSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-        H_HighSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetYaxis()->SetTitle("Counts");
-        H_HighSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetXaxis()->CenterTitle();
-        H_HighSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetYaxis()->CenterTitle();
+      H_Channel_Cleaned[i] = new TH1D(("Channel_Cleaned_" + detectorName[i]).c_str(), ("Channel_Cleaned_" + detectorName[i]).c_str(), eLowN, eLowMin, eLowMax);
+      H_Channel_Cleaned[i]->GetXaxis()->SetTitle("Channel");
+      H_Channel_Cleaned[i]->GetYaxis()->SetTitle("Counts");
+      H_Channel_Cleaned[i]->GetXaxis()->CenterTitle();
+      H_Channel_Cleaned[i]->GetYaxis()->CenterTitle();
 
-        H_HighSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul] = new TH1D(("HighSiPM_Time_IAS_UnCleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), ("HighSiPM_Time_IAS_UnCleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-        H_HighSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-        H_HighSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetYaxis()->SetTitle("Counts");
-        H_HighSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetXaxis()->CenterTitle();
-        H_HighSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetYaxis()->CenterTitle();
-
-        H_Energy_IAS_Cleaned[index_time][index_time1][mul] = new TH1D(("Energy_IAS_Cleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), ("Energy_IAS_Cleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), eSiliN_cal, eSiliMin_cal, eSiliMax_cal);
-        H_Energy_IAS_Cleaned[index_time][index_time1][mul]->GetXaxis()->SetTitle("Energy (keV)");
-        H_Energy_IAS_Cleaned[index_time][index_time1][mul]->GetYaxis()->SetTitle("Counts");
-        H_Energy_IAS_Cleaned[index_time][index_time1][mul]->GetXaxis()->CenterTitle();
-        H_Energy_IAS_Cleaned[index_time][index_time1][mul]->GetYaxis()->CenterTitle();
-
-        H_Energy_IAS_UnCleaned[index_time][index_time1][mul] = new TH1D(("Energy_IAS_UnCleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), ("Energy_IAS_UnCleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), eSiliN_cal, eSiliMin_cal, eSiliMax_cal);
-        H_Energy_IAS_UnCleaned[index_time][index_time1][mul]->GetXaxis()->SetTitle("Energy (keV)");
-        H_Energy_IAS_UnCleaned[index_time][index_time1][mul]->GetYaxis()->SetTitle("Counts");
-        H_Energy_IAS_UnCleaned[index_time][index_time1][mul]->GetXaxis()->CenterTitle();
-        H_Energy_IAS_UnCleaned[index_time][index_time1][mul]->GetYaxis()->CenterTitle();
-      }
     }
   }
-
-  // for each coinc time and multiplicity LOW
-  for (int index_time = 0; index_time < CoincidenceTime.size(); index_time++)
-  {
-    for (int index_time1 = 0; index_time1 < CoincidenceTime.size(); index_time1++)
-    {
-      for (int mul = 0; mul < SIGNAL_MAX; mul++)
-      {
-        H_LowSiPM_Time_IAS_Cleaned[index_time][index_time1][mul] = new TH1D(("LowSiPM_Time_IAS_Cleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), ("LowSiPM_Time_IAS_Cleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-        H_LowSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-        H_LowSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetYaxis()->SetTitle("Counts");
-        H_LowSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetXaxis()->CenterTitle();
-        H_LowSiPM_Time_IAS_Cleaned[index_time][index_time1][mul]->GetYaxis()->CenterTitle();
-
-        H_LowSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul] = new TH1D(("LowSiPM_Time_IAS_UnCleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), ("LowSiPM_Time_IAS_UnCleaned_" + to_string(CoincidenceTime[index_time]) + "ns_" + to_string(CoincidenceTime[index_time1]) + "ns_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-        H_LowSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-        H_LowSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetYaxis()->SetTitle("Counts");
-        H_LowSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetXaxis()->CenterTitle();
-        H_LowSiPM_Time_IAS_UnCleaned[index_time][index_time1][mul]->GetYaxis()->CenterTitle();
-      }
-    }
-  }
-    
 
   for (int mul = 0; mul < SIGNAL_MAX; mul++)
-    {
-      
-      H_HighSiPM_FakeEvent_Multiplicity[mul] = new TH2D(("HighSiPM_FakeEvent_Multiplicity_M" + to_string(mul)).c_str(), ("HighSiPM_FakeEvent_Multiplicity_M" + to_string(mul)).c_str(), (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, -CoincidenceTime_MAX-CoincidenceTime_BIN/2, 0+CoincidenceTime_BIN/2, (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, 0-CoincidenceTime_BIN/2, CoincidenceTime_MAX+CoincidenceTime_BIN/2);
-      H_HighSiPM_FakeEvent_Multiplicity[mul]->GetXaxis()->SetTitle("Rear-SiPM Time Left (ns)");
-      H_HighSiPM_FakeEvent_Multiplicity[mul]->GetYaxis()->SetTitle("Rear-SiPM Time Right (ns)");
-      H_HighSiPM_FakeEvent_Multiplicity[mul]->GetXaxis()->CenterTitle();
-      H_HighSiPM_FakeEvent_Multiplicity[mul]->GetYaxis()->CenterTitle();
+  {
+    H_RearSiPM_Time_New_Nearest[mul] = new TH1D(("RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str(), ("RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
+    H_RearSiPM_Time_New_Nearest[mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
+    H_RearSiPM_Time_New_Nearest[mul]->GetYaxis()->SetTitle("Counts");
+    H_RearSiPM_Time_New_Nearest[mul]->GetXaxis()->CenterTitle();
+    H_RearSiPM_Time_New_Nearest[mul]->GetYaxis()->CenterTitle();
 
-      H_LowSiPM_FakeEvent_Multiplicity[mul] = new TH2D(("LowSiPM_FakeEvent_Multiplicity_M" + to_string(mul)).c_str(), ("LowSiPM_FakeEvent_Multiplicity_M" + to_string(mul)).c_str(), (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, -CoincidenceTime_MAX-CoincidenceTime_BIN/2, 0+CoincidenceTime_BIN/2, (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, 0-CoincidenceTime_BIN/2, CoincidenceTime_MAX+CoincidenceTime_BIN/2);
-      H_LowSiPM_FakeEvent_Multiplicity[mul]->GetXaxis()->SetTitle("Rear-SiPM Time Left (ns)");
-      H_LowSiPM_FakeEvent_Multiplicity[mul]->GetYaxis()->SetTitle("Rear-SiPM Time Right (ns)");
-      H_LowSiPM_FakeEvent_Multiplicity[mul]->GetXaxis()->CenterTitle();
-      H_LowSiPM_FakeEvent_Multiplicity[mul]->GetYaxis()->CenterTitle();
-
-      H_HighSiPM_Losses_Multiplicity[mul] = new TH2D(("HighSiPM_Losses_Multiplicity_M" + to_string(mul)).c_str(), ("HighSiPM_Losses_Multiplicity_M" + to_string(mul)).c_str(), (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, -CoincidenceTime_MAX-CoincidenceTime_BIN/2, 0+CoincidenceTime_BIN/2, (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, 0-CoincidenceTime_BIN/2, CoincidenceTime_MAX+CoincidenceTime_BIN/2);
-      H_HighSiPM_Losses_Multiplicity[mul]->GetXaxis()->SetTitle("Rear-SiPM Time Left (ns)");
-      H_HighSiPM_Losses_Multiplicity[mul]->GetYaxis()->SetTitle("Rear-SiPM Time Right (ns)");
-      H_HighSiPM_Losses_Multiplicity[mul]->GetXaxis()->CenterTitle();
-      H_HighSiPM_Losses_Multiplicity[mul]->GetYaxis()->CenterTitle();
-
-      H_LowSiPM_Losses_Multiplicity[mul] = new TH2D(("LowSiPM_Losses_Multiplicity_M" + to_string(mul)).c_str(), ("LowSiPM_Losses_Multiplicity_M" + to_string(mul)).c_str(), (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, -CoincidenceTime_MAX-CoincidenceTime_BIN/2, 0+CoincidenceTime_BIN/2, (CoincidenceTime_MAX)/CoincidenceTime_BIN+1, 0-CoincidenceTime_BIN/2, CoincidenceTime_MAX+CoincidenceTime_BIN/2);
-      H_LowSiPM_Losses_Multiplicity[mul]->GetXaxis()->SetTitle("Rear-SiPM Time Left (ns)");
-      H_LowSiPM_Losses_Multiplicity[mul]->GetYaxis()->SetTitle("Rear-SiPM Time Right (ns)");
-      H_LowSiPM_Losses_Multiplicity[mul]->GetXaxis()->CenterTitle();
-      H_LowSiPM_Losses_Multiplicity[mul]->GetYaxis()->CenterTitle();
-
-      H_RearSiPM_Time_New_Nearest[mul] = new TH1D(("RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str(), ("RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-      H_RearSiPM_Time_New_Nearest[mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_Time_New_Nearest[mul]->GetYaxis()->SetTitle("Counts");
-      H_RearSiPM_Time_New_Nearest[mul]->GetXaxis()->CenterTitle();
-      H_RearSiPM_Time_New_Nearest[mul]->GetYaxis()->CenterTitle();
-
-      H_RearSiPM_Time_New_Mean[mul] = new TH1D(("RearSiPM_Time_New_Mean_M" + to_string(mul)).c_str(), ("RearSiPM_Time_New_Mean_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-      H_RearSiPM_Time_New_Mean[mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_Time_New_Mean[mul]->GetYaxis()->SetTitle("Counts");
-      H_RearSiPM_Time_New_Mean[mul]->GetXaxis()->CenterTitle();
-      H_RearSiPM_Time_New_Mean[mul]->GetYaxis()->CenterTitle();
-
-      H_RearSiPM_Time_New_Nearest_Centrer[mul] = new TH1D(("RearSiPM_Time_New_Nearest_Centrer_M" + to_string(mul)).c_str(), ("RearSiPM_Time_New_Nearest_Centrer_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-      H_RearSiPM_Time_New_Nearest_Centrer[mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_Time_New_Nearest_Centrer[mul]->GetYaxis()->SetTitle("Counts");
-      H_RearSiPM_Time_New_Nearest_Centrer[mul]->GetXaxis()->CenterTitle();
-      H_RearSiPM_Time_New_Nearest_Centrer[mul]->GetYaxis()->CenterTitle();
-
-      H_RearSiPM_Time_New_Nearest_Right[mul] = new TH1D(("RearSiPM_Time_New_Nearest_Right_M" + to_string(mul)).c_str(), ("RearSiPM_Time_New_Nearest_Right_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-      H_RearSiPM_Time_New_Nearest_Right[mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_Time_New_Nearest_Right[mul]->GetYaxis()->SetTitle("Counts");
-      H_RearSiPM_Time_New_Nearest_Right[mul]->GetXaxis()->CenterTitle();
-      H_RearSiPM_Time_New_Nearest_Right[mul]->GetYaxis()->CenterTitle();
-
-      H_RearSiPM_Time_New_Nearest_Left[mul] = new TH1D(("RearSiPM_Time_New_Nearest_Left_M" + to_string(mul)).c_str(), ("RearSiPM_Time_New_Nearest_Left_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
-      H_RearSiPM_Time_New_Nearest_Left[mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_Time_New_Nearest_Left[mul]->GetYaxis()->SetTitle("Counts");
-      H_RearSiPM_Time_New_Nearest_Left[mul]->GetXaxis()->CenterTitle();
-      H_RearSiPM_Time_New_Nearest_Left[mul]->GetYaxis()->CenterTitle();
-    }
-
+    H_RearSiPM_Time_New_Mean[mul] = new TH1D(("RearSiPM_Time_New_Mean_M" + to_string(mul)).c_str(), ("RearSiPM_Time_New_Mean_M" + to_string(mul)).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
+    H_RearSiPM_Time_New_Mean[mul]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
+    H_RearSiPM_Time_New_Mean[mul]->GetYaxis()->SetTitle("Counts");
+    H_RearSiPM_Time_New_Mean[mul]->GetXaxis()->CenterTitle();
+    H_RearSiPM_Time_New_Mean[mul]->GetYaxis()->CenterTitle();
+  }
 
   //////////////////////////////
   /////// FROM RAW GROUP ///////
@@ -1233,6 +1238,16 @@ inline int InitHistograms_Grouped()
   H_RearStrip_Label_G->GetXaxis()->CenterTitle();
   H_RearStrip_Label_G->GetYaxis()->CenterTitle();
 
+  ///////////////////////////////////////////
+  /////// checking faster configuration /////
+  ///////////////////////////////////////////
+
+  H_2Strip_Label_Check = new TH2D("2Strip_Label_Check", "2Strip_Label_Check", 80, 10, 90, 80, 10, 90);
+  H_2Strip_Label_Check->GetXaxis()->SetTitle("Strip Label");
+  H_2Strip_Label_Check->GetYaxis()->SetTitle("Strip Label");
+  H_2Strip_Label_Check->GetXaxis()->CenterTitle();
+  H_2Strip_Label_Check->GetYaxis()->CenterTitle();
+
   //////////////////////////////////////////
   /////// FROM CUTTED //////////////////////
   //////////////////////////////////////////
@@ -1265,12 +1280,9 @@ inline int InitHistograms_Grouped()
   H_SiPMHigh_Mulitplicity_Cleaned->GetXaxis()->CenterTitle();
   H_SiPMHigh_Mulitplicity_Cleaned->GetYaxis()->CenterTitle();
 
+  
+
   //////////////////////////////////////////////////////
-  H_Energy_IAS = new TH1D("Energy_IAS", "Energy_IAS", eSiliN_cal, eSiliMin_cal, eSiliMax_cal);
-  H_Energy_IAS->GetXaxis()->SetTitle("Energy (keV)");
-  H_Energy_IAS->GetYaxis()->SetTitle("Counts");
-  H_Energy_IAS->GetXaxis()->CenterTitle();
-  H_Energy_IAS->GetYaxis()->CenterTitle();
 
   return 0;
 }
@@ -1288,6 +1300,7 @@ inline int WriteHistograms_Grouped()
       ///////////// CHANNEL //////////////////////////////////////////////////////
       Verbose("Channel", VERBOSE, 1);
       // WRTTING //
+      dir_Group_Strip->cd();
       dir_Strip_Channel_Detector[i]->cd();
       H_Channel_RAW[i]->Write();
       H_Channel_PileUp[i]->Write();
@@ -1473,6 +1486,8 @@ inline int WriteHistograms_Grouped()
 
     if (IsDetectorSiliBack(i))
     {
+      // GROUP
+      dir_Group_Rear->cd();
       // CHANNEL
       dir_Rear_Channel_Detector[i]->cd();
       H_Channel_RAW[i]->Write();
@@ -1552,6 +1567,7 @@ inline int WriteHistograms_Grouped()
   H_2Strip_Label_D->Write();
   H_2Strip_Label_E->Write();
   H_RearStrip_Label_G->Write();
+  H_2Strip_Label_Check->Write();
 
   dir_Strip_Time->cd();
   H_RearStrip_Time_G->Write();
@@ -1574,6 +1590,7 @@ inline int WriteHistograms_Grouped()
   dir_SiPMHigh_Multiplicity->cd();
   H_SiPMHigh_Mulitplicity_RAW->Write();
 
+  GROUPED_File->cd();
   return 0;
 }
 
@@ -1712,10 +1729,10 @@ inline void WriteHistograms_Cutted()
       G_Rear_Mean_Walk_Silicon[i]->SetMarkerSize(0.5);
       G_Rear_Mean_Walk_Silicon[i]->Draw("AP");
       MeanAcceptance_Walk_Silicon[i] = new TF1("inverse", "[0] + [1]/(x+[2])");
-      MeanAcceptance_Walk_Silicon[i]->SetParameters(150, -1e6, -1000);
+      MeanAcceptance_Walk_Silicon[i]->SetParameters(150, -1e6, 2000);
       MeanAcceptance_Walk_Silicon[i]->SetParLimits(0, 20, 150);
       MeanAcceptance_Walk_Silicon[i]->SetParLimits(1, -1e7, -1e5);
-      MeanAcceptance_Walk_Silicon[i]->SetParLimits(2, -150000, 0);
+      MeanAcceptance_Walk_Silicon[i]->SetParLimits(2, -150000, 10000);
 
       int status = G_Rear_Mean_Walk_Silicon[i]->Fit(MeanAcceptance_Walk_Silicon[i], "Q");
       if (status != 0)
@@ -1960,83 +1977,6 @@ inline void WriteHistograms_SiPMWalk()
       P_SiPM_ChannelTime_Walk_SiPM->cd();
       P_SiPM_ChannelTime_Walk_SiPM->SetLogz();
       H_SiPM_ChannelTime_Walk_Corrected[i]->Draw("COLZ");
-
-      // 4th
-      //  C_SiPM_ChannelTime_Walk_SiPM[i]->cd();
-      //  TPad *P_SiPM_ChannelTime_Walk_SiPM_proj = new TPad("P_SiPM_ChannelTime_Walk_SiPM_proj", "P_SiPM_ChannelTime_Walk_SiPM_proj", 0.55, 0.05, 1., 0.5);
-      //  P_SiPM_ChannelTime_Walk_SiPM_proj->Draw();
-      //  P_SiPM_ChannelTime_Walk_SiPM_proj->cd();
-      //  P_SiPM_ChannelTime_Walk_SiPM_proj->SetLogy();
-      //  TH1D *proj = (TH1D *)H_SiPM_ChannelTime_Walk_Corrected[i]->ProjectionX(("H_SiPM_ChannelTime_Walk_SiPM_projx" + detectorName[i]).c_str());
-      //  proj->Draw("HIST");
-
-      // proj->GetXaxis()->SetRangeUser(-200, 200);
-      // TH1D *BKG = (TH1D*)proj->ShowBackground(20, "SAME");
-
-      // TH1D *Distribution = (TH1D*)proj->Clone(("Distribution_" + detectorName[i]).c_str());
-      // Distribution->Add(BKG, -1);
-
-      // LIMIT CALCULATION 3-SIGMA
-      double range[2];
-      // double total = 0;
-      // for (int bin = 0; bin < Distribution->GetNbinsX(); bin++)
-      // {
-      //   if (Distribution->GetBinCenter(bin) > -200 && Distribution->GetBinCenter(bin) < 200)
-      //   {
-      //     total += Distribution->GetBinContent(bin);
-      //   }
-      // }
-      // double first = total * 0.00135;
-      // double last = total * 0.99865;
-      // double integral = 0;
-      // for (int bin = 0; bin < Distribution->GetNbinsX(); bin++)
-      // {
-      //   if (Distribution->GetBinCenter(bin) > -200 && Distribution->GetBinCenter(bin) < 200)
-      //   {
-      //     if ((integral < first) && ((integral + Distribution->GetBinContent(bin)) > first))
-      //     {
-      //       range[0] = Distribution->GetBinCenter(bin);
-      //     }
-      //     else if ((integral < last) && ((integral + Distribution->GetBinContent(bin)) > last))
-      //     {
-      //       range[1] = Distribution->GetBinCenter(bin);
-      //     }
-      //     integral += Distribution->GetBinContent(bin);
-      //   }
-      // }
-      /////////////////////////////////
-
-      /////// MANUAL CUTS ////////
-      range[0] = -30;
-      range[1] = 20;
-      ////////////////////////////
-
-      // DISPLAY SELECTION
-      // double integral_tot = 0;
-      // double integral_BKG = 0;
-      // for (int bin = 0; bin < proj->GetNbinsX(); bin++)
-      // {
-      //   if (proj->GetBinCenter(bin) < range[0] || proj->GetBinCenter(bin) > range[1])
-      //   {
-      //     proj->SetBinContent(bin, 0);
-      //   }
-      //   if (proj->GetBinCenter(bin) > range[0] && proj->GetBinCenter(bin) < range[1])
-      //   {
-      //     integral_tot += proj->GetBinContent(bin);
-      //     integral_BKG += BKG->GetBinContent(bin);
-      //   }
-      // }
-      // TH1D *H_Selection = (TH1D *)proj->DrawCopy("SAME");
-      // H_Selection->GetXaxis()->SetRangeUser(range[0], range[1]);
-      // H_Selection->SetFillColor(kRed);
-      // H_Selection->SetFillStyle(3244);
-
-      // Saving for cuts
-      // if (IsDetectorBetaLow(i))
-      SpreadAcceptance_Walk_SiPM[GetDetectorChannel(i)] = make_pair(range[0], range[1]);
-
-      // cout << " Signal/Noise: " << setprecision(10) << (integral_tot-integral_BKG)/integral_tot << "        Ranges:" << range[0] << "  " << range[1] << endl;
-
       C_SiPM_ChannelTime_Walk_SiPM[i]->Write();
     }
   }
@@ -2051,6 +1991,19 @@ inline void WriteHistograms_Cleaned()
     ProgressCounter(i, detectorNum, " <INFO>  Writing Histograms");
     if (IsDetectorSiliStrip(i))
     {
+      // if (!FULL)
+      // {   
+        dir_Group_Strip->cd();
+        H_Group_Time[i]->Write();
+        H_Group_ChannelTime[i]->Write();
+        H_Channel_Group[i]->Write();
+        TCanvas *c = new TCanvas(("C_Group_ChannelTime_" + detectorName[i]).c_str(), ("C_Group_ChannelTime_" + detectorName[i]).c_str(), 800, 400);
+        H_Channel_RAW[i]->Draw("HIST");
+        H_Channel_Group[i]->SetLineColor(kRed);
+        H_Channel_Group[i]->Draw("SAME");
+        c->Write();
+      // }
+
       dir_Strip_Channel_Detector[i]->cd();
       H_Channel_Cleaned[i]->Write();
       H_RearMatched_Channel_Cleaned[i]->Write();
@@ -2072,6 +2025,18 @@ inline void WriteHistograms_Cleaned()
     }
     if (IsDetectorSiliBack(i))
     {
+      // if (!FULL)
+      // {   
+        dir_Group_Rear->cd();
+        H_Group_Time[i]->Write();
+        H_Group_ChannelTime[i]->Write();
+        H_Channel_Group[i]->Write();
+        TCanvas *c = new TCanvas(("C_Group_ChannelTime_" + detectorName[i]).c_str(), ("C_Group_ChannelTime_" + detectorName[i]).c_str(), 800, 400);
+        H_Channel_RAW[i]->Draw("HIST");
+        H_Channel_Group[i]->SetLineColor(kRed);
+        H_Channel_Group[i]->Draw("SAME");
+        c->Write();
+      // }
       dir_Rear_Channel_Detector[i]->cd();
       H_Channel_Cleaned[i]->Write();
       H_Rear_Channel_IAS_Cleaned[i]->Write();
@@ -2099,12 +2064,16 @@ inline void WriteHistograms_Cleaned()
 
     if (IsDetectorBetaHigh(i))
     {
+      dir_SiPMHigh_Channel_Detector[i]->cd();
+      H_SiPM_Channel_Alone[i]->Write();
+      H_SiPM_Channel_Couple[i]->Write();
+      H_2SiPM_Channel_Couple[i]->Write();
+      H_Channel_Cleaned[i]->Write();
+
       dir_SiPMHigh_Time_Detector[i]->cd();
       H_SiPM_ChannelTime_Walk_Corrected[i]->Write();
       H_SiPM_ChannelTime_Cleaned[i]->Write();
-      H_SiPM_Mulitplicity_Cleaned[i]->Write();
-      H_2SiPM_Channel_Cleaned[i]->Write();
-      H_2SiPM_Time_IAS_Cleaned[i]->Write();
+      
       
       H_SiPMLowHigh_Time_One[i]->Write();
       H_SiPMLowHigh_TimeChannel_One[i]->Write();
@@ -2118,214 +2087,24 @@ inline void WriteHistograms_Cleaned()
           H_RearSiPM_Channel_Nearset_Nearest[i][j]->Write();
           H_RearSiPM_Channel_Nearest_Group[i][j]->Write();
           H_2SiPM_Time_Next[i][j]->Write();
+          
         }
       }
-
     }
 
     if (IsDetectorBetaLow(i))
     {
+      dir_SiPMLow_Channel_Detector[i]->cd();
+      H_SiPM_Channel_Alone[i]->Write();
+      H_SiPM_Channel_Couple[i]->Write();
+      H_Channel_Cleaned[i]->Write();
+
       dir_SiPMLow_Time_Detector[i]->cd();
       H_SiPM_ChannelTime_Walk_Corrected[i]->Write();
       H_SiPM_ChannelTime_Cleaned[i]->Write();
-      H_SiPM_Mulitplicity_Cleaned[i]->Write();
+      
     }
   }
-
-  //// TOTAL AS REF FOR LOSSES /////
-  int vector_size = CoincidenceTime.size() - 1;
-  double total_integral_maxtimeHigh[BETA_SIZE + 1];
-  double total_integral_maxtimeLow[BETA_SIZE + 1];
-  for (int mul = 1; mul <= BETA_SIZE; mul++)
-  {
-    // H_HighSiPM_Time_IAS_UnCleaned[vector_size][vector_size][mul]->GetXaxis()->SetRangeUser(-200, 300);
-    // TH1D *BKG = (TH1D *)H_HighSiPM_Time_IAS_UnCleaned[vector_size][vector_size][mul]->ShowBackground(20);
-    //// COMPUTING SIGNAL/NOISE
-    double integral_tot = H_HighSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->Integral();
-    double integral_rl_window = H_HighSiPM_Time_IAS_UnCleaned[vector_size][vector_size][mul]->Integral()/2;
-    // for (int bin = 0; bin < H_HighSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->GetNbinsX(); bin++)
-    // {
-    //   if (H_HighSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->GetBinCenter(bin) > -CoincidenceTime[vector_size] && H_HighSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->GetBinCenter(bin) < CoincidenceTime[vector_size])
-    //   {
-    //     integral_tot += H_HighSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->GetBinContent(bin);
-    //     integral_BKG += BKG->GetBinContent(bin);
-    //   }
-    // }
-    total_integral_maxtimeHigh[mul] = integral_tot-integral_rl_window;
-
-    // H_LowSiPM_Time_IAS_UnCleaned[vector_size][vector_size][mul]->GetXaxis()->SetRangeUser(-200, 300);
-    // TH1D *BKG_Low = (TH1D *)H_LowSiPM_Time_IAS_UnCleaned[vector_size][vector_size][mul]->ShowBackground(20);
-    //// COMPUTING SIGNAL/NOISE
-    double integral_tot_Low = H_LowSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->Integral();
-    double integral_rl_window_Low = H_LowSiPM_Time_IAS_UnCleaned[vector_size][vector_size][mul]->Integral()/2;
-    // for (int bin = 0; bin < H_LowSiPM_Time_IAS_UnCleaned[vector_size][vector_size][mul]->GetNbinsX(); bin++)
-    // {
-    //   if (H_LowSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->GetBinCenter(bin) > -CoincidenceTime[vector_size] && H_LowSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->GetBinCenter(bin) < CoincidenceTime[vector_size])
-    //   {
-    //     integral_tot_Low += H_LowSiPM_Time_IAS_Cleaned[vector_size][vector_size][mul]->GetBinContent(bin);
-    //     integral_BKG_Low += BKG_Low->GetBinContent(bin);
-    //   }
-    // }
-    total_integral_maxtimeLow[mul] = integral_tot_Low - integral_rl_window_Low;
-  }
-
-  ///////////////////////////////////////////////////////////////////////////////////////////
-  for (int Time_index_l = 0; Time_index_l < CoincidenceTime.size(); Time_index_l++)
-    {
-      for (int Time_index_r = 0; Time_index_r < CoincidenceTime.size(); Time_index_r++)
-    {
-      for (int mul = 1; mul <= BETA_SIZE; mul++)
-      {
-        // HIGH
-        dir_Cleaned_HighSiPM_TimeCoincidence_Mulitplicity[mul]->cd();
-        // H_HighSiPM_Time_IAS_Cleaned[Time_index][mul]->Write();
-        // H_HighSiPM_Time_IAS_UnCleaned[Time_index][mul]->Write();
-
-        dir_Cleaned_HighSiPM_TimeCoincidence_Mulitplicity[mul]->cd();
-        TCanvas *C_IAS_Time_Cleaned_High = new TCanvas(("C_IAS_Time_Cleaned_High_" + to_string(-CoincidenceTime[Time_index_l]) + "ns_" + to_string(CoincidenceTime[Time_index_r]) +"ns_M" + to_string(mul)).c_str(), ("C_IAS_Time_Cleaned_" + to_string(CoincidenceTime[Time_index_l]) + "ns_" + to_string(CoincidenceTime[Time_index_r]) +"ns_M" + to_string(mul)).c_str(), 800, 400);
-        
-        C_IAS_Time_Cleaned_High->Divide(3, 1);
-        C_IAS_Time_Cleaned_High->cd(1);
-        C_IAS_Time_Cleaned_High->SetLogy();
-        H_HighSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->GetYaxis()->SetRangeUser(1, -1111);
-        H_HighSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->SetFillStyle(3244);
-        H_HighSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->SetFillColor(kRed);
-        H_HighSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->Draw("HIST");
-        H_HighSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->SetFillColor(3244);
-        H_HighSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->SetLineColor(kBlack);
-        H_HighSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->Draw("SAME");
-        
-
-        // H_HighSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->GetXaxis()->SetRangeUser(-200, 300);
-        // TH1D *BKG = (TH1D *)H_HighSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->ShowBackground(20);
-
-        //// COMPUTING SIGNAL/NOISE
-        double integral_tot = H_HighSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->Integral();
-        double integral_rl_window = H_HighSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->Integral()/2;
-        
-        TLatex *text = new TLatex();
-        text->SetNDC();
-        text->SetTextSize(0.03);
-        text->DrawLatex(0.2, 0.8, ("Fake events: " + to_string(integral_rl_window * 100 / integral_tot) + " %").c_str());
-        text->Draw("SAME");
-
-        TLatex *text_loss = new TLatex();
-        text_loss->SetNDC();
-        text_loss->SetTextSize(0.03);
-        text_loss->DrawLatex(0.2, 0.7, ("Losses: " + to_string((total_integral_maxtimeHigh[mul]-(integral_tot-integral_rl_window)) * 100 / total_integral_maxtimeHigh[mul]) + " %").c_str());
-        text_loss->Draw("SAME");
-
-        H_HighSiPM_FakeEvent_Multiplicity[mul]->Fill(-CoincidenceTime[Time_index_l], CoincidenceTime[Time_index_r], integral_rl_window * 100 / integral_tot);
-        H_HighSiPM_Losses_Multiplicity[mul]->Fill(-CoincidenceTime[Time_index_l], CoincidenceTime[Time_index_r], (total_integral_maxtimeHigh[mul]-(integral_tot-integral_rl_window)) * 100 / total_integral_maxtimeHigh[mul]);
-        
-        C_IAS_Time_Cleaned_High->cd(2);
-        C_IAS_Time_Cleaned_High->SetLogy();
-        H_Energy_IAS->GetXaxis()->SetRangeUser(3300, 3400);
-        H_Energy_IAS->GetYaxis()->SetRangeUser(1, -1111);
-        H_Energy_IAS->SetLineColor(kBlue);
-        H_Energy_IAS->Draw("HIST");
-        H_Energy_IAS_Cleaned[Time_index_l][Time_index_r][mul]->SetLineColor(kRed);
-        H_Energy_IAS_Cleaned[Time_index_l][Time_index_r][mul]->Draw("HIST SAME");
-        H_Energy_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->SetLineColor(kBlack);
-        H_Energy_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->Draw("HIST SAME");
-        TLegend *legend = new TLegend(0.1, 0.7, 0.48, 0.9);
-        legend->AddEntry(H_Energy_IAS, "Single", "l");
-        legend->AddEntry(H_Energy_IAS_Cleaned[Time_index_l][Time_index_r][mul], "Coincidence", "l");
-        legend->AddEntry(H_Energy_IAS_UnCleaned[Time_index_l][Time_index_r][mul], "Excluded", "l");
-        legend->Draw("SAME");
-
-        C_IAS_Time_Cleaned_High->cd(3);
-        C_IAS_Time_Cleaned_High->SetLogy();
-        TH1D* sub = (TH1D*)H_Energy_IAS->Clone(("sub_" + to_string(Time_index_l) + "_" + to_string(Time_index_r) + "_" + to_string(mul)).c_str());
-        sub->GetXaxis()->SetRangeUser(3300, 3400);
-        sub->GetYaxis()->SetRangeUser(1, -1111);
-        sub->Add(H_Energy_IAS_Cleaned[Time_index_l][Time_index_r][mul], -1);
-        sub->SetLineColor(kGreen);
-        sub->Scale(H_Energy_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->Integral()/sub->Integral());
-        sub->Draw("HIST");
-        H_Energy_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->Draw("HIST SAME");
-               
-
-        C_IAS_Time_Cleaned_High->Write();
-
-        // LOW
-        dir_Cleaned_LowSiPM_TimeCoincidence_Mulitplicity[mul]->cd();
-        // H_LowSiPM_Time_IAS_Cleaned[Time_index][mul]->Write();
-        // H_LowSiPM_Time_IAS_UnCleaned[Time_index][mul]->Write();
-
-        dir_Cleaned_LowSiPM_TimeCoincidence_Mulitplicity[mul]->cd();
-        TCanvas *C_IAS_Time_Cleaned_low = new TCanvas(("C_IAS_Time_Cleaned_Low_" + to_string(-CoincidenceTime[Time_index_l]) + "ns_" + to_string(CoincidenceTime[Time_index_r]) +"ns_M" + to_string(mul)).c_str(), ("C_IAS_Time_Cleaned_" + to_string(CoincidenceTime[Time_index_l]) + "ns_" + to_string(CoincidenceTime[Time_index_r]) +"ns_M" + to_string(mul)).c_str(), 800, 400);
-        C_IAS_Time_Cleaned_low->cd();
-        C_IAS_Time_Cleaned_low->SetLogy();
-        H_LowSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->SetFillStyle(3244);
-        H_LowSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->SetFillColor(kRed);
-        H_LowSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->Draw("HIST");
-        H_LowSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->SetFillColor(3244);
-       
-        H_LowSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->SetLineColor(kBlack);
-        H_LowSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->Draw("SAME");
-        
-
-        // H_LowSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->GetXaxis()->SetRangeUser(-200, 300);
-        // TH1D *BKG_low = (TH1D *)H_LowSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->ShowBackground(20);
-
-        //// COMPUTING SIGNAL/NOISE
-        double integral_tot_low = H_LowSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->Integral();
-        double integral_rl_window_Low = H_LowSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->Integral()/2;
-        // for (int bin = 0; bin < H_LowSiPM_Time_IAS_UnCleaned[Time_index_l][Time_index_r][mul]->GetNbinsX(); bin++)
-        // {
-        //   if (H_LowSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->GetBinCenter(bin) > -CoincidenceTime[Time_index_l] && H_LowSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->GetBinCenter(bin) < CoincidenceTime[Time_index_r])
-        //   {
-        //     integral_tot_low += H_LowSiPM_Time_IAS_Cleaned[Time_index_l][Time_index_r][mul]->GetBinContent(bin);
-        //     integral_BKG_low += BKG_low->GetBinContent(bin);
-        //   }
-        // }
-
-        TLatex *text_low = new TLatex();
-        text_low->SetNDC();
-        text_low->SetTextSize(0.03);
-        text_low->DrawLatex(0.2, 0.8, ("Fake events: " + to_string(integral_rl_window_Low * 100 / integral_tot_low) + " %").c_str());
-        text_low->Draw("SAME");
-
-        TLatex *text_low_loss = new TLatex();
-        text_low_loss->SetNDC();
-        text_low_loss->SetTextSize(0.03);
-        text_low_loss->DrawLatex(0.2, 0.7, ("Losses: " + to_string((total_integral_maxtimeLow[mul]-(integral_tot_low-integral_rl_window_Low)) * 100 / total_integral_maxtimeLow[mul]) + " %").c_str());
-        text_low_loss->Draw("SAME");
-
-        H_LowSiPM_FakeEvent_Multiplicity[mul]->Fill(-CoincidenceTime[Time_index_l], CoincidenceTime[Time_index_r], integral_rl_window_Low * 100 / integral_tot_low);
-        H_LowSiPM_Losses_Multiplicity[mul]->Fill(-CoincidenceTime[Time_index_l], CoincidenceTime[Time_index_r], (total_integral_maxtimeLow[mul]-(integral_tot_low-integral_rl_window_Low)) * 100 / total_integral_maxtimeLow[mul]);
-        C_IAS_Time_Cleaned_low->Write();
-      }
-    }
-    }
-
-  dir_Cleaned->cd();
-
-  //HIGH
-  for (int mul = 1; mul <= MAX_MULTIPLICTY; mul++)
-  {
-    TCanvas *c = new TCanvas(("C_HighSiPM_FakeMultiplicity_Cleaned_M"+to_string(mul)).c_str(), ("C_HighSiPM_FakeMultiplicity_Cleaned_M"+to_string(mul)).c_str(), 800, 400);
-    H_HighSiPM_FakeEvent_Multiplicity[mul]->Draw("COLZ");
-    c->Write();
-
-    TCanvas *c1 = new TCanvas(("C_HighSiPM_Losses_Multiplicity_Cleaned_M"+to_string(mul)).c_str(), ("C_HighSiPM_Losses_Multiplicity_Cleaned_M"+to_string(mul)).c_str(), 800, 400);
-    H_HighSiPM_Losses_Multiplicity[mul]->Draw("COLZ");
-    c1->Write();
-  }
-
-  //LOW
-  for (int mul = 1; mul <= MAX_MULTIPLICTY; mul++)
-  {
-    TCanvas *c = new TCanvas(("C_LowSiPM_FakeMultiplicity_Cleaned_M"+to_string(mul)).c_str(), ("C_LowSiPM_FakeMultiplicity_Cleaned_M"+to_string(mul)).c_str(), 800, 400);
-    H_LowSiPM_FakeEvent_Multiplicity[mul]->Draw("COLZ");
-    c->Write();
-
-    TCanvas *c1 = new TCanvas(("C_LowSiPM_Losses_Multiplicity_Cleaned_M"+to_string(mul)).c_str(), ("C_LowSiPM_Losses_Multiplicity_Cleaned_M"+to_string(mul)).c_str(), 800, 400);
-    H_LowSiPM_Losses_Multiplicity[mul]->Draw("COLZ");
-    c1->Write();
-  }
-
 
   dir_SiPMHigh_Multiplicity->cd();
   H_SiPMHigh_Mulitplicity_Cleaned->Write();
@@ -2346,53 +2125,7 @@ inline void WriteHistograms_Cleaned()
   {
     H_RearSiPM_Time_New_Nearest[mul]->Write();
     H_RearSiPM_Time_New_Mean[mul]->Write();
-
-    H_RearSiPM_Time_New_Nearest_Centrer[mul]->Write();
-    H_RearSiPM_Time_New_Nearest_Right[mul]->Write();
-    H_RearSiPM_Time_New_Nearest_Left[mul]->Write();
   }
-
-
-  ///// NEW ///////
-  // compte integral of left window 
-  // for (int mul = 1; mul <= BETA_SIZE; mul++)
-  // {
-  //   double integral_left = H_RearSiPM_Time_New_Nearest_Left[mul]->Integral();
-  //   double mean_height_left = integral_left/40;
-
-  //   double integral_right = H_RearSiPM_Time_New_Nearest_Right[mul]->Integral();
-  //   double mean_height_right = integral_right/40;
-
-  //   double integral_center = H_RearSiPM_Time_New_Nearest_Centrer[mul]->Integral();
-
-  //   double integral_true = integral_center - integral_left;
-
-  //   double alpha = (mean_height_right-mean_height_left)/integral_true;
-
-  //   TH1D* H_Fortuitous = (TH1D*)H_RearSiPM_Time_New_Nearest_Centrer[mul]->Clone(("H_Fortuitous_" + to_string(mul)).c_str());
-  //   H_Fortuitous->Reset();
-  //   H_RearSiPM_Time_New_Nearest_Centrer[mul]->ComputeIntegral();
-  //   const double *cumulative = H_RearSiPM_Time_New_Nearest_Centrer[mul]->GetIntegral();
-  //   for (int bin = 0; bin < H_RearSiPM_Time_New_Nearest_Centrer[mul]->GetNbinsX(); bin++)
-  //   {
-  //     H_Fortuitous->SetBinContent(bin, cumulative[bin]*alpha*integral_true + mean_height_left);
-  //   }
-
-  //   TCanvas *C_Fortuitous = new TCanvas(("C_FakeCoincidence_" + to_string(mul)).c_str(), ("C_FakeCoincidence_" + to_string(mul)).c_str(), 800, 400);
-  //   H_RearSiPM_Time_New_Nearest[mul]->Draw("HIST");
-  //   H_Fortuitous->SetLineColor(kRed);
-  //   H_Fortuitous->Draw("SAME");
-  //   C_Fortuitous->Write();
-
-
-  //   TCanvas *C_Windows = new TCanvas (("C_Windows_" + to_string(mul)).c_str(), ("C_Windows_" + to_string(mul)).c_str(), 800, 400);
-  //   H_RearSiPM_Time_New_Nearest_Centrer[mul]->Draw("HIST");
-  //   H_RearSiPM_Time_New_Nearest_Left[mul]->SetLineColor(kRed);
-  //   H_RearSiPM_Time_New_Nearest_Left[mul]->Draw("SAME");
-  //   H_RearSiPM_Time_New_Nearest_Right[mul]->SetLineColor(kRed);
-  //   H_RearSiPM_Time_New_Nearest_Right[mul]->Draw("SAME");
-  //   C_Windows->Write();
-  // }
 }
 
 inline void WriteIASLosses()
@@ -2433,43 +2166,6 @@ inline void WriteIASLosses()
   H_Losses_IAS->SetLineColor(kRed);
   H_Losses_IAS->Draw("SAME");
   C_Losses->Write();
-
-
-  // /// FOR SIPM
-  // TCanvas *C_Losses_SiPM = new TCanvas("C_Losses_SiPM", "C_Losses_SiPM", 800, 400);
-  // TH1D* H_Losses_all_SiPM = new TH1D("H_Losses_all_SiPM", "H_Losses_all_SiPM", 6, 0, 3);
-  // TH1D* H_Losses_IAS_SiPM = new TH1D("H_Losses_IAS_SiPM", "H_Losses_IAS_SiPM", 6, 0, 3);
-
-  // for (int i = 0; i < detectorNum; i++)
-  // {
-  //   if (IsDetectorBetaHigh(i))
-  //   {
-  //     H_Losses_all_SiPM->SetBinContent(0, H_Losses_all_SiPM->GetBinContent(0) + H_SiPMHigh_Mulitplicity_RAW[i]->Integral()); 
-  //     // H_Losses_all_SiPM->SetBinContent(2, H_Losses_all_SiPM->GetBinContent(2) + H_SiPMHigh_Mulitplicity_A[i]->Integral());   
-  //     H_Losses_all_SiPM->SetBinContent(5, H_Losses_all_SiPM->GetBinContent(5) + H_SiPM_Mulitplicity_Cleaned[i]->Integral());  
-      
-  //     H_SiPMHigh_Mulitplicity_RAW[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
-  //     // H_SiPMHigh_Mulitplicity_A[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
-  //     H_SiPM_Mulitplicity_Cleaned[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
-
-  //     H_Losses_IAS_SiPM->SetBinContent(0, H_Losses_IAS_SiPM->GetBinContent(0) + H_SiPMHigh_Mulitplicity_RAW[i]->Integral());
-  //     // H_Losses_IAS_SiPM->SetBinContent(2, H_Losses_IAS_SiPM->GetBinContent(2) + H_SiPMHigh_Mulitplicity_A[i]->Integral());
-  //     H_Losses_IAS_SiPM->SetBinContent(5, H_Losses_IAS_SiPM->GetBinContent(5) + H_SiPM_Mulitplicity_Cleaned[i]->Integral());
-
-  //     H_SiPMHigh_Mulitplicity_RAW[i]->GetXaxis()->SetRangeUser(-1111, 1111);
-  //     // H_SiPMHigh_Mulitplicity_A[i]->GetXaxis()->SetRangeUser(-1111, 1111);
-  //     H_SiPM_Mulitplicity_Cleaned[i]->GetXaxis()->SetRangeUser(-1111, 1111);
-  //   }
-  // }
-
-  // H_Losses_all_SiPM->SetLineColor(kBlack);
-  // // H_Losses_all_SiPM->SetBinLabel(1, "RAW");
-  // // H_Losses_all_SiPM->SetBinLabel(3, "SELECTED");
-  // // H_Losses_all_SiPM->SetBinLabel(6, "CLEANED");
-  // H_Losses_all_SiPM->Draw();
-  // H_Losses_IAS_SiPM->SetLineColor(kRed);
-  // H_Losses_IAS_SiPM->Draw("SAME");
-  // C_Losses_SiPM->Write();
 }
 
 inline int WriteTree_Grouped()
@@ -2533,7 +2229,7 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
       SiPM_Low_Multiplicity_RAW++;
       H_Channel_RAW[current_label]->Fill(signals[index].Channel);
     }
-  }
+  } 
 
   ////// RAW //////
   H_Strip_Mulitplicity_RAW->Fill(Strip_Multiplicity_RAW);
@@ -2687,28 +2383,7 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
         H_2Strip_Time_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
         H_2Strip_Label_E->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
       }
-    }
-
-    //////////////////////// TREE ////////////////////////
-    GROUPED_Tree_Silicon.push_back(RearStrip_ASSOCIATED[0].first);
-    GROUPED_Tree_Silicon.push_back(RearStrip_ASSOCIATED[0].second);
-    if (THIRD_ALPHA_PEAK_FLAG.isValid)
-      GROUPED_Tree_Silicon.push_back(THIRD_ALPHA_PEAK_FLAG);
-    
-    for (int index_h = 0; index_h < SiPM_High_Position.size(); index_h++)
-    {
-      GROUPED_Tree_SiPMHigh.push_back(signals[SiPM_High_Position[index_h]]);
-    }
-    for (int index_l = 0; index_l < SiPM_Low_Position.size(); index_l++)
-    {
-      GROUPED_Tree_SiPMLow.push_back(signals[SiPM_Low_Position[index_l]]);
-    }
-    GROUPED_Tree->Fill();
-    GROUPED_Tree_Silicon.clear();
-    GROUPED_Tree_SiPMHigh.clear();
-    GROUPED_Tree_SiPMLow.clear();
-    ///////////////////////////////////////////////////////
-    
+    }    
   }
 
   // Case F : SINGLE Rear
@@ -2745,6 +2420,16 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
     {
       H_Channel_H[signals[index_rear].Label]->Fill(signals[index_rear].Channel); // REAR
     }
+  }
+
+
+  // checking if strip are well defined in faster
+  if (RearStrip_ASSOCIATED.size() == 2 && GetDetector(RearStrip_ASSOCIATED[0].second.Label) == GetDetector(RearStrip_ASSOCIATED[1].second.Label))
+  {
+    if (RearStrip_ASSOCIATED[0].second.Label < RearStrip_ASSOCIATED[1].second.Label)
+      H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
+    else
+      H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[1].second.Label, RearStrip_ASSOCIATED[0].second.Label);
   }
 }
 
@@ -2810,8 +2495,11 @@ void CuttingGroups()
       H_RearSiPM_MulitplicityTime_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time, SiPM_Low_Size);
     }
 
-    H_SiPMLow_Mulitplicity_Cutted->Fill(SiPM_Low_Size);
-    H_SiPMHigh_Mulitplicity_Cutted->Fill(SiPM_High_Size);
+    if (Rear_Channel > Rear_IAS[GetDetector(Rear_Label)].first && Rear_Channel < Rear_IAS[GetDetector(Rear_Label)].second)
+    {
+      H_SiPMLow_Mulitplicity_Cutted->Fill(SiPM_Low_Size);
+      H_SiPMHigh_Mulitplicity_Cutted->Fill(SiPM_High_Size);
+    }
 
     for (auto &signal : *Silicon)
     {
@@ -2834,6 +2522,7 @@ void CuttingGroups()
 
 void SiliconWalkCorrection()
 {
+  
   int Rear_Label = (*Silicon)[0].Label;
   double Rear_Time = (*Silicon)[0].Time;
   double Rear_Channel = (*Silicon)[0].Channel;
@@ -2857,6 +2546,7 @@ void SiliconWalkCorrection()
 
 inline void SiPMWalkCorrection()
 {
+  
   int Rear_Label = (*Silicon)[0].Label;
   double Rear_Time = (*Silicon)[0].Time;
   double Rear_Channel = (*Silicon)[0].Channel;
@@ -2880,102 +2570,216 @@ inline void SiPMWalkCorrection()
   }
 }
 
-inline void CleaningGroups()
+inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
 {
 
+  ////////////////////####################////////////////////
+  /// Selecting CASE A ///
+  vector<int> Rear_Position;
+  vector<int> Strip_Position;
+
+  vector<Signal> Silicon;
+  vector<Signal> SiPM_High;
+  vector<Signal> SiPM_Low;
+
+
+  for (int index = 0; index < signals.GetSize(); index++)
+  {
+    int current_label = signals[index].Label;
+    // cout << current_label << endl;
+    if (IsDetectorSiliBack(current_label))
+    {
+      Rear_Position.push_back(index);
+    }
+    else if (IsDetectorSiliStrip(current_label))
+    {
+      Strip_Position.push_back(index);
+    }
+    else if (IsDetectorBetaHigh(current_label))
+    {
+      SiPM_High.push_back(signals[index]);
+    }
+    else if (IsDetectorBetaLow(current_label))
+    {
+      SiPM_Low.push_back(signals[index]);
+    }
+  }
+  
+
+  // Determining Rear strip couples
+  vector<pair<Signal, Signal>> RearStrip_ASSOCIATED;
+  for (int index_rear = 0; index_rear < Rear_Position.size(); index_rear++)
+  {
+    for (int index_strip = 0; index_strip < Strip_Position.size(); index_strip++)
+    {
+      if (IsSameSiliDetector(signals[Strip_Position[index_strip]].Label, signals[Rear_Position[index_rear]].Label))
+      {
+        RearStrip_ASSOCIATED.push_back(make_pair(signals[Rear_Position[index_rear]], signals[Strip_Position[index_strip]]));
+      }
+    }
+  }
+
+  // !Case A : SINGLE Rear and Strip associated (most common case)
+  // if (RearStrip_ASSOCIATED.size() != 1 || Rear_Position.size() != 1 || Strip_Position.size() != 1)
+  // {
+  //   return; 
+  // }
+  if (Rear_Position.size() < 1 || Strip_Position.size() < 1)
+  {
+    return;
+  }
+  Silicon.push_back(signals[Rear_Position[0]]);
+  Silicon.push_back(signals[Strip_Position[0]]);
+  ////////////////////####################////////////////////
+
+  // if (Silicon[0].Pileup == 1 || Silicon[1].Pileup == 1)
+  // {
+  //   return;
+  // }
+  ////////////////////####################////////////////////
+  /// Cutting data Rear/Strip ///
+  //// Strip
+  double Strip_Channel = (Silicon)[1].Channel;
+  int Strip_Label = (Silicon)[1].Label;
+  double Strip_Time = (Silicon)[1].Time;
+
+  ////Rear
+  double Rear_Channel = (Silicon)[0].Channel;
+  int Rear_Label = (Silicon)[0].Label;
+  double Rear_Time = (Silicon)[0].Time;
+
+  /// SiPM
+  double SiPM_Time = 0;
+  int SiPM_High_Size = SiPM_High.size();
+  int SiPM_Low_Size = SiPM_Low.size();
+
+  /// Selection
+  double diff = (Rear_Channel - Strip_Channel) / Strip_Channel;
+  double spread = SpreadAcceptance[Strip_Label]->Eval(Strip_Channel);
+  double mean = MeanAcceptance[Strip_Label];
+
+  if (!FULL)
+  {
+    H_Channel_RAW[Strip_Label]->Fill(Strip_Channel);
+    H_Channel_RAW[Rear_Label]->Fill(Rear_Channel);
+  }
+
+  int number = Strip_Label;
+
+  if (Strip_Time - lastGroupTime[number] < 500e3)
+  {
+    lastGroupTime[number] = Strip_Time;
+    return;
+  }
+  H_Group_Time[Strip_Label]->Fill(Strip_Time - lastGroupTime[number]);
+  H_Channel_Group[Strip_Label]->Fill(Strip_Channel);
+  H_Group_ChannelTime[Strip_Label]->Fill(Strip_Time - lastGroupTime[number], Strip_Channel);
+
+  H_Group_Time[Rear_Label]->Fill(Rear_Time - lastGroupTime[Rear_Label]);
+  H_Channel_Group[Rear_Label]->Fill(Rear_Channel);
+  H_Group_ChannelTime[Rear_Label]->Fill(Rear_Time - lastGroupTime[Rear_Label], Rear_Channel);
+
+  lastGroupTime[number] = Strip_Time;
+
+  // if (diff > mean + 3 * spread || diff < mean - 3 * spread)
+  // {
+  //   return;
+  // }
+
+  if (!FULL)
+  {
+    H_Channel_Cutted[Strip_Label]->Fill(Strip_Channel);
+    H_Channel_Cutted[Rear_Label]->Fill(Rear_Channel);
+  }
+
+  ////////////////////####################////////////////////
+
+  ////////////////////####################////////////////////
   /// CONTINUOUS VALUE OF CHANNELS ///
-  for (auto &signal : *Silicon)
+  for (auto &signal : Silicon)
   {
     signal.Channel = signal.Channel - 0.5 + gRandom->Rndm();    
     signal.Time = signal.Time + (- 0.5 + gRandom->Rndm()) * 8; 
+    H_Channel_Cleaned[signal.Label]->Fill(signal.Channel);
     CLEANED_Tree_Silicon.push_back(signal);
   }
 
-  // if ((*Silicon).GetSize() == 2)
-  //   {
-  //     double matched = RearStrip_Matching[(*Silicon)[1].Label].first * (*Silicon)[0].Channel + RearStrip_Matching[(*Silicon)[1].Label].second;
-  //     H_RearMatched_Channel_Cleaned[(*Silicon)[1].Label]->Fill(matched);
-  //     H_RearMatchedMean_Channel_Cleaned[(*Silicon)[1].Label]->Fill(( matched + (*Silicon)[1].Channel) /2);
-  //   }
-
-  for (auto &signal : *SiPM_High)
+  for (auto &signal : SiPM_High)
   {
     signal.Channel = signal.Channel - 0.5 + gRandom->Rndm();
     signal.Time = signal.Time + (- 0.5 + gRandom->Rndm()) * 2;
-    CLEANED_Tree_SiPMHigh.push_back(signal);
+    // signal.Time = CLEANED_Tree_Silicon[0].Time - signal.Time + MeanAcceptance_Walk_SiPM[signal.Label]->Eval(signal.Channel) + MeanAcceptance_Walk_Silicon[CLEANED_Tree_Silicon[0].Label]->Eval(CLEANED_Tree_Silicon[0].Channel);
+    // CLEANED_Tree_SiPMHigh.push_back(signal);
   }
 
-  for (auto &signal : *SiPM_Low)
+  for (auto &signal : SiPM_Low)
   {
     signal.Channel = signal.Channel - 0.5 + gRandom->Rndm();
     signal.Time = signal.Time + (- 0.5 + gRandom->Rndm()) * 2;
-    CLEANED_Tree_SiPMLow.push_back(signal);
+    // signal.Time = CLEANED_Tree_Silicon[0].Time - signal.Time + MeanAcceptance_Walk_SiPM[signal.Label]->Eval(signal.Channel) + MeanAcceptance_Walk_Silicon[CLEANED_Tree_Silicon[0].Label]->Eval(CLEANED_Tree_Silicon[0].Channel);
+    // CLEANED_Tree_SiPMLow.push_back(signal);
   }
+
+
   /////////////////////////////////////
-
-  
-  int Rear_Label = (*Silicon)[0].Label;
-  double Rear_Time = (*Silicon)[0].Time;
-  double Rear_Channel = (*Silicon)[0].Channel;
 
   double mean_time_silicon = MeanAcceptance_Walk_Silicon[Rear_Label]->Eval(Rear_Channel); // silicon walk correction
 
   vector<Signal> SiPM_H[10];
   vector<Signal> SiPM_L[10];
+  bool IAS = false;
   //////////// NEW ANALYSIS ///////////
   if (Rear_Channel > Rear_IAS[GetDetector(Rear_Label)].first && Rear_Channel < Rear_IAS[GetDetector(Rear_Label)].second)
   {
-    for (int i = 0; i < SiPM_High->GetSize(); i++)
+    IAS = true;
+  }
+
+
+  //cumpute list of triggered SiPM per channel
+  //plotting next SiPM high to trigger after a SiPM high
+    for (int i = 0; i < SiPM_High.size(); i++)
     {
-      double diff_time = Rear_Time - (*SiPM_High)[i].Time;
-      double mean_time_SiPM = MeanAcceptance_Walk_SiPM[(*SiPM_High)[i].Label]->Eval((*SiPM_High)[i].Channel);
-      SiPM_H[GetDetectorChannel((*SiPM_High)[i].Label)].push_back((*SiPM_High)[i]);
-
-      // if ((*SiPM_High)[0].Time > (*SiPM_High)[i].Time)
-      // {
-      //   cout << "ERROR" << endl;
-      // }
-
+      SiPM_H[GetDetectorChannel((SiPM_High)[i].Label)].push_back((SiPM_High)[i]);
       // time between Two SiPMs next to each other
-      if (i > 0)
+      if (i > 1)
       {
-        if ((*SiPM_High)[i].Label < (*SiPM_High)[i-1].Label)
+        if ((SiPM_High)[i].Label < (SiPM_High)[i-1].Label)
         {
-          H_2SiPM_Time_Next[(*SiPM_High)[i].Label][(*SiPM_High)[i-1].Label]->Fill((*SiPM_High)[i].Time - (*SiPM_High)[i-1].Time);
+          if (IAS)
+          H_2SiPM_Time_Next[(SiPM_High)[i].Label][(SiPM_High)[i-1].Label]->Fill((SiPM_High)[i].Time - (SiPM_High)[i-1].Time);
         }
         else
         {
-          H_2SiPM_Time_Next[(*SiPM_High)[i-1].Label][(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Time - (*SiPM_High)[i-1].Time);
+          if (IAS)
+          H_2SiPM_Time_Next[(SiPM_High)[i-1].Label][(SiPM_High)[i].Label]->Fill((SiPM_High)[i].Time - (SiPM_High)[i-1].Time);
         }
       }
     }
 
-    for (int i = 0; i < SiPM_Low->GetSize(); i++)
+    for (int i = 0; i < SiPM_Low.size(); i++)
     {
-      double diff_time = Rear_Time - (*SiPM_Low)[i].Time;
-      double mean_time_SiPM = MeanAcceptance_Walk_SiPM[(*SiPM_Low)[i].Label]->Eval((*SiPM_Low)[i].Channel);
-      SiPM_L[GetDetectorChannel((*SiPM_Low)[i].Label)].push_back((*SiPM_Low)[i]);
+      SiPM_L[GetDetectorChannel((SiPM_Low)[i].Label)].push_back((SiPM_Low)[i]);
     }
 
     // grouping beta event within the faster group in subgroup
     vector<vector<Signal>> SiPM_HGroups;
-    for (int i = 0; i < SiPM_High->GetSize(); i++)
+    for (int i = 0; i < SiPM_High.size(); i++)
     {
       if (i == 0)
       {
-        SiPM_HGroups.push_back({(*SiPM_High)[i]});
+        SiPM_HGroups.push_back({(SiPM_High)[i]});
       }
       else
       {
-        if ((abs(SiPM_HGroups[SiPM_HGroups.size() - 1][(SiPM_HGroups[SiPM_HGroups.size() - 1]).size() - 1].Time - (*SiPM_High)[i].Time)) <= 20)
+        if ((abs(SiPM_HGroups[SiPM_HGroups.size() - 1][(SiPM_HGroups[SiPM_HGroups.size() - 1]).size() - 1].Time - (SiPM_High)[i].Time)) <= 20)
         {
           // same group
-          SiPM_HGroups[SiPM_HGroups.size() - 1].push_back((*SiPM_High)[i]);
+          SiPM_HGroups[SiPM_HGroups.size() - 1].push_back((SiPM_High)[i]);
         }
         else
         {
           // new group
-          SiPM_HGroups.push_back({(*SiPM_High)[i]});
+          SiPM_HGroups.push_back({(SiPM_High)[i]});
         }
       }
     }
@@ -3007,12 +2811,24 @@ inline void CleaningGroups()
         // nearest event whithin subgroups
         if (abs(SiPM_HGroups[i][j].Time) < abs(SiPM_HGroupsNearestTime[i]))
         {
-          nearest_group_time = SiPM_HGroups[i][j].Time;
+          // nearest_group_time = SiPM_HGroups[i][j].Time;
           SiPM_HGroupsNearestTime[i] = SiPM_HGroups[i][j].Time;
+          // nearest_index = i;
+        }
+
+        if  (abs(SiPM_HGroups[i][j].Time) < abs(nearest_group_time))
+        {
+          nearest_group_time = SiPM_HGroups[i][j].Time;
           nearest_index = i;
         }
       }
       mean_time = mean_time / SiPM_HGroups[i].size();
+      vector<double> Time;
+      for (int j = 0; j < SiPM_HGroups[i].size(); j++)
+      {
+        Time.push_back(SiPM_HGroups[i][j].Time);
+      }
+      mean_time = computeMedian(Time);
       SiPM_HGroupsMeanTime.push_back(mean_time);
 
       if (abs(mean_time) < abs(lowest_mean_time))
@@ -3020,6 +2836,31 @@ inline void CleaningGroups()
         lowest_mean_time = mean_time;
         lowest_index = i;
       }
+    }
+
+    ///// !!! NEAREST IS MAX MULTIPLICITY !!! /////
+    int Max_Multiplicity = 0;
+    for (int i = 0; i < SiPM_HGroups.size(); i++)
+    {
+      if (Max_Multiplicity <= SiPM_HGroups[i].size())
+      {
+        Max_Multiplicity = SiPM_HGroups[i].size();
+        nearest_index = i;
+      }
+    }
+
+    if (nearest_index != -1)
+    {
+    // nearest time
+    nearest_group_time = 1000000;
+    for (int j = 0; j < SiPM_HGroups[nearest_index].size(); j++)
+    {
+      if (SiPM_HGroups[nearest_index].size() == 9 && IAS)
+        H_Channel_Cleaned[SiPM_HGroups[nearest_index][j].Label]->Fill(SiPM_HGroups[nearest_index][j].Channel);
+      if (abs(SiPM_HGroups[nearest_index][j].Time) < abs(nearest_group_time))
+        nearest_group_time = SiPM_HGroups[nearest_index][j].Time;
+    }
+    ////////////////////////////////////////////////
     }
 
 
@@ -3034,119 +2875,256 @@ inline void CleaningGroups()
           {
             if (SiPM_HGroups[nearest_index][i].Label < SiPM_HGroups[nearest_index][j].Label)
             {
-              H_RearSiPM_Channel_Nearest_Group[SiPM_HGroups[nearest_index][i].Label][SiPM_HGroups[nearest_index][j].Label]->Fill(SiPM_HGroups[nearest_index][i].Channel, SiPM_HGroups[nearest_index][j].Channel);
+              if (IAS)
+                H_RearSiPM_Channel_Nearest_Group[SiPM_HGroups[nearest_index][i].Label][SiPM_HGroups[nearest_index][j].Label]->Fill(SiPM_HGroups[nearest_index][i].Channel, SiPM_HGroups[nearest_index][j].Channel);
             }
             else
             {
-              H_RearSiPM_Channel_Nearest_Group[SiPM_HGroups[nearest_index][j].Label][SiPM_HGroups[nearest_index][i].Label]->Fill(SiPM_HGroups[nearest_index][j].Channel, SiPM_HGroups[nearest_index][i].Channel);
+              if (IAS)
+                H_RearSiPM_Channel_Nearest_Group[SiPM_HGroups[nearest_index][j].Label][SiPM_HGroups[nearest_index][i].Label]->Fill(SiPM_HGroups[nearest_index][j].Channel, SiPM_HGroups[nearest_index][i].Channel);
             }
           }
         }
       }
 
-      for (int mul = 1; mul <= SiPM_HGroups[nearest_index].size(); mul++)
+      ////// get out grouped signals /////
+      // vector of missing label in group
+      bool MissingLabel[10] = {true, true, true, true, true, true, true, true, true, true};
+      for (Signal grouped : SiPM_HGroups[nearest_index])
       {
-        double near_of_thegroup = nearest_group_time;//nearest_group_time;
-        H_RearSiPM_Time_New_Nearest[mul]->Fill(near_of_thegroup);
-        H_RearSiPM_Time_New_Mean[mul]->Fill(SiPM_HGroupsMeanTime[nearest_index]);
+        MissingLabel[GetDetectorChannel(grouped.Label)] = false;
+      }
 
-        if (near_of_thegroup > -10 && near_of_thegroup < 70)
+
+      bool Verbose = false;
+      vector<vector<Signal>> SiPM_HGroups_Added;
+      ///////// WRITING SUBGROUP IN THE FINAL TREE /////////
+      if (IAS)
+      {
+        if (SiPM_High_Size > 9) 
         {
-          H_RearSiPM_Time_New_Nearest_Centrer[mul]->Fill(near_of_thegroup);
-        }
-        else if (near_of_thegroup > 90 && near_of_thegroup < 200)
-        {
-          H_RearSiPM_Time_New_Nearest_Right[mul]->Fill(near_of_thegroup);
-        }
-        else if (near_of_thegroup < -20 && near_of_thegroup > -200)
-        {
-          H_RearSiPM_Time_New_Nearest_Left[mul]->Fill(near_of_thegroup);
+          if (Verbose)
+          cout << endl;
+          if (Verbose)
+          cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
+          for (Signal high : SiPM_High)
+          {
+            bool grouped = false;
+            for (Signal highg : SiPM_HGroups[nearest_index])
+            {
+              if (high.Channel == highg.Channel)
+              {
+                grouped = true;
+              }
+            }
+
+            double diff_time = Rear_Time - high.Time;
+            double mean_time_SiPM = MeanAcceptance_Walk_SiPM[high.Label]->Eval(high.Channel);
+            high.Time = -(diff_time + mean_time_silicon + mean_time_SiPM);
+            if (grouped)
+            {
+              if (Verbose)
+                cout << GREEN << high << WHITE << endl;
+            }
+            else
+            {
+              if (MissingLabel[GetDetectorChannel(high.Label)] && high.Time > SiPM_HGroups[nearest_index][0].Time - 250 && high.Time - SiPM_HGroups[nearest_index][0].Time < 0)
+              {
+                if (Verbose)
+                {
+                  cout << YELLOW << high << WHITE << endl;
+                  // SiPM_HGroups_Added[nearest_index].push_back(high);
+                  // for (int group = 0; group < SiPM_HGroups.size(); group++)
+                  // {
+                  //   if (group != nearest_index)
+                  //   {
+                  //     if (SiPM_HGroups[group].size() > 1)
+                  //     {
+                  //     for (int i = 0 ; i < SiPM_HGroups[group].size(); i++)
+                  //     {
+                  //       if (high.Time == SiPM_HGroups[group][i].Time)
+                  //       {
+                  //         SiPM_HGroups[group].erase(SiPM_HGroups[group].begin()+i);
+                  //       }
+                  //     }
+                  //     }
+                  //     else
+                  //     {
+                  //       SiPM_HGroups.erase(SiPM_HGroups.begin()+group);
+                  //     }
+                  //   }
+                  // }
+                }
+              }
+              else
+              {
+                if (Verbose)
+                  cout << RED << high << WHITE << endl;
+              }
+            }
+          }
         }
       }
+      for (int high = 0; high < SiPM_HGroups[nearest_index].size(); high++)
+      {
+        if (IAS)
+          H_SiPM_ChannelTime_Cleaned[SiPM_HGroups[nearest_index][high].Label]->Fill(SiPM_HGroups[nearest_index][high].Time, SiPM_HGroups[nearest_index][high].Channel);
+        Signal s = SiPM_HGroups[nearest_index][high];
+        s.Time = nearest_group_time;
+        CLEANED_Tree_SiPMHigh.push_back(s);
+      }
+      if (IAS && nearest_group_time < 60 && nearest_group_time > -20 && SiPM_HGroups[nearest_index].size() >= 3)
+        H_SiPMHigh_Mulitplicity_Cleaned->Fill(SiPM_HGroups[nearest_index].size());
+      else if (IAS)
+        H_SiPMHigh_Mulitplicity_Cleaned->Fill(0);
+      //////////////////////////////////////////////////////
       
-
-      /////
 
       /// Plotting Time between Low and High for each SiPM
       for (int SiPMi = 1; SiPMi < 10; SiPMi++)
       {
         if (SiPM_H[SiPMi].size() == 1 && SiPM_L[SiPMi].size() == 1)
         {
-          H_SiPMLowHigh_Time_One[SiPM_H[SiPMi][0].Label]->Fill(SiPM_H[SiPMi][0].Time - SiPM_L[SiPMi][0].Time);
-          H_SiPMLowHigh_TimeChannel_One[SiPM_H[SiPMi][0].Label]->Fill(SiPM_H[SiPMi][0].Time - SiPM_L[SiPMi][0].Time, SiPM_H[SiPMi][0].Channel);
+          double diff_time_High = Rear_Time - SiPM_H[SiPMi][0].Time;
+          double mean_time_SiPM_High = MeanAcceptance_Walk_SiPM[SiPM_H[SiPMi][0].Label]->Eval(SiPM_H[SiPMi][0].Channel);
+          double high = SiPM_H[SiPMi][0].Time;//-(diff_time_High + mean_time_silicon + mean_time_SiPM_High);
+
+          double diff_time_Low = Rear_Time - SiPM_L[SiPMi][0].Time;
+          double mean_time_SiPM_Low = MeanAcceptance_Walk_SiPM[SiPM_L[SiPMi][0].Label]->Eval(SiPM_L[SiPMi][0].Channel);
+          double low = SiPM_L[SiPMi][0].Time;//-(diff_time_Low + mean_time_silicon + mean_time_SiPM_Low);
+
+          // H_SiPMLowHigh_Time_One[SiPM_H[SiPMi][0].Label]->Fill(low - high);
+          if (IAS)
+            H_SiPMLowHigh_TimeChannel_One[SiPM_H[SiPMi][0].Label]->Fill(low - high, SiPM_H[SiPMi][0].Channel);
         }
         for (int i = 0; i < SiPM_H[SiPMi].size(); i++)
         {
           for (int j = 0; j < SiPM_L[SiPMi].size(); j++)
           {
-            H_SiPMLowHigh_Time_Multiple[SiPM_H[SiPMi][i].Label]->Fill(SiPM_H[SiPMi][i].Time - SiPM_L[SiPMi][j].Time);
+            if (IAS)
+              H_SiPMLowHigh_Time_Multiple[SiPM_H[SiPMi][i].Label]->Fill(SiPM_L[SiPMi][i].Time - SiPM_H[SiPMi][j].Time);
           }
         }
       }
-    }
-  }
 
-  // // Plotting Mean time Difference between Rear and SiPMs for each multiplciity
-  // for (int SiPMi = 0; SiPMi < 10; SiPMi++)
-  // {
-  //   if (SiPM_H[SiPMi].size() == 1)
-  //     H_RearSiPM_Time_One[SiPMi]->Fill(Rear_Time - SiPM_H[SiPMi][0].Time);
-  //   for (int i = 0; i < SiPM_H[SiPMi].size(); i++)
-  //   {
-  //     H_RearSiPM_Time_Multiple[SiPMi]->Fill(Rear_Time - SiPM_H[SiPMi][i].Time);
-  //   }
-  // }
+
+      // searching low for each highin the group
+      for (int SiPMi = 1; SiPMi < 10; SiPMi++)
+      {
+        for (auto high : SiPM_HGroups[nearest_index])
+        {
+          double mean_time_SiPM = MeanAcceptance_Walk_SiPM[high.Label]->Eval(high.Channel);
+          double uncorrected_time = high.Time + mean_time_silicon + mean_time_SiPM + Rear_Time;
+
+          if (GetDetectorChannel(high.Label) == SiPMi)
+          {
+            for (int i = 0; i < SiPM_L[SiPMi].size(); i++)
+            {
+              if (SiPM_L[SiPMi][i].Time - uncorrected_time > -20 && SiPM_L[SiPMi][i].Time - uncorrected_time < 260)
+              {
+                if (IAS)
+                  H_SiPMLowHigh_Time_One[high.Label]->Fill(SiPM_L[SiPMi][i].Time - uncorrected_time);
+                if (IAS)
+                  H_SiPM_ChannelTime_Cleaned[SiPM_L[SiPMi][i].Label]->Fill(SiPM_L[SiPMi][i].Time, SiPM_L[SiPMi][i].Channel);
+                CLEANED_Tree_SiPMLow.push_back(SiPM_L[SiPMi][i]);
+              }
+            }
+          }
+        }
+      }
+      H_SiPMLow_Mulitplicity_Cleaned->Fill(CLEANED_Tree_SiPMLow.size());
+
+
+      for (int mul = 1; mul <= SiPM_HGroups[nearest_index].size(); mul++)
+      {
+        double near_of_thegroup = nearest_group_time;
+        if (IAS)
+          H_RearSiPM_Time_New_Nearest[mul]->Fill(near_of_thegroup);
+        // if (IAS)
+        //   H_RearSiPM_Time_New_Mean[mul]->Fill(SiPM_HGroupsMeanTime[nearest_index]);
+      }
+
+      for (int group = 0; group < SiPM_HGroups.size(); group++)
+      {
+        // if (SiPM_High_Size > 9) 
+        // {
+        // if (IAS)
+        // {
+        //   cout << "Group: " << group << "  Size: " << SiPM_HGroups[group].size() << "  From " << SiPM_HGroups[group][0].Time << "  To " << SiPM_HGroups[group][SiPM_HGroups[group].size() - 1].Time << endl;
+        // }
+        // }
+        for (int mul = 1; mul <= SiPM_HGroups[group].size(); mul++)
+        {
+          if (IAS)
+           H_RearSiPM_Time_New_Mean[mul]->Fill(SiPM_HGroupsMeanTime[group]);
+        }
+      }
+
+        // plotting couples High Low
+        bool Couple[10] = {false};
+        bool Triggered_High[10] = {false};
+        bool Triggered_Low[10] = {false};
+        for (auto low : CLEANED_Tree_SiPMLow)
+        {
+          Triggered_Low[GetDetectorChannel(low.Label)] = true;
+          for (auto high : CLEANED_Tree_SiPMHigh)
+          {
+            Triggered_High[GetDetectorChannel(high.Label)] = true;
+            if (GetDetectorChannel(low.Label) == GetDetectorChannel(high.Label))
+            {
+              Couple[GetDetectorChannel(low.Label)] = true;
+              if (IAS)
+                H_2SiPM_Channel_Couple[high.Label]->Fill(low.Channel, high.Channel);
+            }
+          }
+        }
+
+        if (IAS)
+        {
+          for (auto high : CLEANED_Tree_SiPMHigh)
+          {
+            if (!Couple[GetDetectorChannel(high.Label)])
+            {
+              H_SiPM_Channel_Alone[high.Label]->Fill(high.Channel);
+            }
+            else if (Couple[GetDetectorChannel(high.Label)])
+            {
+              H_SiPM_Channel_Couple[high.Label]->Fill(high.Channel);
+            }
+          }
+
+          for (auto low : CLEANED_Tree_SiPMLow)
+          {
+            if (!Couple[GetDetectorChannel(low.Label)])
+            {
+              H_SiPM_Channel_Alone[low.Label]->Fill(low.Channel);
+            }
+            else if (Couple[GetDetectorChannel(low.Label)])
+            {
+              H_SiPM_Channel_Couple[low.Label]->Fill(low.Channel);
+            }
+          }
+        }
+      }
+    else
+    {
+      if (IAS)
+        H_SiPMHigh_Mulitplicity_Cleaned->Fill(0);  
+    }
 
   /////////////////////////////////////
 
-  // if ((*Silicon)[1].Pileup == 0 && (*Silicon)[0].Pileup == 0)
-  // {
   CLEANED_Tree->Fill();
-  Tree_Channel_detector = (*Silicon)[1].Channel;
-  CLEANED_Tree_detector[(*Silicon)[1].Label]->Fill();
-  // }
+  Tree_Channel_detector = (Silicon)[1].Channel;
+  CLEANED_Tree_detector[(Silicon)[1].Label]->Fill();
   CLEANED_Tree_Silicon.clear();
   CLEANED_Tree_SiPMHigh.clear();
   CLEANED_Tree_SiPMLow.clear();
+
+  //////////////////////////////////////
+  
 }
 
-void SaveFitParameters()
-{
-  TFile *file = new TFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters.root").c_str(), "RECREATE");
 
-  for (int i = 0; i < detectorNum; i++)
-  {
-    if (IsDetectorBeta(i))
-    {
-      MeanAcceptance_Walk_SiPM[i]->SetName(("MeanAcceptance_Walk_SiPM_" + detectorName[i]).c_str());
-      MeanAcceptance_Walk_SiPM[i]->Write();
-    }
-    else if (IsDetectorSiliBack(i))
-    {
-      MeanAcceptance_Walk_Silicon[i]->SetName(("MeanAcceptance_Walk_Silicon_" + detectorName[i]).c_str());
-      MeanAcceptance_Walk_Silicon[i]->Write();
-    }
-  }
-
-  file->Close();
-}
-
-void LoadFitParameters()
-{
-  TFile *file = new TFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters.root").c_str(), "READ");
-  for (int i = 0; i < detectorNum; i++)
-  {
-    if (IsDetectorBeta(i))
-    {
-      MeanAcceptance_Walk_SiPM[i] = (TF1 *)file->Get(("MeanAcceptance_Walk_SiPM_" + detectorName[i]).c_str());
-    }
-    else if (IsDetectorSiliBack(i))
-    {
-      MeanAcceptance_Walk_Silicon[i] = (TF1 *)file->Get(("MeanAcceptance_Walk_Silicon_" + detectorName[i]).c_str());
-    }
-  }
-  file->Close();
-  GROUPED_File->cd();
-}
 
 #endif

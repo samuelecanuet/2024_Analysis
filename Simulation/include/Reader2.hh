@@ -26,6 +26,7 @@ TTreeReaderArray<double> *Tree_PlasticScintillator_Hit_Time;
 TTreeReaderArray<vector<double>> *Tree_Silicon_Detector_Energy_Deposit;
 TTreeReaderArray<vector<Hep3Vector>> *Tree_Silicon_Detector_Hit_Position;
 TTreeReaderArray<vector<double>> *Tree_Silicon_Detector_Hit_Angle;
+TTreeReaderArray<vector<double>> *Tree_Silicon_Detector_Hit_Time;
 TTreeReaderArray<vector<int>> *Tree_Silicon_Detector_Code;
 TTreeReaderArray<vector<double>> *Tree_Silicon_Detector_DL_Energy_Deposit;
 TTreeReaderArray<vector<int>> *Tree_Silicon_Detector_InterStrip_Code;
@@ -40,6 +41,8 @@ double sili_e;
 double SiPM_e;
 
 double size_interstrip = 0.07;
+
+double time_e_IAS;
 
 map<int, TH1D *> H_E0;
 map<int, TH1D *> H_x;
@@ -60,6 +63,7 @@ map<int, TH1D *> H_PlasticScintillator_Hit_Angle;
 map<int, TH1D *> H_PlasticScintillator_Hit_Time;
 map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det;
 map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det_without_interstrip;
+map<int, TH2D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det_Rear;
 map<int, TH1D *> H_Silicon_Detector_Hit_Position_x;
 map<int, TH1D *> H_Silicon_Detector_Hit_Position_y;
 map<int, TH1D *> H_Silicon_Detector_Hit_Position_z;
@@ -68,6 +72,7 @@ map<int, TH2D *> H_Silicon_Detector_Hit_Position_xz;
 map<int, TH2D *> H_Silicon_Detector_Hit_Position_yz;
 map<int, TH3D *> H_Silicon_Detector_Hit_Position_xyz;
 map<int, TH1D *> H_Silicon_Detector_Hit_Angle;
+map<int, TH1D *> H_Silicon_Detector_Hit_Time;
 map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Hit_Angle_Det;
 map<int, TH2D *> H_Silicon_Detector_Hit_Anglez;
 map<int, TH2D *> H_Silicon_Detector_Hit_Anglexy;
@@ -90,6 +95,7 @@ TH2D* H[SIGNAL_MAX];
 double Plastic_Full_energy = 0;
 double Full_energy[SIGNAL_MAX];
 double Full_energy_without_interstrip[SIGNAL_MAX];
+double RearEnergy[SIGNAL_MAX];
 double proton_energy[SIGNAL_MAX];
 double positron_energy[SIGNAL_MAX];
 double InterStrip[SIGNAL_MAX];
@@ -297,6 +303,12 @@ void InitHistograms(int PDG_code)
     H_Silicon_Detector_Hit_Anglexy[PDG_code]->GetXaxis()->CenterTitle();
     H_Silicon_Detector_Hit_Anglexy[PDG_code]->GetYaxis()->CenterTitle();
 
+    H_Silicon_Detector_Hit_Time[PDG_code] = new TH1D(("Silicon_Detector_Time_" + name).c_str(), ("Silicon_Detector_Time_" + name).c_str(), 1000, 0, 1000);
+    H_Silicon_Detector_Hit_Time[PDG_code]->GetXaxis()->SetTitle("Time [ns]");
+    H_Silicon_Detector_Hit_Time[PDG_code]->GetYaxis()->SetTitle("Counts");
+    H_Silicon_Detector_Hit_Time[PDG_code]->GetXaxis()->CenterTitle();
+    H_Silicon_Detector_Hit_Time[PDG_code]->GetYaxis()->CenterTitle();
+
     H_Silicon_Detector_Code[PDG_code] = new TH1D(("Silicon_Detector_Code_" + name).c_str(), ("Silicon_Detector_Code_" + name).c_str(), 100, 0, 100);
     H_Silicon_Detector_Code[PDG_code]->GetXaxis()->SetTitle("Code");
     H_Silicon_Detector_Code[PDG_code]->GetYaxis()->SetTitle("Counts");
@@ -332,6 +344,13 @@ void InitHistograms(int PDG_code)
                 H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det]->GetYaxis()->SetTitle("Counts");
                 H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det]->GetXaxis()->CenterTitle();
                 H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det]->GetYaxis()->CenterTitle();
+
+                H_Silicon_Detector_Energy_Deposit_Det_Rear[PDG_code][det] = new TH2D(("Silicon_Detector_Energy_Deposit_Rear_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_Rear_" + detectorName[det] + "_" + name).c_str(), 1000, 0, 10000, 1000, 0, 10000);
+                H_Silicon_Detector_Energy_Deposit_Det_Rear[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
+                H_Silicon_Detector_Energy_Deposit_Det_Rear[PDG_code][det]->GetYaxis()->SetTitle("Counts");
+                H_Silicon_Detector_Energy_Deposit_Det_Rear[PDG_code][det]->GetXaxis()->CenterTitle();
+                H_Silicon_Detector_Energy_Deposit_Det_Rear[PDG_code][det]->GetYaxis()->CenterTitle();
+                
             }
 
             H_Silicon_Detector_Hit_Angle_Det[PDG_code][det] = new TH1D(("Silicon_Detector_Hit_Angle_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Hit_Angle_" + detectorName[det] + "_" + name).c_str(), 900, 0, 90);
@@ -421,6 +440,7 @@ void WriteHistograms()
         H_Silicon_Detector_Hit_Anglez[PDG]->Write();
         H_Silicon_Detector_Hit_Anglexy[PDG]->Draw("COLZ");
         H_Silicon_Detector_Hit_Anglexy[PDG]->Write();
+        H_Silicon_Detector_Hit_Time[PDG]->Write();
         H_Silicon_Detector_Code[PDG]->Write();
         dir_Silicon_Detector_InterStrip[PDG]->cd();
         H_Silicon_Detector_InterStrip_xy[PDG]->Write();
@@ -433,6 +453,13 @@ void WriteHistograms()
                 dir_Silicon_Detector_Det[PDG][GetDetector(det)]->cd();
                 H_Silicon_Detector_Energy_Deposit_Det[PDG][det]->Write();
                 H_Silicon_Detector_Hit_Angle_Det[PDG][det]->Write();
+
+                if (GetDetectorChannel(det) != 5)
+                {
+                    dir_Silicon_Detector_InterStrip[PDG]->cd();
+                    int interstrip = GetDetector(det) * 1000 + ((GetDetectorChannel(det) * 2 + 1)) * 100 / 2;
+                    H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG][interstrip]->Write();
+                }
             }
         }
     }
@@ -443,6 +470,7 @@ void WriteHistograms()
         if (IsDetectorSiliStrip(det))
         {
             H_Silicon_Detector_Energy_Deposit_Det[0][det]->Write();
+            H_Silicon_Detector_Energy_Deposit_Det_Rear[0][det]->Write();
 
             TCanvas *c = new TCanvas(("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_All_WithWithoutInterStrip").c_str(), ("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_All_WithWithoutInterStrip").c_str(), 800, 600);
             c->cd();

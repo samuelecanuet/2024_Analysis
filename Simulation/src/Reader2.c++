@@ -2,7 +2,7 @@
 
 int main()
 {
-    string name = "../Time_test";
+    string name = "14-11/32Ar_CS0_CSP0_CV1_CVP1_1";
     // name = "241Am_700nm_width";
     Info("Reading File: " + name);
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
@@ -27,6 +27,7 @@ int main()
     Tree_Silicon_Detector_Energy_Deposit = new TTreeReaderArray<vector<double>>(*Reader, "Silicon_Detector_Energy_Deposit");
     Tree_Silicon_Detector_Hit_Position = new TTreeReaderArray<vector<Hep3Vector>>(*Reader, "Silicon_Detector_Hit_Position");
     Tree_Silicon_Detector_Hit_Angle = new TTreeReaderArray<vector<double>>(*Reader, "Silicon_Detector_Hit_Angle");
+    Tree_Silicon_Detector_Hit_Time = new TTreeReaderArray<vector<double>>(*Reader, "Silicon_Detector_Hit_Time");
     Tree_Silicon_Detector_Code = new TTreeReaderArray<vector<int>>(*Reader, "Silicon_Detector_Code");
     Tree_Silicon_Detector_DL_Energy_Deposit = new TTreeReaderArray<vector<double>>(*Reader, "Silicon_Detector_DL_Energy_Deposit");
     Tree_Silicon_Detector_InterStrip_Code = new TTreeReaderArray<vector<int>>(*Reader, "Silicon_Detector_InterStrip_Code");
@@ -71,9 +72,9 @@ int main()
 
             //// INITIAL ////
             double E0 = Tree_E0->At(part_i);
-            double x = Tree_x->At(part_i);
-            double y = Tree_y->At(part_i);
-            double z = Tree_z->At(part_i);
+            double x = Tree_x->At(part_i)*1e3;
+            double y = Tree_y->At(part_i)*1e3;
+            double z = Tree_z->At(part_i)*1e6;
             double px = Tree_px->At(part_i);
             double py = Tree_py->At(part_i);
             double pz = Tree_pz->At(part_i);
@@ -101,7 +102,8 @@ int main()
                 H_PlasticScintillator_Hit_Position_z[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).z());
                 H_PlasticScintillator_Hit_Position_xy[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
                 H_PlasticScintillator_Hit_Angle[PDG]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
-                H_PlasticScintillator_Hit_Time[PDG]->Fill(Tree_PlasticScintillator_Hit_Time->At(part_i));
+                // H_PlasticScintillator_Hit_Time[PDG]->Fill(Tree_PlasticScintillator_Hit_Time->At(part_i));
+                time_e_IAS = Tree_PlasticScintillator_Hit_Time->At(part_i);
                 Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
                 H_PlasticScintillator_Energy_Deposit[0]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
                 SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
@@ -123,7 +125,7 @@ int main()
                 H_Silicon_Detector_Hit_Position_xz[PDG]->Fill(X, Z);
                 H_Silicon_Detector_Hit_Position_yz[PDG]->Fill(Y, Z);
                 H_Silicon_Detector_Hit_Angle[PDG]->Fill(THETA);
-
+                H_Silicon_Detector_Hit_Time[PDG]->Fill(Tree_Silicon_Detector_Hit_Time->At(part_i).at(sili_i));
                 H_Silicon_Detector_Hit_Anglez[PDG]->Fill(THETA, Z);
                 H_Silicon_Detector_Hit_Anglexy[PDG]->Fill(THETA, X);
                 H_Silicon_Detector_Code[PDG]->Fill(Silicon_Detector_Code);
@@ -155,7 +157,7 @@ int main()
                     // new 
                     if (Z + (300 * 1e-3 + 800 * 1e-6) / 2 > 300 * 1e-3)
                         continue;
-                    double ratio = 1;
+                    double ratio = (Y+size_interstrip)/size_interstrip;
                     
                     if ( Y > 0)
                     {
@@ -195,6 +197,16 @@ int main()
         // }
 
         // filling energy deposit by all particle 
+
+        // calculating "rear" energy
+        
+        for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            if (IsDetectorSiliStrip(i))
+            {
+                RearEnergy[GetDetector(i)] += Full_energy[i];
+            }
+        }
         for (int i = 0; i < SIGNAL_MAX; i++)
         {
             if (IsDetectorSiliStrip(i))
@@ -203,6 +215,7 @@ int main()
                 {
                     H_Silicon_Detector_Energy_Deposit_Det[0][i]->Fill(Full_energy[i]); 
                     H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[0][i]->Fill(Full_energy_without_interstrip[i]);   
+                    H_Silicon_Detector_Energy_Deposit_Det_Rear[0][i]->Fill(RearEnergy[GetDetector(i)], Full_energy[i]);
                     e = Full_energy[i];
                     OutTree[i]->Fill();
                     sili_code = i;
@@ -212,6 +225,17 @@ int main()
             Full_energy[i] = 0;
             Full_energy_without_interstrip[i] = 0;
             e = 0;
+
+            if (IsDetectorSiliBack(i))
+            {
+                RearEnergy[GetDetector(i)] = 0;
+            }
+        }
+
+        //
+        if (sili_e > 3200 && sili_e < 3400)
+        {
+            H_PlasticScintillator_Hit_Time[-11]->Fill(time_e_IAS);
         }
 
         sili_e = 0;
