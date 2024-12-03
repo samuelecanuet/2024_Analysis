@@ -271,61 +271,119 @@ int main()
     ////#################### 18N THIRD PEAK ###################
     //### Decay
     
-    H_Time_All_3a->Write();
-    run_number = 114;
-    int run_i = 0;
-    string NUCLEUS = "18N";
-    int Peak_Group = 0;
-    int Peak_Position = 0;
-    for (int i = 0; i < H_Data[run_number]->GetNbinsX(); i++)
+    // H_Time_All_3a->Write();
+    // run_number = 114;
+    // int run_i = 0;
+    // string NUCLEUS = "18N";
+    // int Peak_Group = 0;
+    // int Peak_Position = 0;
+    // for (int i = 0; i < H_Data[run_number]->GetNbinsX(); i++)
+    // {
+    //     if (H_Data[run_number]->GetBinContent(i) > Intensity_Threshold)
+    //     {
+    //         Peak_Group = Group_Determining(i, NUCLEUS);
+    //         if (Peak_Group != 4)
+    //             { continue; }
+    //         Peak_Position = i + H_Data[run_number]->FindBin(MAP_Delta_Time[NUCLEUS][run_i]);
+    //         int j = Peak_Position;
+    //         while (H_Data[run_number]->GetBinCenter(j) < H_Data[run_number]->GetBinCenter(Peak_Position) + 4 * Pulse_Period)
+    //         {
+    //             H_Decay_3a->SetBinContent(j - Peak_Position, H_Decay_3a->GetBinContent(j - Peak_Position) + H_Time_All_3a->GetBinContent(j));
+    //             j++;
+    //         }
+    //     }
+    // }
+
+    // H_Decay_3a->Rebin(20);
+    // ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
+    // TF1 *fReleaseCurve3a = new TF1(("fReleaseCurve_3a" + NUCLEUS).c_str(), ReleaseCurve, 0.1, 4 * Pulse_Period, 6);
+    // fReleaseCurve3a->SetNpx(1000);
+    // fReleaseCurve3a->SetParLimits(0, 0, 1);
+    // fReleaseCurve3a->FixParameter(1, 0);
+    // fReleaseCurve3a->SetParLimits(2, 0, 100);
+    // fReleaseCurve3a->FixParameter(3, 0);
+    // fReleaseCurve3a->SetParLimits(4, 0, 1);
+    // fReleaseCurve3a->SetParameter(4, MAP_LifeTime[NUCLEUS]);
+    // fReleaseCurve3a->SetParLimits(5, -0.5, 0.5);
+
+    // TFitResultPtr resf = H_Decay_3a->Fit(("fReleaseCurve_3a" + NUCLEUS).c_str(), "RES");
+
+    // // Printing results
+    // Success("Results for third alpha peak of " + NUCLEUS);
+    // Success("Realese Time  : " + formatValueWithError(fReleaseCurve[NUCLEUS]->GetParameter(2), fReleaseCurve[NUCLEUS]->GetParError(2), "nolatex") + "s");
+    // Success("Halflife : " + formatValueWithError(fReleaseCurve3a->GetParameter(4) * 1000, fReleaseCurve3a->GetParError(4) * 1000, "nolatex") + " ms");
+    // Success("Chi2 : " + to_string(fReleaseCurve3a->GetChisquare() / fReleaseCurve3a->GetNDF()));
+
+    // fTime->cd();
+    // dir[NUCLEUS]->cd();
+    // TCanvas *cFit = new TCanvas(("cFit_3alpha_" + NUCLEUS).c_str(), ("cFit_3alpha" + NUCLEUS).c_str(), 800, 600);
+    // H_Decay_3a->Draw("HIST");
+    // H_Decay_3a->GetXaxis()->SetTitle("Time [s]");
+    // H_Decay_3a->GetYaxis()->SetTitle("Counts");
+    // fReleaseCurve3a->Draw("SAME");
+    // TPaveText *pt = new TPaveText(0.7, 0.7, 0.9, 0.9, "NDC");
+    // pt->AddText(("Halflife : " + formatValueWithError(fReleaseCurve3a->GetParameter(4) * 1000, fReleaseCurve3a->GetParError(4) * 1000, "nolatex") + " ms").c_str());
+    // pt->AddText(("Chi2 : " + to_string(fReleaseCurve3a->GetChisquare() / fReleaseCurve3a->GetNDF())).c_str());
+    // pt->Draw("SAME");
+    // cFit->Write();
+
+
+    ////////////
+    cout << "ok" << endl;
+    TH1D* h = (TH1D*)H_Decay["32Ar"][2]->Clone("h");
+    h->Rebin(10);
+    TH1D* hh = (TH1D*)H_Decay["32Ar"][2]->Clone("hh");
+    hh->Reset();
+    hh->Rebin(10);
+    TH1D* h_exp;
+    TF1* f = new TF1("f", "[0]*exp(-0.69*(x-[2])/[1])", h->GetXaxis()->GetXmin(), h->GetXaxis()->GetXmax());
+    f->SetParameter(1, MAP_LifeTime["32Ar"]);
+    f->SetNpx(480);
+    TH1D* h_res = (TH1D*)h->Clone("h_res");
+    h_res->Reset();
+
+    for (int bin = 0; bin < h->GetNbinsX()-1; bin++)
     {
-        if (H_Data[run_number]->GetBinContent(i) > Intensity_Threshold)
-        {
-            Peak_Group = Group_Determining(i, NUCLEUS);
-            if (Peak_Group != 4)
-                { continue; }
-            Peak_Position = i + H_Data[run_number]->FindBin(MAP_Delta_Time[NUCLEUS][run_i]);
-            int j = Peak_Position;
-            while (H_Data[run_number]->GetBinCenter(j) < H_Data[run_number]->GetBinCenter(Peak_Position) + 4 * Pulse_Period)
-            {
-                H_Decay_3a->SetBinContent(j - Peak_Position, H_Decay_3a->GetBinContent(j - Peak_Position) + H_Time_All_3a->GetBinContent(j));
-                j++;
-            }
-        }
+        if ((h->GetBinContent(bin-1) < h->GetBinContent(bin)) && h->GetBinCenter(bin) > 0.4)
+            h->SetBinContent(bin, h->GetBinContent(bin-1));
     }
 
-    H_Decay_3a->Rebin(20);
-    ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
-    TF1 *fReleaseCurve3a = new TF1(("fReleaseCurve_3a" + NUCLEUS).c_str(), ReleaseCurve, 0.1, 4 * Pulse_Period, 6);
-    fReleaseCurve3a->SetNpx(1000);
-    fReleaseCurve3a->SetParLimits(0, 0, 1);
-    fReleaseCurve3a->FixParameter(1, 0);
-    fReleaseCurve3a->SetParLimits(2, 0, 100);
-    fReleaseCurve3a->FixParameter(3, 0);
-    fReleaseCurve3a->SetParLimits(4, 0, 1);
-    fReleaseCurve3a->SetParameter(4, MAP_LifeTime[NUCLEUS]);
-    fReleaseCurve3a->SetParLimits(5, -0.5, 0.5);
+    TCanvas *cFitConv = new TCanvas("cFitConv", "cFitConv", 800, 600);
+    cFitConv->cd();
+    for (int bin = 0; bin < h->GetNbinsX(); bin++)
+    {
+        double value = h->GetBinContent(bin);
+        double x = h->GetBinCenter(bin);
 
-    TFitResultPtr resf = H_Decay_3a->Fit(("fReleaseCurve_3a" + NUCLEUS).c_str(), "RES");
+        if (value <= 0)
+            continue;
 
-    // Printing results
-    Success("Results for third alpha peak of " + NUCLEUS);
-    Success("Realese Time  : " + formatValueWithError(fReleaseCurve[NUCLEUS]->GetParameter(2), fReleaseCurve[NUCLEUS]->GetParError(2), "nolatex") + "s");
-    Success("Halflife : " + formatValueWithError(fReleaseCurve3a->GetParameter(4) * 1000, fReleaseCurve3a->GetParError(4) * 1000, "nolatex") + " ms");
-    Success("Chi2 : " + to_string(fReleaseCurve3a->GetChisquare() / fReleaseCurve3a->GetNDF()));
+        f->SetParameter(0, value);
+        f->SetParameter(2, x);
+        h_exp = (TH1D *)f->GetHistogram()->Clone("h_exp");
+        for (int bin_exp = 0; bin_exp < h_exp->GetNbinsX(); bin_exp++)
+        {
+            if (h_exp->GetBinCenter(bin_exp) < x)
+                h_exp->SetBinContent(bin_exp, 0);
+        }
 
-    fTime->cd();
-    dir[NUCLEUS]->cd();
-    TCanvas *cFit = new TCanvas(("cFit_3alpha_" + NUCLEUS).c_str(), ("cFit_3alpha" + NUCLEUS).c_str(), 800, 600);
-    H_Decay_3a->Draw("HIST");
-    H_Decay_3a->GetXaxis()->SetTitle("Time [s]");
-    H_Decay_3a->GetYaxis()->SetTitle("Counts");
-    fReleaseCurve3a->Draw("SAME");
-    TPaveText *pt = new TPaveText(0.7, 0.7, 0.9, 0.9, "NDC");
-    pt->AddText(("Halflife : " + formatValueWithError(fReleaseCurve3a->GetParameter(4) * 1000, fReleaseCurve3a->GetParError(4) * 1000, "nolatex") + " ms").c_str());
-    pt->AddText(("Chi2 : " + to_string(fReleaseCurve3a->GetChisquare() / fReleaseCurve3a->GetNDF())).c_str());
-    pt->Draw("SAME");
-    cFit->Write();
+        h_exp->Draw("SAME");
+        h_res->Add(h_exp);
+        h->Add(h_exp, -1);
+        hh->SetBinContent(bin, value);
+
+    }
+    cFitConv->Write();
+
+    h_res->Write();
+    TCanvas *cFitConv2 = new TCanvas("cFitConv2", "cFitConv2", 800, 600);
+    h_res->SetLineColor(kRed);
+    h_res->Draw("HIST");
+    H_Decay["32Ar"][2]->Draw("HIST SAME");
+    cFitConv2->Write();
+    hh->Write();
+    h->Write();
+    ///////////
 
     cout << "Writing histograms" << endl;
     WriteHistograms();

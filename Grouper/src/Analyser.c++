@@ -8,6 +8,7 @@ int main()
     string filename = "32Ar";
     int peak = 14;
     MERGED_File = new TFile((DIR_ROOT_DATA_MERGED + filename + "_merged.root").c_str(), "READ");
+    // MERGED_File = new TFile((DIR_ROOT_DATA_GROUPED + "run_078_multifast_33Ar_grouped.root").c_str(), "READ");
     TTreeReader *Reader = new TTreeReader((TTree*)MERGED_File->Get("MERGED_Tree"));
     TTreeReaderArray<Signal> *Silicon = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_Silicon");
     TTreeReaderArray<Signal> *SiPM_High = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_SiPMHigh");
@@ -34,12 +35,16 @@ int main()
         int Strip_Label = (*Silicon)[1].Label;
         double energy = Calibration[Strip_Label]->Eval((*Silicon)[1].Channel / 1000);
         H_Single[Strip_Label]->Fill(energy);
+        // cout << "Energy: " << energy << "    " << Strip_Label << endl;
         double nearest = 1e9;
+
+        
 
         if (WindowsMap[filename][peak][Strip_Label].first < energy && energy < WindowsMap[filename][peak][Strip_Label].second ) // only for ias
         {
             if ((*SiPM_High).GetSize() > 0)
             {
+                // cout << "SiPM_Low: " << (*SiPM_Low).GetSize() << endl;
                 for (int i = 0; i < (*SiPM_High).GetSize(); i++)
                 {
                     if (abs(nearest) > abs((*SiPM_High)[i].Time))
@@ -53,8 +58,15 @@ int main()
             {
                 if ( mul <= (*SiPM_High).GetSize() && (nearest > start_gate && nearest < end_gate)) //coinc for at least mul
                 {
-                    H_Coinc[Strip_Label][mul]->Fill(energy);
-                    H_SiPM_Time_Coinc[Strip_Label][mul]->Fill(nearest);
+                    // if ((*SiPM_High)[0].Channel > 200e3)
+                    // {
+                        H_Coinc[Strip_Label][mul]->Fill(energy);
+                        H_SiPM_Time_Coinc[Strip_Label][mul]->Fill(nearest);
+                    // }
+                    // else
+                    // {
+                    //     H_NoCoinc[Strip_Label][mul]->Fill(energy);
+                    // }
                 }
                 else
                 {
@@ -134,10 +146,10 @@ int main()
                 H_Single[i]->SetLineColor(kBlack);
                 H_Single[i]->Draw("HIST");
                 H_Coinc[i][mul]->SetLineColor(kRed);
-                H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][14][i].first, WindowsMap["32Ar"][14][i].second);
+                H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
                 H_Coinc[i][mul]->Draw("HIST SAME");
                 H_NoCoinc[i][mul]->SetLineColor(kBlue);
-                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][14][i].first, WindowsMap["32Ar"][14][i].second);
+                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
                 H_NoCoinc[i][mul]->Draw("HIST SAME");
                 c->Write();
 
@@ -145,10 +157,10 @@ int main()
                 H_Single[i]->SetLineColor(kBlack);
                 H_Single[i]->Draw("HIST");
                 H_Coinc_Corrected[i][mul]->SetLineColor(kRed);
-                H_Coinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][14][i].first, WindowsMap["32Ar"][14][i].second);
+                H_Coinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
                 H_Coinc_Corrected[i][mul]->Draw("HIST SAME");
                 H_NoCoinc_Corrected[i][mul]->SetLineColor(kBlue);
-                H_NoCoinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][14][i].first, WindowsMap["32Ar"][14][i].second);
+                H_NoCoinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
                 H_NoCoinc_Corrected[i][mul]->Draw("HIST SAME");
                 c_Corrected->Write();
 

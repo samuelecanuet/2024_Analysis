@@ -2681,10 +2681,10 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
 
   lastGroupTime[number] = Strip_Time;
 
-  // if (diff > mean + 3 * spread || diff < mean - 3 * spread)
-  // {
-  //   return;
-  // }
+  if (diff > mean + 3 * spread || diff < mean - 3 * spread)
+  {
+    return;
+  }
 
   if (!FULL)
   {
@@ -2735,7 +2735,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
   }
 
 
-  //cumpute list of triggered SiPM per channel
+  //compute list of triggered SiPM per channel
   //plotting next SiPM high to trigger after a SiPM high
     for (int i = 0; i < SiPM_High.size(); i++)
     {
@@ -2867,7 +2867,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
     if (nearest_index != -1)
     {
       // Plotting SiPM channel between SiPM in the nearest subgroup
-      if (SiPM_HGroups[nearest_index].size() > 0)
+      if (SiPM_HGroups[nearest_index].size() >= 8)
       {
         for (int i = 0; i < SiPM_HGroups[nearest_index].size(); i++)
         {
@@ -2896,17 +2896,17 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
       }
 
 
-      bool Verbose = false;
+      bool Verbose = true;
       vector<vector<Signal>> SiPM_HGroups_Added;
       ///////// WRITING SUBGROUP IN THE FINAL TREE /////////
       if (IAS)
       {
-        if (SiPM_High_Size > 9) 
+        if (SiPM_High_Size > 0) 
         {
-          if (Verbose)
-          cout << endl;
-          if (Verbose)
-          cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
+          // if (Verbose)
+          // cout << endl;
+          // if (Verbose)
+          // cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
           for (Signal high : SiPM_High)
           {
             bool grouped = false;
@@ -2924,7 +2924,15 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
             if (grouped)
             {
               if (Verbose)
-                cout << GREEN << high << WHITE << endl;
+              {
+                
+                if (isnan(high.Time) && high.Time < 20)
+                {
+                  cout << "Time = 0" << endl;
+                  cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
+                  cout << GREEN << high << WHITE << endl;
+                }
+              }
             }
             else
             {
@@ -2932,7 +2940,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
               {
                 if (Verbose)
                 {
-                  cout << YELLOW << high << WHITE << endl;
+                  // cout << YELLOW << high << WHITE << endl;
                   // SiPM_HGroups_Added[nearest_index].push_back(high);
                   // for (int group = 0; group < SiPM_HGroups.size(); group++)
                   // {
@@ -2956,11 +2964,11 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
                   // }
                 }
               }
-              else
-              {
-                if (Verbose)
-                  cout << RED << high << WHITE << endl;
-              }
+              // else
+              // {
+                // if (Verbose)
+                  // cout << RED << high << WHITE << endl;
+              // }
             }
           }
         }

@@ -9,7 +9,7 @@ GSL_LIBS        = $(shell gsl-config --libs)
 
 CC        = g++
 CFLAGS    = ${FASTERAC_CFLAGS} ${ROOT_CFLAGS} ${GSL_CFLAGS} -Iinclude
-LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS}   ${GSL_LIBS} -lboost_filesystem -lboost_system
+LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS}   ${GSL_LIBS} -lboost_filesystem -lboost_system -lfftw3
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
@@ -17,11 +17,8 @@ EXE       = FullFunction
 
 all : $(EXE)
 
-FullFunction: obj/FullFunction.o
-
-
 $(EXE): $(OBJS)
-	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so -lfftw3 
+	${CC} -std=c++17 ${CFLAGS} ${OBJS} ${LIBS} -o $@ ../../lib/SignalDict/SignalDict.so
 
 obj/%.o: src/%.c++ include/%.hh
 	@mkdir -p obj
@@ -30,5 +27,3 @@ obj/%.o: src/%.c++ include/%.hh
 clean :
 	rm -f obj/*.o
 	rm -f $(EXE)
-
-

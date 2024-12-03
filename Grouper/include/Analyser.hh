@@ -27,8 +27,8 @@ double HFake[SIGNAL_MAX][MAX_MULTIPLICTY];
 
 
 /// params
-double start_gate = -230;
-double end_gate = 200;
+double start_gate = -20;
+double end_gate = 50;
 double start_gate_fake = -300;
 double end_gate_fake = -240;
 
@@ -43,7 +43,7 @@ void InitHistograms()
             dir_FakeCorrection_Strip_Write[i] = dir_FakeCorrection_Strip[i]->mkdir("Write");
 
 
-            H_Single[i] = new TH1D(("H_Single_" + detectorName[i]).c_str(), ("H_Single_" + detectorName[i]).c_str(), 10000, 0, 10000);
+            H_Single[i] = new TH1D(("H_Single_" + detectorName[i]).c_str(), ("H_Single_" + detectorName[i]).c_str(), 50000, 0, 10000);
             H_Single[i]->GetXaxis()->SetTitle("Energy [keV]");
             H_Single[i]->GetYaxis()->SetTitle("Counts");
             H_Single[i]->GetXaxis()->CenterTitle();
@@ -51,19 +51,19 @@ void InitHistograms()
 
             for (int mul = 1; mul <= BETA_SIZE; mul++)
             {
-                H_NoCoinc[i][mul] = new TH1D(("H_NoCoinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_NoCoinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), 10000, 0, 10000);
+                H_NoCoinc[i][mul] = new TH1D(("H_NoCoinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_NoCoinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), 50000, 0, 10000);
                 H_NoCoinc[i][mul]->GetXaxis()->SetTitle("Energy [keV]");
                 H_NoCoinc[i][mul]->GetYaxis()->SetTitle("Counts");
                 H_NoCoinc[i][mul]->GetXaxis()->CenterTitle();
                 H_NoCoinc[i][mul]->GetYaxis()->CenterTitle();
 
-                H_Coinc[i][mul] = new TH1D(("H_Coinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_Coinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), 10000, 0, 10000);
+                H_Coinc[i][mul] = new TH1D(("H_Coinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_Coinc_" + detectorName[i] + "_" + to_string(mul)).c_str(), 50000, 0, 10000);
                 H_Coinc[i][mul]->GetXaxis()->SetTitle("Energy [keV]");
                 H_Coinc[i][mul]->GetYaxis()->SetTitle("Counts");
                 H_Coinc[i][mul]->GetXaxis()->CenterTitle();
                 H_Coinc[i][mul]->GetYaxis()->CenterTitle();
 
-                H_Coinc_Mulitplicity[i][mul] = new TH1D(("H_Coinc_Mulitplicity_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_Coinc_Mulitplicity_" + detectorName[i] + "_" + to_string(mul)).c_str(), 10000, 0, 10000);
+                H_Coinc_Mulitplicity[i][mul] = new TH1D(("H_Coinc_Mulitplicity_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_Coinc_Mulitplicity_" + detectorName[i] + "_" + to_string(mul)).c_str(), 50000, 0, 10000);
                 H_Coinc_Mulitplicity[i][mul]->GetXaxis()->SetTitle("Energy [keV]");
                 H_Coinc_Mulitplicity[i][mul]->GetYaxis()->SetTitle("Counts");
                 H_Coinc_Mulitplicity[i][mul]->GetXaxis()->CenterTitle();
