@@ -15,17 +15,20 @@
 
 #include "Constants.hh"
 #include "Peak.hh"
-#include "MyTF1.hh"
+#include "Addition.hh"  
+#include "Convolution.hh"
+#include "Spectrum.hh"
 
 
 // RESOLUTION //
 double fGauss(double *x, double *par)
 {
     double E = x[0];
-    double E_p = par[0];
+    double E_p = 0;
+    double A = par[0];
     double Sigma = par[1];
 
-    return exp(-0.5 * pow((E - E_p) / Sigma, 2)) / (Sigma * sqrt(2 * M_PI));
+    return A * exp(-0.5 * pow((E - E_p) / Sigma, 2)) / (Sigma * sqrt(2 * M_PI));
 }
 
 double fGaussBortelsCollaers(double *x, double *p)
