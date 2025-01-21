@@ -2,7 +2,7 @@
 
 int main()
 {
-    string name = "14-11/32Ar_CS0_CSP0_CV1_CVP1_1";
+    string name = "14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma";
     // name = "241Am_700nm_width";
     Info("Reading File: " + name);
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
@@ -220,6 +220,16 @@ int main()
                     OutTree[i]->Fill();
                     sili_code = i;
                     sili_e = Full_energy[i];
+
+                    H_Silicon_Detector_Energy_Deposit_SINGLE[0][i]->Fill(Full_energy[i]);
+                    if (Plastic_Full_energy > 50)
+                    {
+                        H_Silicon_Detector_Energy_Deposit_COINC[0][i]->Fill(Full_energy[i]);
+                    }
+                    else
+                    {
+                        H_Silicon_Detector_Energy_Deposit_NOCOINC[0][i]->Fill(Full_energy[i]);
+                    }
                 }
             }
             Full_energy[i] = 0;
@@ -236,6 +246,7 @@ int main()
         if (sili_e > 3200 && sili_e < 3400)
         {
             H_PlasticScintillator_Hit_Time[-11]->Fill(time_e_IAS);
+            H->Fill(Plastic_Full_energy);
         }
 
         sili_e = 0;

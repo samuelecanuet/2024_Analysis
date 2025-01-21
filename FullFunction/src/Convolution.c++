@@ -15,7 +15,7 @@ Convolution::~Convolution()
 double Convolution::Evaluate(double *x, double *params)
 {
     bool f1Changed = false;
-    for (int i = 1; i < fFunction1->GetNpar(); ++i)
+    for (int i = 0; i < fFunction1->GetNpar(); ++i)
     {
         if (fFunction1->GetParameter(i) != params[i])
         {
@@ -27,6 +27,10 @@ double Convolution::Evaluate(double *x, double *params)
     bool f2Changed = false;
     for (int i = 0; i < fFunction2->GetNpar(); ++i)
     {
+        // if ((fFunction1->GetNpar() + i) == 9)
+        // {
+        //     continue;
+        // }
         if (fFunction2->GetParameter(i) != params[fFunction1->GetNpar() + i])
         {
             f2Changed = true;

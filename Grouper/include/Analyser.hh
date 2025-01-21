@@ -17,6 +17,7 @@ TH1D* H_NoCoinc_Corrected[SIGNAL_MAX][MAX_MULTIPLICTY];
 TH1D* H_Coinc_Corrected[SIGNAL_MAX][MAX_MULTIPLICTY];
 TH1D* H_SiPM_Time[SIGNAL_MAX][MAX_MULTIPLICTY];
 TH1D* H_SiPM_Time_Coinc[SIGNAL_MAX][MAX_MULTIPLICTY];
+TH1D* H_Fake[SIGNAL_MAX][MAX_MULTIPLICTY];
 TGraph* G_NFake[MAX_MULTIPLICTY];
 TDirectory *dir_FakeCorrection;
 TDirectory *dir_FakeCorrection_Strip[SIGNAL_MAX];   
@@ -25,10 +26,12 @@ TDirectory *dir_FakeCorrection_Strip_Time[SIGNAL_MAX];
 double NFake[SIGNAL_MAX][MAX_MULTIPLICTY];
 double HFake[SIGNAL_MAX][MAX_MULTIPLICTY];
 
+TH1D* H_SiPM_Channel_M_nocoinc[SIGNAL_MAX][MAX_MULTIPLICTY+1];
+TH1D* H_SiPM_Channel_M_coinc[SIGNAL_MAX][MAX_MULTIPLICTY+1];
 
 /// params
-double start_gate = -20;
-double end_gate = 50;
+double start_gate = -12;
+double end_gate = 6;
 double start_gate_fake = -300;
 double end_gate_fake = -240;
 
@@ -67,9 +70,14 @@ void InitHistograms()
                 H_Coinc_Mulitplicity[i][mul]->GetXaxis()->SetTitle("Energy [keV]");
                 H_Coinc_Mulitplicity[i][mul]->GetYaxis()->SetTitle("Counts");
                 H_Coinc_Mulitplicity[i][mul]->GetXaxis()->CenterTitle();
-                H_Coinc_Mulitplicity[i][mul]->GetYaxis()->CenterTitle();               
+                H_Coinc_Mulitplicity[i][mul]->GetYaxis()->CenterTitle();    
 
-    
+                H_Fake[i][mul] = new TH1D(("H_Fake_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_Fake_" + detectorName[i] + "_" + to_string(mul)).c_str(), 50000, 0, 10000);
+                H_Fake[i][mul]->GetXaxis()->SetTitle("Energy [keV]");
+                H_Fake[i][mul]->GetYaxis()->SetTitle("Counts");
+                H_Fake[i][mul]->GetXaxis()->CenterTitle();
+                H_Fake[i][mul]->GetYaxis()->CenterTitle();         
+
                 H_SiPM_Time[i][mul] = new TH1D(("H_SiPM_Time_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("H_SiPM_Time_" + detectorName[i] + "_" + to_string(mul)).c_str(), 300, -300, 300);
                 H_SiPM_Time[i][mul]->GetXaxis()->SetTitle("Time [ns]");
                 H_SiPM_Time[i][mul]->GetYaxis()->SetTitle("Counts");
@@ -81,6 +89,45 @@ void InitHistograms()
                 H_SiPM_Time_Coinc[i][mul]->GetYaxis()->SetTitle("Counts");
                 H_SiPM_Time_Coinc[i][mul]->GetXaxis()->CenterTitle();
                 H_SiPM_Time_Coinc[i][mul]->GetYaxis()->CenterTitle();
+
+                
+
+            }
+        }
+
+        if (IsDetectorBetaHigh(i))
+        {
+            for (int m = 1; m <= MAX_MULTIPLICTY; m++)
+            {
+                H_SiPM_Channel_M_nocoinc[i][m] = new TH1D(("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eHighN, eHighMin, eHighMax);
+                H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->SetTitle("Energy [keV]");
+                H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->CenterTitle();
+
+                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eHighN, eHighMin, eHighMax);
+                H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->SetTitle("Energy [keV]");
+                H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->CenterTitle();
+            }
+        }
+
+        if (IsDetectorBetaLow(i))
+        {
+            for (int m = 1; m <= MAX_MULTIPLICTY; m++)
+            {
+                H_SiPM_Channel_M_nocoinc[i][m] = new TH1D(("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eLowN, eLowMin, eLowMax);
+                H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->SetTitle("Energy [keV]");
+                H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->CenterTitle();
+
+                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eLowN, eLowMin, eLowMax);
+                H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->SetTitle("Energy [keV]");
+                H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->CenterTitle();
             }
         }
     }

@@ -37,13 +37,11 @@ vector<Peak*> Spectrum::GetPeaks()
 void Spectrum::GenerateSpectrum()
 {
     ReadFile();
-    // vector<TF1* > fPeakss = {fPeaks[0], fPeaks[1], fPeaks[2]};
     SpectrumAdd = new Addition(fPeaks);
     fSpectrum = new TF1("fSpectrum", [this](double *x, double *p) {
         return this->f(x, p);
     }, SpectrumAdd->GetXmin(), SpectrumAdd->GetXmax(), SpectrumAdd->GetNpar());
 }
-
 
 void Spectrum::ReadFile()
 {
@@ -106,7 +104,7 @@ void Spectrum::ReadFile()
                     if (abs(Daughter_energy1 - LevelEnergy) < 1)
                     {
 
-                        if (Energy > 0)
+                        if (Energy > 3300 && Energy < 3400)
                         {   
                             double a;
                             if (abs(Q_beta - 6088) < 1)
@@ -117,7 +115,7 @@ void Spectrum::ReadFile()
                             {
                                 a = -1./3.;
                             }
-                            Peak* p = new Peak(Energy, Intensity, SecondTokeV(LevelHalfLife), sqrt((Q_beta-511) * (Q_beta-511) + 511 * 511), fA, fZ, a, M_PI, 0, Energy-250, Energy+250, 0.1);
+                            Peak* p = new Peak(Energy, Intensity, SecondTokeV(LevelHalfLife), sqrt((Q_beta-511) * (Q_beta-511) + 511 * 511), fA, fZ, a, 0, M_PI, 3300, 3400, 0.01);
                             Peaks.push_back(p);
                             fPeaks.push_back(p->GetFunction());
                         }

@@ -4,6 +4,7 @@
 #include "Peak.hh"
 #include "Constants.hh"
 #include "Addition.hh"
+#include "Convolution.hh"
 
 class Spectrum
 {
@@ -29,6 +30,8 @@ public:
     vector<TF1 *> GetTF1Peaks();
     vector<Peak *> GetPeaks();
 
+    vector<TF1 *> DoConvolutionResolution(TF1 *);
+
     double SecondTokeV(double t)
     {
         if (t == 0)
@@ -44,6 +47,7 @@ public:
     }   
 
     Addition *SpectrumAdd;
+    
 };
 
 #endif

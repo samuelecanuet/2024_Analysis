@@ -627,8 +627,8 @@ void FittingSiPMs()
         }
     }
 
-    MatchingSiPM[NUCLEUS][101] = new TF1("MatchingSiPM_101", "[0]*x + [1]", 0, 10000e3);
-    MatchingSiPM[NUCLEUS][101]->SetParameters(1, 0);
+    MatchingSiPM[NUCLEUS][104] = new TF1("MatchingSiPM_104", "[0]*x + [1]", 0, 10000e3);
+    MatchingSiPM[NUCLEUS][104]->SetParameters(1, 0);
 }
 
 void FittingSiPMsBi207()
@@ -717,15 +717,15 @@ void FittingSiPMsBi207()
             // }
         }
 
-        if (SiPM[1].isValid)
+        if (SiPM[4].isValid)
         {
             for (int index = 1; index <= 9; index++)
             {
                 if (!SiPM[index].isValid)
                     continue;
-                if (abs((SiPM[1].Time - (SiPM)[index].Time)) < 10)
+                if (abs((SiPM[4].Time - (SiPM)[index].Time)) < 10)
                 {
-                    G_Matching_SiPM[NUCLEUS][index]->SetPoint(counter_graph[index], SiPM[index].Channel, SiPM[1].Channel);
+                    G_Matching_SiPM[NUCLEUS][index]->SetPoint(counter_graph[index], SiPM[index].Channel, SiPM[4].Channel);
                     counter_graph[index]++;
                 }
             }
@@ -744,8 +744,8 @@ void FittingSiPMsBi207()
         }
     }
 
-    MatchingSiPM[NUCLEUS][101] = new TF1("MatchingSiPM_101", "[0]*x + [1]", 0, 10000e3);
-    MatchingSiPM[NUCLEUS][101]->SetParameters(1, 0);
+    MatchingSiPM[NUCLEUS][104] = new TF1("MatchingSiPM_104", "[0]*x + [1]", 0, 10000e3);
+    MatchingSiPM[NUCLEUS][104]->SetParameters(1, 0);
 }
 
 void MergingSiPMs()
@@ -1064,7 +1064,7 @@ void WriteHistograms()
 
                 // superimposed SiPM matched merged sipms
                 cSiPM->cd(GetDetectorChannel(i));
-                H_SiPM_Merged[NUCLEUS][101]->Draw("HIST");
+                H_SiPM_Merged[NUCLEUS][104]->Draw("HIST");
                 H_SiPM_Merged[NUCLEUS][i]->SetLineColor(kRed);
                 H_SiPM_Merged[NUCLEUS][i]->Draw("HIST SAME");
                 // TLatex *text = new TLatex();

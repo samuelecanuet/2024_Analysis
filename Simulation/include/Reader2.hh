@@ -64,6 +64,9 @@ map<int, TH1D *> H_PlasticScintillator_Hit_Time;
 map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det;
 map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det_without_interstrip;
 map<int, TH2D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_Det_Rear;
+map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_SINGLE;
+map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_COINC;
+map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_Energy_Deposit_NOCOINC;
 map<int, TH1D *> H_Silicon_Detector_Hit_Position_x;
 map<int, TH1D *> H_Silicon_Detector_Hit_Position_y;
 map<int, TH1D *> H_Silicon_Detector_Hit_Position_z;
@@ -81,6 +84,7 @@ map<int, TH1D *[SIGNAL_MAX]> H_Silicon_Detector_DL_Energy_Deposit_Det;
 map<int, TH2D *> H_Silicon_Detector_InterStrip_xy;
 map<int, TH1D *> H_Silicon_Detector_InterStrip_z;
 map<int, TH1D * [100 * SIGNAL_MAX]> H_Silicon_Detector_InterStrip_Energy_Deposit_Det;
+TH1D *H = new TH1D("H", "H", 10000, 0, 10000);
 
 map<int, TDirectory *> dir_Particle;
 map<int, TDirectory *> dir_Initial;
@@ -91,7 +95,7 @@ map<int, array<TDirectory *, SIGNAL_MAX>> dir_Silicon_Detector_Det;
 map<int, TDirectory *> dir_Silicon_Detector_DL;
 map<int, TDirectory *> dir_Silicon_Detector_InterStrip;
 
-TH2D* H[SIGNAL_MAX];
+// TH2D* H[SIGNAL_MAX];
 double Plastic_Full_energy = 0;
 double Full_energy[SIGNAL_MAX];
 double Full_energy_without_interstrip[SIGNAL_MAX];
@@ -133,7 +137,7 @@ void Init()
     gSystem->AddIncludePath("-I/softs/clhep/2.4.6.2/include/");
     gSystem->AddIncludePath("-I/softs/clhep/2.4.6.2/include/CLHEP/Vector/");
     gSystem->AddIncludePath("Merger/");
-    Info("Initializing");
+    Info("Initialisation");
     for (int i = 0; i < Particle_Used_String.size(); i++)
     {
         PDGtoIndex[NametoCode_map.at(Particle_Used_String.at(i))] = i;
@@ -365,6 +369,24 @@ void InitHistograms(int PDG_code)
             H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det]->GetXaxis()->CenterTitle();
             H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det]->GetYaxis()->CenterTitle();
 
+            H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_SINGLE_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_SINGLE_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
+            H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetYaxis()->SetTitle("Counts");
+            H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetXaxis()->CenterTitle();
+            H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetYaxis()->CenterTitle();
+
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_NOCOINC_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_NOCOINC_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetYaxis()->SetTitle("Counts");
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetXaxis()->CenterTitle();
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetYaxis()->CenterTitle();
+
+            H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_COINC_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_COINC_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
+            H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det]->GetYaxis()->SetTitle("Counts");
+            H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det]->GetXaxis()->CenterTitle();
+            H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det]->GetYaxis()->CenterTitle();
+
             if (GetDetectorChannel(det) != 5)
             {
                 int interstrip = GetDetector(det) * 1000 + ((GetDetectorChannel(det) * 2 + 1)) * 100 / 2;
@@ -502,6 +524,29 @@ void WriteHistograms()
             }
             leg->Draw("SAME");
             c2->Write();
+
+            TCanvas *c3 = new TCanvas(("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_Coinc").c_str(), ("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_Coinc").c_str(), 800, 600);
+            c3->cd();
+            H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->SetLineColor(kBlack);
+            H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->Draw("HIST");
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]->SetLineColor(kBlue);
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]->Draw("HIST SAME");
+            H_Silicon_Detector_Energy_Deposit_COINC[0][det]->SetLineColor(kRed);
+            H_Silicon_Detector_Energy_Deposit_COINC[0][det]->Draw("HIST SAME");
+
+            H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->GetXaxis()->SetRangeUser(3200, 3400);
+            H_Silicon_Detector_Energy_Deposit_COINC[0][det]->GetXaxis()->SetRangeUser(3200, 3400);
+            double shift = H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->GetMean() - H_Silicon_Detector_Energy_Deposit_COINC[0][det]->GetMean();
+
+            TLatex *text = new TLatex();
+            text->SetNDC();
+            text->SetTextSize(0.03);
+            text->DrawLatex(0.1, 0.92, "Single");
+            text->SetTextColor(kBlue);
+
+            c3->Write();
+            
+        
         }
     }
 
@@ -537,5 +582,7 @@ void WriteHistograms()
     }
     leg->Draw("SAME");
     c3->Write();
+
+    H->Write();
 
 }

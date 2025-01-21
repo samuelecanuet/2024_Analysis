@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
                 MERGED_Tree_Silicon.push_back((*Silicon)[0]);
                 
                 // run matching correction
-                // (*Silicon)[1].Channel = Matching_function[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
+                (*Silicon)[1].Channel = Matching_function[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
                 H_RearStrip[(*Silicon)[0].Label]->Fill((*Silicon)[0].Channel, (*Silicon)[1].Channel);
                 
                 // rear-strip matching correction

@@ -2620,22 +2620,22 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
   }
 
   // !Case A : SINGLE Rear and Strip associated (most common case)
-  // if (RearStrip_ASSOCIATED.size() != 1 || Rear_Position.size() != 1 || Strip_Position.size() != 1)
-  // {
-  //   return; 
-  // }
-  if (Rear_Position.size() < 1 || Strip_Position.size() < 1)
+  if (RearStrip_ASSOCIATED.size() != 1 || Rear_Position.size() != 1 || Strip_Position.size() != 1)
   {
-    return;
+    return; 
   }
+  // if (Rear_Position.size() < 1 || Strip_Position.size() < 1)
+  // {
+  //   return;
+  // }
   Silicon.push_back(signals[Rear_Position[0]]);
   Silicon.push_back(signals[Strip_Position[0]]);
   ////////////////////####################////////////////////
 
-  // if (Silicon[0].Pileup == 1 || Silicon[1].Pileup == 1)
-  // {
-  //   return;
-  // }
+  if (Silicon[0].Pileup == 1 || Silicon[1].Pileup == 1)
+  {
+    return;
+  }
   ////////////////////####################////////////////////
   /// Cutting data Rear/Strip ///
   //// Strip
@@ -2771,7 +2771,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
       }
       else
       {
-        if ((abs(SiPM_HGroups[SiPM_HGroups.size() - 1][(SiPM_HGroups[SiPM_HGroups.size() - 1]).size() - 1].Time - (SiPM_High)[i].Time)) <= 20)
+        if ((abs(SiPM_HGroups[SiPM_HGroups.size() - 1][(SiPM_HGroups[SiPM_HGroups.size() - 1]).size() - 1].Time - (SiPM_High)[i].Time)) <= 10)
         {
           // same group
           SiPM_HGroups[SiPM_HGroups.size() - 1].push_back((SiPM_High)[i]);
@@ -2839,15 +2839,16 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
     }
 
     ///// !!! NEAREST IS MAX MULTIPLICITY !!! /////
-    int Max_Multiplicity = 0;
-    for (int i = 0; i < SiPM_HGroups.size(); i++)
-    {
-      if (Max_Multiplicity <= SiPM_HGroups[i].size())
-      {
-        Max_Multiplicity = SiPM_HGroups[i].size();
-        nearest_index = i;
-      }
-    }
+    // int Max_Multiplicity = 0;
+    // for (int i = 0; i < SiPM_HGroups.size(); i++)
+    // {
+    //   if (Max_Multiplicity <= SiPM_HGroups[i].size())
+    //   {
+    //     Max_Multiplicity = SiPM_HGroups[i].size();
+    //     nearest_index = i;
+    //   }
+    // }
+    ///////////////////////////////////////////////
 
     if (nearest_index != -1)
     {
@@ -2901,12 +2902,12 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
       ///////// WRITING SUBGROUP IN THE FINAL TREE /////////
       if (IAS)
       {
-        if (SiPM_High_Size > 0) 
+        if (SiPM_High_Size == 7) 
         {
-          // if (Verbose)
-          // cout << endl;
-          // if (Verbose)
-          // cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
+          if (Verbose)
+            cout << endl;
+          if (Verbose)
+            cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
           for (Signal high : SiPM_High)
           {
             bool grouped = false;
@@ -2926,16 +2927,17 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
               if (Verbose)
               {
                 
-                if (isnan(high.Time) && high.Time < 20)
-                {
-                  cout << "Time = 0" << endl;
-                  cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
+                // if (!isnan(high.Time) && high.Time < 20)
+                // {
+                  // cout << "Time = 0" << endl;
+                  // cout << "Multiplicity Group:" << SiPM_HGroups[nearest_index].size() << "   Multiplicity Faster: " << SiPM_High_Size << endl;
                   cout << GREEN << high << WHITE << endl;
-                }
+                // }
               }
             }
             else
             {
+              cout << RED << high << WHITE << endl;
               if (MissingLabel[GetDetectorChannel(high.Label)] && high.Time > SiPM_HGroups[nearest_index][0].Time - 250 && high.Time - SiPM_HGroups[nearest_index][0].Time < 0)
               {
                 if (Verbose)
@@ -2977,14 +2979,15 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals )
       {
         if (IAS)
           H_SiPM_ChannelTime_Cleaned[SiPM_HGroups[nearest_index][high].Label]->Fill(SiPM_HGroups[nearest_index][high].Time, SiPM_HGroups[nearest_index][high].Channel);
-        Signal s = SiPM_HGroups[nearest_index][high];
-        s.Time = nearest_group_time;
-        CLEANED_Tree_SiPMHigh.push_back(s);
+        
+          Signal s = SiPM_HGroups[nearest_index][high];
+          s.Time = nearest_group_time;
+          if (s.Channel > 0)
+            CLEANED_Tree_SiPMHigh.push_back(s);
+        
       }
-      if (IAS && nearest_group_time < 60 && nearest_group_time > -20 && SiPM_HGroups[nearest_index].size() >= 3)
+      if (IAS)
         H_SiPMHigh_Mulitplicity_Cleaned->Fill(SiPM_HGroups[nearest_index].size());
-      else if (IAS)
-        H_SiPMHigh_Mulitplicity_Cleaned->Fill(0);
       //////////////////////////////////////////////////////
       
 

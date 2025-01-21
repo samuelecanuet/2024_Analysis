@@ -22,13 +22,14 @@ int main()
     ANALYSED_File = new TFile((DIR_ROOT_DATA_ANALYSED + filename + "_analysed.root").c_str(), "RECREATE");
     TTree *ANALYSED_Tree = new TTree("ANALYSED_Tree", "ANALYSED_Tree");
     
+    double TH[10] = {0, 300, 300, 300, 400, 200, 400, 400, 400, 300};
 
     InitWindows();
     InitHistograms();
     Info("Start Fake Coincidence Correction");
     clock_t start = clock(), Current;
     int Entries = Reader->GetEntries();
-    int limit =Entries;// 1e7;//Entries;
+    int limit =5e6;//Entries;
     while (Reader->Next() && Reader->GetCurrentEntry() < limit)
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
@@ -38,10 +39,8 @@ int main()
         // cout << "Energy: " << energy << "    " << Strip_Label << endl;
         double nearest = 1e9;
 
-        
-
-        if (WindowsMap[filename][peak][Strip_Label].first < energy && energy < WindowsMap[filename][peak][Strip_Label].second ) // only for ias
-        {
+        // if (WindowsMap[filename][peak][Strip_Label].first < energy && energy < WindowsMap[filename][peak][Strip_Label].second ) // only for ias
+        // {
             if ((*SiPM_High).GetSize() > 0)
             {
                 // cout << "SiPM_Low: " << (*SiPM_Low).GetSize() << endl;
@@ -56,25 +55,38 @@ int main()
 
             for (int mul = 1; mul <= BETA_SIZE; mul++)
             {
-                if ( mul <= (*SiPM_High).GetSize() && (nearest > start_gate && nearest < end_gate)) //coinc for at least mul
+                if (mul <= (*SiPM_High).GetSize() && (nearest > start_gate && nearest < end_gate) && TH[GetDetectorChannel((*SiPM_High)[0].Label)] * 1e3 < (*SiPM_High)[0].Channel) // coinc for at least mul
                 {
-                    // if ((*SiPM_High)[0].Channel > 200e3)
-                    // {
-                        H_Coinc[Strip_Label][mul]->Fill(energy);
-                        H_SiPM_Time_Coinc[Strip_Label][mul]->Fill(nearest);
-                    // }
-                    // else
-                    // {
-                    //     H_NoCoinc[Strip_Label][mul]->Fill(energy);
-                    // }
+
+                    H_Coinc[Strip_Label][mul]->Fill(energy);
+                    H_SiPM_Time_Coinc[Strip_Label][mul]->Fill(nearest);
+
+                    for (int i = 0; i < (*SiPM_High).GetSize(); i++)
+                    {
+                        H_SiPM_Channel_M_coinc[(*SiPM_High)[i].Label][mul]->Fill((*SiPM_High)[i].Channel);
+                    }
+                    for (int i = 0; i < (*SiPM_Low).GetSize(); i++)
+                    {
+                        H_SiPM_Channel_M_coinc[(*SiPM_Low)[i].Label][mul]->Fill((*SiPM_Low)[i].Channel);
+                    }
                 }
                 else
                 {
                     H_NoCoinc[Strip_Label][mul]->Fill(energy);
+
+                    for (int i = 0; i < (*SiPM_High).GetSize(); i++)
+                    {
+                        H_SiPM_Channel_M_nocoinc[(*SiPM_High)[i].Label][mul]->Fill((*SiPM_High)[i].Channel);
+                    }
+                    for (int i = 0; i < (*SiPM_Low).GetSize(); i++)
+                    {
+                        H_SiPM_Channel_M_nocoinc[(*SiPM_Low)[i].Label][mul]->Fill((*SiPM_Low)[i].Channel);
+                    }
                 }
 
                 if (mul <= (*SiPM_High).GetSize())
                     H_SiPM_Time[Strip_Label][mul]->Fill(nearest);
+
             }
 
             if ((*SiPM_High).GetSize() > 0)
@@ -84,7 +96,7 @@ int main()
                     H_Coinc_Mulitplicity[Strip_Label][(*SiPM_High).GetSize()]->Fill(energy);
                 }
             }
-        }
+        // }
     }
 
     ///////// COMPUTE COINCIDENCE CORRECTION //////////
@@ -97,7 +109,7 @@ int main()
                 H_SiPM_Time[i][mul]->GetXaxis()->SetRangeUser(start_gate_fake, end_gate_fake);
                 HFake[i][mul] = H_SiPM_Time[i][mul]->Integral() / (abs(start_gate_fake - end_gate_fake)); 
                 H_SiPM_Time[i][mul]->GetXaxis()->SetRangeUser(-1111, -1111);
-                NFake[i][mul] = HFake[i][mul] * abs(end_gate - start_gate); 
+                NFake[i][mul] = 2*HFake[i][mul] * abs(end_gate - start_gate); 
             }
         }
     }
@@ -115,16 +127,27 @@ int main()
                 H_Coinc_Corrected[i][mul] = (TH1D*)H_Coinc[i][mul]->Clone(("H_Coinc_Corrected" + detectorName[i] + "_" + to_string(mul)).c_str());
                 H_Coinc_Corrected[i][mul]->SetTitle(("H_Coinc_Corrected" + detectorName[i] + "_" + to_string(mul)).c_str());
 
+                //perfect
+                // H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second );
+                // H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second );
+                // double integral_nocoinc = H_NoCoinc[i][mul]->Integral();
+                // double integral_coinc = H_Coinc[i][mul]->Integral();
+                // double ratio = abs(integral_coinc - integral_nocoinc) / 2 ;
+
                 //compute 
                 H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second );
                 double integral = H_NoCoinc[i][mul]->Integral();
                 H_NoCoinc[i][mul]->Scale(1. / integral);
                 H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(-1111, -1111);
 
-                //apply
-                H_Coinc_Corrected[i][mul]->Add(H_NoCoinc[i][mul], -NFake[i][mul]);
-                H_NoCoinc_Corrected[i][mul]->Add(H_NoCoinc[i][mul], NFake[i][mul]);
+                
 
+                //apply              
+                H_Coinc_Corrected[i][mul]->Add(H_NoCoinc[i][mul], -2*NFake[i][mul]);
+                H_NoCoinc_Corrected[i][mul]->Add(H_NoCoinc[i][mul], 2*NFake[i][mul]);
+
+                H_Fake[i][mul] = (TH1D*)H_NoCoinc[i][mul]->Clone(("H_Fake" + detectorName[i] + "_" + to_string(mul)).c_str());
+                H_Fake[i][mul]->Scale(NFake[i][mul]);
                 H_NoCoinc[i][mul]->Scale(integral);
 
                 //for display
@@ -135,12 +158,17 @@ int main()
 
     /// DRAWING
     ANALYSED_File->cd();
+    double all_coinc = 0;
+    double all_nocoinc = 0;
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
         if (IsDetectorSiliStrip(i))
         {
+            cout << endl;
+            Info(detectorName[i]);
             for (int mul = 1; mul <= BETA_SIZE; mul++)
             {
+                cout << "Multiplicity: " << mul << endl;
                 dir_FakeCorrection_Strip[i]->cd();
                 TCanvas *c = new TCanvas(("RAW_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("RAW_" + detectorName[i] + "_" + to_string(mul)).c_str(), 1920, 1080);
                 H_Single[i]->SetLineColor(kBlack);
@@ -151,6 +179,9 @@ int main()
                 H_NoCoinc[i][mul]->SetLineColor(kBlue);
                 H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
                 H_NoCoinc[i][mul]->Draw("HIST SAME");
+                H_Fake[i][mul]->SetLineColor(kGreen);
+                H_Fake[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
+                H_Fake[i][mul]->Draw("HIST SAME");
                 c->Write();
 
                 TCanvas *c_Corrected = new TCanvas(("Corrected_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("Corrected_" + detectorName[i] + "_" + to_string(mul)).c_str(), 1920, 1080);
@@ -184,6 +215,10 @@ int main()
                 cout << "No Coinc: " << nocoinc << endl;
                 cout << "Coinc: " << coinc << endl;
                 cout << "Coinc/NoCoinc: " << coinc / (double)nocoinc << endl;
+                cout << "## SHIFT CORRECTED ##" << endl;
+                cout << "No Coinc: " << H_NoCoinc_Corrected[i][mul]->GetMean() << endl;
+                cout << "Coinc: " << H_Coinc_Corrected[i][mul]->GetMean() << endl;
+                cout << "E: " << 0.5*abs(H_NoCoinc_Corrected[i][mul]->GetMean() -  H_Coinc_Corrected[i][mul]->GetMean())<< endl;
 
                 dir_FakeCorrection_Strip_Write[i]->cd();
                 H_NoCoinc[i][mul]->Write();
@@ -192,6 +227,9 @@ int main()
                 H_Coinc_Corrected[i][mul]->Write();
                 H_SiPM_Time[i][mul]->Write();
                 H_SiPM_Time_Coinc[i][mul]->Write();
+
+                // all_coinc+= H_Coinc_Corrected[i][mul]->Integral();
+                // all_nocoinc += H_NoCoinc_Corrected[i][mul]->Integral();
             }
 
             //Compare coinc with multiplicity
@@ -224,6 +262,11 @@ int main()
         }
     }
 
+    cout << "All coinc: " << all_coinc << endl;
+    cout << "All nocoinc: " << all_nocoinc << endl;
+    cout << "ratio: " << all_coinc / all_nocoinc << endl;
+
+
     ANALYSED_File->cd();
     //Compare NFake with multiplicity
     for (int mul = 1; mul <= BETA_SIZE; mul++)
@@ -236,6 +279,36 @@ int main()
         G_NFake[mul]->Draw("AP");
         c->Write();
     }
+
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorBeta(i))
+        {
+            TCanvas *c = new TCanvas(("H_SiPM_Channel_nocoinc" + detectorName[i]).c_str(), ("H_SiPM_Channel_nocoinc" + detectorName[i]).c_str(), 1920, 1080);
+            c->cd();
+            for (int m = 1; m < MAX_MULTIPLICTY; m++)
+            {
+                if (m == 1)
+                    H_SiPM_Channel_M_nocoinc[i][m]->Draw("HIST");
+                else
+                    H_SiPM_Channel_M_nocoinc[i][m]->Draw("HIST SAME");
+            }
+            c->Write();
+
+            TCanvas *c1 = new TCanvas(("H_SiPM_Channel_coinc" + detectorName[i]).c_str(), ("H_SiPM_Channel_coinc" + detectorName[i]).c_str(), 1920, 1080);
+            c1->cd();
+            for (int m = 1; m < MAX_MULTIPLICTY; m++)
+            {
+                if (m == 1)
+                    H_SiPM_Channel_M_coinc[i][m]->Draw("HIST");
+                else
+                    H_SiPM_Channel_M_coinc[i][m]->Draw("HIST SAME");
+            }
+            c1->Write();
+        }
+    }
+    
+
     ANALYSED_File->Close();
 
     return 0;

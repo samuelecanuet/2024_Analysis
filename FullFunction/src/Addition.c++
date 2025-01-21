@@ -2,10 +2,7 @@
 
 Addition::Addition(vector<TF1 *> functions) : fFunctions(functions)
 {
-    fSaved.resize(fFunctions.size(), false);
-
-    cout << &fFunctions << endl;
-    
+    fSaved.resize(fFunctions.size(), false);    
 }
 
 Addition::~Addition()

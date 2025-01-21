@@ -26,7 +26,7 @@ Peak::Peak(double Energy, double BranchingRatio, double HalfLife, double Q_beta,
 
     TF1KinematicFunction = new TF1("KinematicShift", [this](double *x, double *par)
                                    { return this->fTotalWeightKinematicShift(x, par); }, fE_min, fE_max, NParKinematic);
-    TF1KinematicFunction->FixParameter(0, 1);
+    TF1KinematicFunction->SetParameter(0, 1);
     TF1KinematicFunction->FixParameter(1, fEnergy);
     TF1KinematicFunction->FixParameter(2, fQ_beta);
     TF1KinematicFunction->FixParameter(3, K(fEnergy, fA * m));
@@ -36,30 +36,26 @@ Peak::Peak(double Energy, double BranchingRatio, double HalfLife, double Q_beta,
     TF1KinematicFunction->FixParameter(7, fPhi_min);
     TF1KinematicFunction->FixParameter(8, fPhi_max);
 
+    TF1NuclearBroadering = new TF1("NuclearBroadering", [this](double *x, double *par)
+                                   { return this->fNuclearBroadering(x, par); }, -300, 300, NParNuclear);
+    TF1NuclearBroadering->SetParameters(1, fHalfLife);
 
-
-
-        TF1NuclearBroadering = new TF1("NuclearBroadering", [this](double *x, double *par)
-                                       { return this->fNuclearBroadering(x, par); }, -300, 300, NParNuclear);
-        TF1NuclearBroadering->SetParameters(1, fHalfLife);
-
-        ConvolutedNucKin = new Convolution(TF1KinematicFunction, TF1NuclearBroadering, fE_min, fE_max, fStep);
-        fFunction = new TF1("fFunction", [this](double *x, double *par)
-                            { return this->f(x, par); }, fE_min, fE_max, NPar);
-        fFunction->FixParameter(0, 1);
-        fFunction->FixParameter(1, fEnergy);
-        fFunction->FixParameter(2, fQ_beta);
-        fFunction->FixParameter(3, K(fEnergy, fA * m));
-        fFunction->FixParameter(4, fa);
-        fFunction->FixParameter(5, fA);
-        fFunction->FixParameter(6, fZ);
-        fFunction->FixParameter(7, fPhi_min);
-        fFunction->FixParameter(8, fPhi_max);
-        fFunction->SetParameter(9, 1e5);
-        fFunction->SetParLimits(9, 1e2, 1e7);
-        fFunction->FixParameter(10, HalfLife);
-        // fFunction->SetParLimits(10, 0, 10);
-    
+    ConvolutedNucKin = new Convolution(TF1KinematicFunction, TF1NuclearBroadering, fE_min, fE_max, fStep);
+    fFunction = new TF1("fFunction", [this](double *x, double *par)
+                        { return par[9]*this->f(x, par); }, fE_min, fE_max, NPar);
+    fFunction->SetParameter(0, 1);
+    fFunction->FixParameter(1, fEnergy);
+    fFunction->FixParameter(2, fQ_beta);
+    fFunction->FixParameter(3, K(fEnergy, fA * m));
+    fFunction->FixParameter(4, fa);
+    fFunction->FixParameter(5, fA);
+    fFunction->FixParameter(6, fZ);
+    fFunction->FixParameter(7, fPhi_min);
+    fFunction->FixParameter(8, fPhi_max);
+    fFunction->SetParameter(9, 1e5);
+    fFunction->SetParLimits(9, 1e2, 1e7);
+    fFunction->FixParameter(10, HalfLife);
+    // fFunction->SetParLimits(10, 0, 10);
 }
 
 Peak::~Peak()

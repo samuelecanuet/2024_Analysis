@@ -38,11 +38,10 @@
 #include "Math/Factory.h"
 #include "TF1Convolution.h"
 #include "TSpectrum.h"
+#include <Minuit2/Minuit2Minimizer.h>
 #include "TFitResult.h"
+#include "TVirtualFitter.h"
 #include <gsl/gsl_statistics.h>
-
-#include "../../../lib/SignalDict/Signal.h"
-#include "Detectors.hh"
 
 using namespace std;
 using namespace ROOT::Math;
@@ -56,6 +55,9 @@ TTreeReader *Reader;
 TTree *Tree;
 TTree *Cleaned_Tree;
 
+TFile* fSaved;
+bool WRITTING;
+
 TH1D *H_RAW[5];
 TH2D *H_RAW_2D;
 TH2D *H;
@@ -63,7 +65,7 @@ TH2D *H_precorrrected;
 TH2D *H_corrected;
 TH2D *H_reconstruction;
 TH2D *H_measurement;
-TH2D *H_measurement_reconstruted;
+TH2D *H_measurement_reconstructed;
 
 int A = 1;
 int B = 3;
@@ -128,10 +130,10 @@ bool M_final[8][8] = {
     {false, false, false, false, false, false, false, false},
     {false, false, false, false, false, false, false, false}};
 
-double x_measurement_min = -2.5;
-double x_measurement_max = 2.5;
-double y_measurement_min = -2.5;
-double y_measurement_max = 2.5;
+double x_measurement_min = -2.;
+double x_measurement_max = 2.;
+double y_measurement_min = -2.;
+double y_measurement_max = 2.;
 
 bool M_measurement[8][8] = {
     {false, false, false, false, false, false, false, false},
@@ -1059,7 +1061,7 @@ void FittingReconstruction()
     }
     else
     {
-        std::ifstream file("guess_center.txt");
+        std::ifstream file("out_centers.txt");
         std::string line;
         int counter = 0;
         while (std::getline(file, line))
@@ -1281,8 +1283,8 @@ void FinalFunctionToMinimize2D()
 
     // l
     FinalFunction->SetParLimits(9, 1., 1.4);
-    FinalFunction->SetParameter(9, 1.2);
-    // FinalFunction->FixParameter(9, 1.2);
+    // FinalFunction->SetParameter(9, 1.2);
+    FinalFunction->FixParameter(9, 1.2);
 
     for (int i = 0; i < N; ++i)
     {
@@ -1415,7 +1417,7 @@ double MyGaussian(double *x, double *par)
     double sigma_gy = par[4];
 
     // RAW EXPRESSION  OF 2D GAUSSIAN (R)
-    double gauss = A_g / ( 2 * M_PI * sigma_gx * sigma_gy ) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
+    double gauss = A_g /(2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
 
     return gauss;
 }
@@ -1423,7 +1425,7 @@ double MyGaussian(double *x, double *par)
 double MeasurementFittedFunction2D(double *x, double *par)
 {
 
-    // double A = par[0];
+    double A = par[0];
     double sigma_x = par[1];
     double sigma_y = par[2];
     double A_g = par[3];
@@ -1432,10 +1434,10 @@ double MeasurementFittedFunction2D(double *x, double *par)
     double sigma_gx = par[6];
     double sigma_gy = par[7];
     double bkg = par[8];
-    double l2 = par[9] / 2;
+    double l2 = par[9]/2;
     double beta_x[n][n];
     double beta_y[n][n];
-    double A[n][n];
+    // double A[n][n];
     double a[6] = {par[3*n*n+10], par[3*n*n+11], par[3*n*n+21], par[3*n*n+13], par[3*n*n+14], par[3*n*n+15]};
 
     double result_sum = 0.0;
@@ -1449,34 +1451,40 @@ double MeasurementFittedFunction2D(double *x, double *par)
             if (!M_measurement[i][j])
                 continue;
 
-            A[i][j] = par[2 * n * n + 10 + i * n + j];
+            // A[i][j] = par[2 * n * n + 10 + i * n + j];
             beta_x[i][j] = par[10 + i * n + j];
             beta_y[i][j] = par[10 + n * n + i * n + j];
 
-            double erf_x_pos = erf((x[0] - (beta_x[i][j] - l2)) / (sqrt(2) * sigma_x));
-            double erf_x_neg = erf((x[0] - (beta_x[i][j] + l2)) / (sqrt(2) * sigma_x));
-            double erf_y_pos = erf((x[1] - (beta_y[i][j] - l2)) / (sqrt(2) * sigma_y));
-            double erf_y_neg = erf((x[1] - (beta_y[i][j] + l2)) / (sqrt(2) * sigma_y));
+            double erf_x_pos = 0.5*(1+erf((x[0] - (beta_x[i][j] - l2)) / (sqrt(2) * sigma_x)));
+            double erf_x_neg = 0.5*(1+erf((x[0] - (beta_x[i][j] + l2)) / (sqrt(2) * sigma_x)));
+            double erf_y_pos = 0.5*(1+erf((x[1] - (beta_y[i][j] - l2)) / (sqrt(2) * sigma_y)));
+            double erf_y_neg = 0.5*(1+erf((x[1] - (beta_y[i][j] + l2)) / (sqrt(2) * sigma_y)));
 
             result_sum += (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
-            grid_sum += A[i][j] * (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
+            grid_sum += (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
         }
     }
 
     // RAW EXPRESSION  OF 2D GAUSSIAN
-    double gauss = A_g * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
+    double theta = A * TMath::Pi() / 180.;
+    double Xr = (x[0]-mu_gx)*cos(theta) + (x[1]-mu_gy)*sin(theta);
+    double Yr = -(x[0]-mu_gx)*sin(theta) + (x[1]-mu_gy)*cos(theta);
+
+    // double rho = 0.0;
+    double gaussr = A_g * 1/(sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
+    // double gaussr_corr = bkg + A_g * exp(-0.5 * 1/(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
+
+    double gauss = A_g * 1/(sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
 
     // RAW EXPRESSION  OF 2D GAUSSIAN (R)
     // double GaussianParameters[9] = {A_g, mu_gx, mu_gy, a[0], a[1], a[2], a[3], a[4], a[5]};
     
-    result_sum *= gauss;
+    result_sum *= gaussr;
 
-    double result = result_sum + grid_sum;
+    double result = result_sum + bkg*grid_sum;
 
     return result;
 }
-
-/////////////////////////////////// NEW FOR CONVOLUTION //////////////////////////////////////
 
 double f(double *x, double *par)
 {
@@ -1532,15 +1540,18 @@ double f(double *x, double *par)
     // double Yr = -(x[0]-mu_gx)*sin(theta) + (x[1]-mu_gy)*cos(theta);
 
     // double rho = 0.0;
-    // double gaussr = A_g * 1/(sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
+    // double gaussr = A_g / (2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
     // double gaussr_corr = bkg + A_g * exp(-0.5 * 1/(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
 
-    double gauss = A_g * 1/(sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
+    double par_gauss[5] = {A_g, mu_gx, sigma_gx, mu_gy, sigma_gy};
+    double gauss = MyGaussian(x, par_gauss);
+    // double gauss = A_g / (2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
     
     result_sum *= gauss;
 
     return result_sum + bkg*grid_sum;
 }
+
 
 double MeasurementFittedFunction2D_Convoluted(double *x, double *par)
 {
@@ -1583,61 +1594,87 @@ double MeasurementFittedFunction2D_Convoluted(double *x, double *par)
     return result_conv;
 }
 
-
-void MeasurementFunctionToMinimize2D()
+double MeasurementFunctionToMinimize2D(double *par)
 {
+    // double sigma_x = par[0];
+    // double sigma_y = par[1];
+    // double Amplitude_gauss = par[2];
+    // double mu_gx = par[3];
+    // double mu_gy = par[4];
+    // double sigma_gx = par[5];
+    // double sigma_gy = par[6];
+    // double bkg = par[7];
+
+
+    ////////// SOLUTION OF FIT //////////////
+    // ### ERROR AT THE END THE FILE ### // 
+    double sigma_x = 1.70116e-01;
+    double sigma_y = 1.28192e-01;
+    double Amplitude_gauss = 2.62887e+02;
+    double mu_gx = -7.91786e-02;
+    double mu_gy = 6.31885e-02;
+    double sigma_gx = 6.59898e-01;
+    double sigma_gy = 7.73420e-01;
+    double bkg = 3.40290e+00;
+    /////////////////////////////////////////   
 
     double chi2 = 0.0;
     int N = n * n;
+
+    // ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(2); // 2 for verbose
+    ROOT::Math::MinimizerOptions::SetDefaultErrorDef(9.30*9.30);
     MeasurementFunction = new TF2("MeasurementFunction", MeasurementFittedFunction2D_Convoluted, x_measurement_min, x_measurement_max, x_measurement_min, x_measurement_max, 3 * N + 10);
     MeasurementFunction->SetNpx(75);
     MeasurementFunction->SetNpy(75);
 
     // Amplitude
-    MeasurementFunction->SetParLimits(0, 0, 1000);
-    MeasurementFunction->SetParameter(0, 50);
+    // MeasurementFunction->SetParLimits(0, 0, 180);
+    // MeasurementFunction->SetParameter(0, 50);
     MeasurementFunction->FixParameter(0, 0);
 
     // sigma x
     MeasurementFunction->SetParLimits(1, 0.1, 0.4);
-    MeasurementFunction->FixParameter(1, FinalFunction->GetParameter(1));
+    MeasurementFunction->SetParameter(1, 0.17);
+    MeasurementFunction->FixParameter(1, sigma_x);
 
     // sigma y
     MeasurementFunction->SetParLimits(2, 0.1, 0.4);
-    MeasurementFunction->FixParameter(2, FinalFunction->GetParameter(2));
+    MeasurementFunction->SetParameter(2, 0.12);
+    MeasurementFunction->FixParameter(2, sigma_y);
 
     // amplitude gaus
-    MeasurementFunction->SetParLimits(3, 10, 1000);
-    MeasurementFunction->SetParameter(3, 100);
-    MeasurementFunction->FixParameter(3, 10);
+    MeasurementFunction->SetParLimits(3, 0, 1000);
+    MeasurementFunction->SetParameter(3, 50);
+    MeasurementFunction->FixParameter(3, Amplitude_gauss);
 
     // mu gaus x
-    MeasurementFunction->SetParLimits(4, -1, 0.25);
-    MeasurementFunction->SetParameter(4, -0.2);
-    MeasurementFunction->FixParameter(4,-0.2);
+    MeasurementFunction->SetParLimits(4, -1, 1);
+    MeasurementFunction->SetParameter(4, 0);
+    MeasurementFunction->FixParameter(4, mu_gx);
 
     // mu gaus y
-    MeasurementFunction->SetParLimits(5, -1, 0.);
-    MeasurementFunction->SetParameter(5, -0.1);
-    MeasurementFunction->FixParameter(5, -0.1);
+    MeasurementFunction->SetParLimits(5, -1, 1);
+    MeasurementFunction->SetParameter(5, 0);
+    MeasurementFunction->FixParameter(5, mu_gy);
 
     // sigma gaus x
-    MeasurementFunction->SetParLimits(6, 0.3, 1.5);
-    MeasurementFunction->SetParameter(6, 0.5);
-    MeasurementFunction->FixParameter(6, 1);
+    MeasurementFunction->SetParLimits(6, 0.1, 1.5);
+    MeasurementFunction->SetParameter(6, 0.6);
+    MeasurementFunction->FixParameter(6, sigma_gx);
 
     // sigma gaus y
-    MeasurementFunction->SetParLimits(7, 0.3, 1.5);
-    MeasurementFunction->SetParameter(7, 0.5);
-    MeasurementFunction->FixParameter(7, 1);
+    MeasurementFunction->SetParLimits(7, 0.1, 1.5);
+    MeasurementFunction->SetParameter(7, 0.6);
+    MeasurementFunction->FixParameter(7, sigma_gy);
 
     // bkg
     MeasurementFunction->SetParLimits(8, 0, 100);
-    MeasurementFunction->SetParameter(8, 10);
-    MeasurementFunction->FixParameter(8, 0);
+    MeasurementFunction->SetParameter(8, 4);
+    MeasurementFunction->FixParameter(8, bkg);
 
     // l
-    MeasurementFunction->FixParameter(9, l_real);
+    // MeasurementFunction->SetParLimits(9, 0.8, 1.4);
+    MeasurementFunction->FixParameter(9, 1.2);
 
     for (int i = 0; i < N; ++i)
     {
@@ -1651,8 +1688,8 @@ void MeasurementFunctionToMinimize2D()
         else
         {
             // MeasurementFunction->FixParameter(i, 0);
-            double x_center = i / n * rho - rho * (n - 1) / 2;
-            double y_center = i % n * rho - rho * (n - 1) / 2;
+            double x_center = i / n * rho_real - rho_real * (n - 1) / 2;
+            double y_center = i % n * rho_real - rho_real * (n - 1) / 2;
 
             // beta_x
             MeasurementFunction->FixParameter(10 + i, x_center);
@@ -1666,100 +1703,88 @@ void MeasurementFunctionToMinimize2D()
         }
     }    
 
+    H_measurement_reconstructed->Rebin2D(2, 2);
 
-    // MeasurementFunction->SetParLimits(3 * N + 10, 0, 20);
-    // // MeasurementFunction->SetParameter(3 * N + 10, 0.3);
+    H_measurement_reconstructed->GetXaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
+    H_measurement_reconstructed->GetYaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
 
-    // MeasurementFunction->SetParLimits(3 * N + 11, 0, 20);
-
-    // MeasurementFunction->FixParameter(3 * N + 12, 0);
-
-    // MeasurementFunction->FixParameter(3 * N + 13, 0);
-
-    // MeasurementFunction->FixParameter(3 * N + 14, 0);
-
-    // MeasurementFunction->FixParameter(3 * N + 15, 0);
-
-
-    ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
-    ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0);
-    H_measurement_reconstruted->Rebin2D(2, 2);
-
-    H_measurement_reconstruted->GetXaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
-    H_measurement_reconstruted->GetYaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
-
-    H_measurement_reconstruted->SetBinContent(57, 51, 0);
-    TFitResultPtr r = H_measurement_reconstruted->Fit(MeasurementFunction, "MULTITHREAD RNS");
-    MeasurementFunction->Write();
-
-    cout << "chi2 = " << MeasurementFunction->GetChisquare() / MeasurementFunction->GetNDF() << endl;
-
-    // cout covarience matrix
-    TMatrixDSym cov = r->GetCovarianceMatrix();
-    cov.Print();
-
-    // cout all the error of gaussain paramaters
+    H_measurement_reconstructed->SetBinContent(57, 51, 0);
+    H_measurement_reconstructed->Fit(MeasurementFunction, "MULTITHREAD RNM");
     
-    cout << "A_g = " << MeasurementFunction->GetParameter(3) << " +/- " << MeasurementFunction->GetParError(3) << endl;
-    cout << "mu_gx = " << MeasurementFunction->GetParameter(4) << " +/- " << MeasurementFunction->GetParError(4) << endl;
-    cout << "mu_gy = " << MeasurementFunction->GetParameter(5) << " +/- " << MeasurementFunction->GetParError(5) << endl;
-    cout << "sigma_x = " << MeasurementFunction->GetParameter(6) << " +/- " << MeasurementFunction->GetParError(6) << endl;
-    cout << "sigma_y = " << MeasurementFunction->GetParameter(7) << " +/- " << MeasurementFunction->GetParError(7) << endl;
-
-    TCanvas *c1 = new TCanvas("MeassurementFitted_2D_View", "MeassurementFitted_2D_View", 800, 800);
-    H_measurement_reconstruted->Draw("COLZ");
-    MeasurementFunction->Draw("SAME");
-    c1->Write();
-
-    TCanvas *c = new TCanvas("MeassurementFitted_3D_View", "MeassurementFitted_3D_View", 800, 800);
-    H_measurement_reconstruted->GetXaxis()->SetRangeUser(-2, 2);
-    H_measurement_reconstruted->GetYaxis()->SetRangeUser(-2, 2);
-    H_measurement_reconstruted->Draw("LEGO2");
-    MeasurementFunction->SetNpx(75);
-    MeasurementFunction->SetNpy(75);
-    MeasurementFunction->Draw("SURF SAME");
-    c->Write();
+    chi2 = H_measurement_reconstructed->Chisquare(MeasurementFunction) / MeasurementFunction->GetNDF();
+    cout << "chi2 = " << chi2 << endl;
 
     
 
-    /////// SAVING PARAMETER ////////
-    SIGMA_BEAM_X = make_pair(MeasurementFunction->GetParameter(6), MeasurementFunction->GetParError(6));
-    SIGMA_BEAM_Y = make_pair(MeasurementFunction->GetParameter(7), MeasurementFunction->GetParError(7));
-    MEAN_BEAM_X = make_pair(MeasurementFunction->GetParameter(4), MeasurementFunction->GetParError(4));
-    MEAN_BEAM_Y = make_pair(MeasurementFunction->GetParameter(5), MeasurementFunction->GetParError(5));
-    AMPLITUDE_BEAM = make_pair(MeasurementFunction->GetParameter(3), MeasurementFunction->GetParError(3));
-    /////////////////////////////////
+    if (WRITTING)
+    {
+        FINAL_file->cd();
 
-    TF2 *fMyGaussian = new TF2("Beam_Profile", MyGaussian, -2, 2, -2, 2, 5);
-    fMyGaussian->SetParameter(0, MeasurementFunction->GetParameter(3));
-    fMyGaussian->SetParameter(1, MeasurementFunction->GetParameter(4));
-    fMyGaussian->SetParameter(2, MeasurementFunction->GetParameter(6));
-    fMyGaussian->SetParameter(3, MeasurementFunction->GetParameter(5));
-    fMyGaussian->SetParameter(4, MeasurementFunction->GetParameter(7));
-    fMyGaussian->Write();
+        MeasurementFunction->Write();
+
+        TCanvas *c1 = new TCanvas("MeassurementFitted_2D_View", "MeassurementFitted_2D_View", 800, 800);
+        H_measurement_reconstructed->Draw("COLZ");
+        MeasurementFunction->Draw("SAME");
+        c1->Write();
+
+        TCanvas *c = new TCanvas("MeassurementFitted_3D_View", "MeassurementFitted_3D_View", 800, 800);
+        c->Divide(2, 1);
+        c->cd(1);
+        H_measurement_reconstructed->GetXaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
+        H_measurement_reconstructed->GetYaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
+        MeasurementFunction->Draw("SURF");
+        c->cd(2);
+        // MeasurementFunction->SetNpx(75);
+        // MeasurementFunction->SetNpy(75);
+        H_measurement_reconstructed->Draw("LEGO2");
+        c->Write();
+
+        /////// SAVING PARAMETER ////////
+        SIGMA_BEAM_X = make_pair(MeasurementFunction->GetParameter(6), MeasurementFunction->GetParError(6));
+        SIGMA_BEAM_Y = make_pair(MeasurementFunction->GetParameter(7), MeasurementFunction->GetParError(7));
+        MEAN_BEAM_X = make_pair(MeasurementFunction->GetParameter(4), MeasurementFunction->GetParError(4));
+        MEAN_BEAM_Y = make_pair(MeasurementFunction->GetParameter(5), MeasurementFunction->GetParError(5));
+        AMPLITUDE_BEAM = make_pair(MeasurementFunction->GetParameter(3), MeasurementFunction->GetParError(3));
+        /////////////////////////////////
+
+        TF2 *fMyGaussian = new TF2("Beam_Profile", MyGaussian, -2, 2, -2, 2, 5);
+        fMyGaussian->SetParameter(0, MeasurementFunction->GetParameter(3));
+        fMyGaussian->SetParameter(1, MeasurementFunction->GetParameter(4));
+        fMyGaussian->SetParameter(2, MeasurementFunction->GetParameter(6));
+        fMyGaussian->SetParameter(3, MeasurementFunction->GetParameter(5));
+        fMyGaussian->SetParameter(4, MeasurementFunction->GetParameter(7));
+        fMyGaussian->Write();
+    }
+    return chi2;
 }
-
-
-////////////////////////////////////////////////////////////////////////////////
 
 void Measurement2D()
 {
-    H_measurement_reconstruted = new TH2D("H_measurement_reconstruted", "H_measurement_reconstruted", 100, x_measurement_min, x_measurement_max, 100, x_measurement_min, x_measurement_max);
+    // recreate data in histogram
+    H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 100, x_measurement_min, x_measurement_max, 100, x_measurement_min, x_measurement_max);
     for (int i = 0; i < 60202; ++i)
     {
         double x, y;
         H_measurement->GetRandom2(x, y);
         double x_fit = f_X->Eval(x, y)-0.27;
         double y_fit = f_Y->Eval(y, x)+0.30;
-        H_measurement_reconstruted->Fill(x_fit, y_fit);
+        H_measurement_reconstructed->Fill(x_fit, y_fit);
     }
 
-    H_measurement_reconstruted->SetBinContent(57, 51, 0);
+    H_measurement_reconstructed->SetBinContent(57, 51, 0);
 
 
-    TCanvas *c_measurement_reconstruted = new TCanvas("Measurement_2D_View", "Measurement_2D_View", 800, 800);
-    H_measurement_reconstruted->Draw("COLZ");
-    c_measurement_reconstruted->Write();
+    TCanvas *c_measurement_reconstructed = new TCanvas("Measurement_2D_View", "Measurement_2D_View", 800, 800);
+    H_measurement_reconstructed->Draw("COLZ");
+    c_measurement_reconstructed->Write();
+
+    fSaved = new TFile("Calibration_Saved.root", "RECREATE");
+    fSaved->cd();
+    H_measurement_reconstructed->SetName("H_measurement_reconstructed");
+    H_measurement_reconstructed->Write();
+    fSaved->Close();
+
+    FINAL_file->cd();
     
 }
 
@@ -1781,7 +1806,7 @@ double func1d(double *x, double *par)
     double grid2 = (erf((x[0] - mu2 + l/2)/(sqrt(2) * sigmar)) - erf((x[0] - mu2 - l/2)/(sqrt(2) * sigmar)) );
     double gauss = A_g * exp(-0.5 * (x[0] - mu_g) * (x[0] - mu_g) / (sigma_g * sigma_g));
 
-    return par[7] + A1 * grid1 + A2 * grid2 + gauss*(grid1+grid2);
+    return par[7]+ A1 * grid1 + A2 * grid2 + gauss*(grid1+grid2);
 }
 
 void testdiag()
@@ -1811,8 +1836,7 @@ void testdiag()
     TH1D* H_diag = H->ProjectionX("H_diag", 37, 42);
 
     TF1* f1 = new TF1("f1", func1d, -3, 3, 9);
-    // f1->SetParLimits(0, 0, 300);
-    f1->FixParameter(0, 0);
+    f1->SetParLimits(0, 0, 300);
     f1->SetParLimits(1, -1.5, -0.8);
     f1->SetParameter(1, -1);
     f1->SetParLimits(2, 0.8, 1.4);
@@ -1825,8 +1849,7 @@ void testdiag()
     // f1->SetParameter(5, -0.5);
     f1->SetParLimits(6, 0.2, 3);
     f1->SetParameter(7, 10);
-    // f1->SetParLimits(8, 0, 500);
-    f1->FixParameter(8, 0);
+    f1->SetParLimits(8, 0, 500);
 
     TCanvas *c = new TCanvas("fit", "fit", 800, 800);
     H_diag->Fit(f1, "RN");
@@ -1838,8 +1861,7 @@ void testdiag()
     TH1D* H_diagy = H->ProjectionY("H_diagy", 37, 42);
 
     TF1* f1y = new TF1("f1", func1d, -3, 3, 9);
-    // f1y->SetParLimits(0, 0, 1000);
-    f1y->FixParameter(0, 0);
+    f1y->SetParLimits(0, 0, 1000);
     f1y->SetParLimits(1, -1.5, -0.8);
     f1y->SetParameter(1, -1);
     f1y->SetParLimits(2, 0.8, 1.4);
@@ -1852,8 +1874,7 @@ void testdiag()
     // f1->SetParameter(5, -0.5);
     f1y->SetParLimits(6, 0.2, 10);
     f1y->SetParameter(7, 10);
-    // f1y->SetParLimits(8, 0, 1000);
-    f1y->FixParameter(8, 0);
+    f1y->SetParLimits(8, 0, 1000);
 
     TCanvas *cy = new TCanvas("fity", "fity", 800, 800);
     H_diagy->Fit(f1y, "RN");
@@ -1886,3 +1907,77 @@ void PrintResults()
 
 }
 #endif
+
+
+
+
+// 1 SIGMA 8 PARAMETERS
+
+// EXTERNAL ERROR MATRIX.    NDIM= 203    NPAR=  8    ERR DEF=86.49
+//   1.090e-03  1.717e-04  1.769e-02 -1.672e-05  2.030e-04  2.956e-04  3.294e-04 -7.549e-03 
+//   1.717e-04  1.065e-03 -1.146e-02 -3.404e-04  3.019e-04  6.300e-04  1.234e-04 -1.506e-03 
+//   1.769e-02 -1.146e-02  4.445e+01  9.188e-02 -3.663e-02  4.397e-01  4.347e-01 -1.731e+01 
+//  -1.672e-05 -3.404e-04  9.188e-02  3.317e-03 -7.914e-04  2.142e-03  1.888e-03 -6.069e-02 
+//   2.030e-04  3.019e-04 -3.663e-02 -7.914e-04  5.406e-03  2.339e-03 -2.235e-04 -1.686e-02 
+//   2.956e-04  6.300e-04  4.397e-01  2.142e-03  2.339e-03  2.649e-02  1.675e-02 -5.411e-01 
+//   3.294e-04  1.234e-04  4.347e-01  1.888e-03 -2.235e-04  1.675e-02  2.039e-02 -4.447e-01 
+//  -7.549e-03 -1.506e-03 -1.731e+01 -6.069e-02 -1.686e-02 -5.411e-01 -4.447e-01  1.460e+01 
+//  PARAMETER  CORRELATION COEFFICIENTS  
+//        NO.  GLOBAL      2      3      4      5      6      7      8      9
+//         2  0.20601   1.000  0.159  0.080 -0.009  0.084  0.055  0.070 -0.060
+//         3  0.32994   0.159  1.000 -0.053 -0.181  0.126  0.119  0.026 -0.012
+//         4  0.79627   0.080 -0.053  1.000  0.239 -0.075  0.405  0.457 -0.680
+//         5  0.39200  -0.009 -0.181  0.239  1.000 -0.187  0.229  0.230 -0.276
+//         6  0.39340   0.084  0.126 -0.075 -0.187  1.000  0.196 -0.021 -0.060
+//         7  0.91705   0.055  0.119  0.405  0.229  0.196  1.000  0.721 -0.870
+//         8  0.83256   0.070  0.026  0.457  0.230 -0.021  0.721  1.000 -0.815
+//         9  0.95979  -0.060 -0.012 -0.680 -0.276 -0.060 -0.870 -0.815  1.000
+//  FCN=5943.79 FROM HESSE     STATUS=OK             61 CALLS         594 TOTAL
+//                      EDM=1.7357e-06    STRATEGY= 1      ERROR MATRIX ACCURATE 
+//   EXT PARAMETER                                   STEP         FIRST   
+//   NO.   NAME      VALUE            ERROR          SIZE      DERIVATIVE 
+//    1  p0           0.00000e+00     fixed    
+//    2  p1           1.70116e-01   3.26478e-02   2.07529e-04   1.67458e-02
+//    3  p2           1.28192e-01   3.18885e-02   2.87029e-04  -3.31911e-02
+//    4  p3           4.18400e+01   6.66552e+00   3.28492e-06  -5.75860e-02
+//    5  p4          -7.91798e-02   5.75601e-02   4.33378e-05  -5.69671e-02
+//    6  p5           6.31906e-02   7.34606e-02   5.52322e-05   2.39150e-02
+//    7  p6           6.59905e-01   1.61221e-01   7.71534e-05   3.67518e-02
+//    8  p7           7.73425e-01   1.41796e-01   9.22056e-05  -6.31119e-02
+//    9  p8           3.40275e+00   3.79227e+00   9.64843e-06  -6.75542e-02
+
+//// 2 SIGMA 8 PARAMETERS
+
+//                             ERR DEF= 249.64
+//  EXTERNAL ERROR MATRIX.    NDIM= 203    NPAR=  8    ERR DEF=249.64
+//   3.147e-03  4.955e-04  5.105e-02 -4.826e-05  5.861e-04  8.533e-04  9.507e-04 -2.179e-02 
+//   4.955e-04  3.075e-03 -3.308e-02 -9.825e-04  8.715e-04  1.818e-03  3.561e-04 -4.347e-03 
+//   5.105e-02 -3.308e-02  1.283e+02  2.652e-01 -1.057e-01  1.269e+00  1.255e+00 -4.996e+01 
+//  -4.826e-05 -9.825e-04  2.652e-01  9.574e-03 -2.284e-03  6.183e-03  5.449e-03 -1.752e-01 
+//   5.861e-04  8.715e-04 -1.057e-01 -2.284e-03  1.560e-02  6.752e-03 -6.449e-04 -4.865e-02 
+//   8.533e-04  1.818e-03  1.269e+00  6.183e-03  6.752e-03  7.645e-02  4.836e-02 -1.562e+00 
+//   9.507e-04  3.561e-04  1.255e+00  5.449e-03 -6.449e-04  4.836e-02  5.885e-02 -1.283e+00 
+//  -2.179e-02 -4.347e-03 -4.996e+01 -1.752e-01 -4.865e-02 -1.562e+00 -1.283e+00  4.213e+01 
+//  PARAMETER  CORRELATION COEFFICIENTS  
+//        NO.  GLOBAL      2      3      4      5      6      7      8      9
+//         2  0.20601   1.000  0.159  0.080 -0.009  0.084  0.055  0.070 -0.060
+//         3  0.32994   0.159  1.000 -0.053 -0.181  0.126  0.119  0.026 -0.012
+//         4  0.79627   0.080 -0.053  1.000  0.239 -0.075  0.405  0.457 -0.680
+//         5  0.39199  -0.009 -0.181  0.239  1.000 -0.187  0.229  0.230 -0.276
+//         6  0.39340   0.084  0.126 -0.075 -0.187  1.000  0.196 -0.021 -0.060
+//         7  0.91705   0.055  0.119  0.405  0.229  0.196  1.000  0.721 -0.870
+//         8  0.83256   0.070  0.026  0.457  0.230 -0.021  0.721  1.000 -0.815
+//         9  0.95979  -0.060 -0.012 -0.680 -0.276 -0.060 -0.870 -0.815  1.000
+//  FCN=5943.79 FROM HESSE     STATUS=OK             61 CALLS         609 TOTAL
+//                      EDM=1.74129e-06    STRATEGY= 1      ERROR MATRIX ACCURATE 
+//   EXT PARAMETER                                   STEP         FIRST   
+//   NO.   NAME      VALUE            ERROR          SIZE      DERIVATIVE 
+//    1  p0           0.00000e+00     fixed    
+//    2  p1           1.70116e-01   5.42888e-02   2.10318e-04   1.67659e-02
+//    3  p2           1.28192e-01   5.18172e-02   2.90886e-04  -3.32327e-02
+//    4  p3           4.18400e+01   1.13203e+01   3.32906e-06  -5.77193e-02
+//    5  p4          -7.91798e-02   9.76877e-02   4.39202e-05  -5.68426e-02
+//    6  p5           6.31906e-02   1.24591e-01   5.59744e-05   2.37812e-02
+//    7  p6           6.59905e-01   2.69061e-01   7.81901e-05   3.69810e-02
+//    8  p7           7.73425e-01   2.37748e-01   9.34446e-05  -6.31110e-02
+//    9  p8           3.40275e+00   6.35295e+00   9.77808e-06  -6.74828e-02

@@ -91,20 +91,19 @@ int main()
         return conv2.Evaluate(x, p);
     }, fTotal->GetXmin(), fTotal->GetXmax(), fTotal->GetNpar()+2);
 
-    
 
     for (int i = 0; i < Peaks.size(); ++i)
     {
         Peaks[i]->ExternalFixAllParameters(convolution2, i, {9});
         Peaks[i]->ExternalSetParameter(convolution2, i, 9, 1e2);
         Peaks[i]->ExternalSetParLimits(convolution2, i, 9, 1e-7, 1e7);
+        // Peaks[i]->ExternalSetParameter(convolution2, i, 0, 10);
+        // Peaks[i]->ExternalSetParLimits(convolution2, i, 0, 0, 20);
 
         // Peaks[i]->ExternalSetParameter(convolution2, i, 1, fPeaks[i]->GetParameter(1));
         // Peaks[i]->ExternalSetParLimits(convolution2, i, 1, fPeaks[i]->GetParameter(1) - 10, fPeaks[i]->GetParameter(1) + 10);
     }
 
-    
-   
     convolution2->FixParameter(fTotal->GetNpar(), 1);
     // convolution2->SetParLimits(11*IAS->GetNPeak(), 0, 1e7);
     convolution2->SetParameter(fTotal->GetNpar()+1, 5);
@@ -120,7 +119,7 @@ int main()
     h->Reset();
 
     std::cauchy_distribution<double> distribution(0, 10/2);
-    std::normal_distribution<double> distribution2(0, 10);
+    std::normal_distribution<double> distribution2(0, 4);
     for (int i = 0; i < hh->GetEntries(); ++i)
     {
         h->Fill(hh->GetRandom() + distribution2(gen));
@@ -139,7 +138,7 @@ int main()
     clock_t start = clock();
     ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(2); // 2 for verbose
     h->Fit(convolution2, "MULTITHREAD RNE");
-    convolution2->SetNpx((3400-2000)*10);
+    convolution2->SetNpx((3400-3300)*10);
     convolution2->SetLineColor(kRed);
     convolution2->Draw("SAME");
     cout << "Time: " << (clock() - start) / (double) CLOCKS_PER_SEC / 8 << endl;

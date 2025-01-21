@@ -143,7 +143,7 @@ private:
 
     double fTotalWeightKinematicShift(double *t, double *par)
     {
-        double Amp = par[0];
+        double A = par[0];
         double E_p = par[1];
         double W0 = par[2];
         double k = par[3];
@@ -167,7 +167,7 @@ private:
 
         for (double Wb = Wmin; Wb <= W0; Wb += step)
         {
-            wt += Amp * WeightKinematicShift(t_, k, W0, Wb, a, M, Z, Phi_min, Phi_max) * step;
+            wt += A*WeightKinematicShift(t_, k, W0, Wb, a, M, Z, Phi_min, Phi_max) * step;
         }
 
         return wt;
@@ -177,7 +177,7 @@ private:
     double fNuclearBroadering(double *x, double *par)
     {
         double E = x[0];
-        double A = par[0];
+        double A = 1;
         double Gamma = par[1];
 
         // condition if there is no half-life
