@@ -140,8 +140,9 @@ int main(int argc, char *argv[])
 
         TTree *MERGED_Tree = new TTree("MERGED_Tree", "MERGED_Tree");
         MERGED_Tree->Branch("MERGED_Tree_Silicon", &MERGED_Tree_Silicon);
-        MERGED_Tree->Branch("MERGED_Tree_SiPMHigh", &MERGED_Tree_SiPMHigh);
-        MERGED_Tree->Branch("MERGED_Tree_SiPMLow", &MERGED_Tree_SiPMLow);
+        // MERGED_Tree->Branch("MERGED_Tree_SiPMHigh", &MERGED_Tree_SiPMHigh);
+        // MERGED_Tree->Branch("MERGED_Tree_SiPMLow", &MERGED_Tree_SiPMLow);
+        MERGED_Tree->Branch("MERGED_Tree_SiPMGroup", &MERGED_Tree_SiPMGroup);
 
         TTree* MERGED_Tree_Detector[SIGNAL_MAX];
 
@@ -171,8 +172,9 @@ int main(int argc, char *argv[])
             LoadMatchingFunction(atoi(Run.c_str()));           
             TTreeReader *Reader = new TTreeReader(Tree);
             Silicon = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_Silicon");
-            SiPM_High = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_SiPMHigh");
-            SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_SiPMLow");
+            // SiPM_High = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_SiPMHigh");
+            // SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_SiPMLow");
+            SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
 
             clock_t start = clock(), Current;
             int Entries = Reader->GetEntries();
@@ -185,24 +187,25 @@ int main(int argc, char *argv[])
                 (*Silicon)[1].Channel = Matching_function[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
                 H_RearStrip[(*Silicon)[0].Label]->Fill((*Silicon)[0].Channel, (*Silicon)[1].Channel);
                 
-                // rear-strip matching correction
-                // (*Silicon)[1].Channel = MatchingRearStrip[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
                 MERGED_Tree_Silicon.push_back((*Silicon)[1]);
                 Channel = (*Silicon)[1].Channel;
 
-                for (Signal s : *SiPM_High)
-                    MERGED_Tree_SiPMHigh.push_back(s);
-                for (Signal s : *SiPM_Low)
-                    MERGED_Tree_SiPMLow.push_back(s);
+                // !!! ADDING SIPM MATCHING !!! //
+                MERGED_Tree_SiPMGroup = **SiPM_Groups;
+                
 
-
+                // for (Signal s : *SiPM_High)
+                //     MERGED_Tree_SiPMHigh.push_back(s);
+                // for (Signal s : *SiPM_Low)
+                //     MERGED_Tree_SiPMLow.push_back(s);
 
                 MERGED_Tree->Fill();
                 MERGED_Tree_Detector[(*Silicon)[1].Label]->Fill();
                 
                 MERGED_Tree_Silicon.clear();
-                MERGED_Tree_SiPMHigh.clear();
-                MERGED_Tree_SiPMLow.clear();
+                // MERGED_Tree_SiPMHigh.clear();
+                // MERGED_Tree_SiPMLow.clear();
+                MERGED_Tree_SiPMGroup.clear();
                 Channel = 0;
 
                 // H_Strip_Matched[(*Silicon)[1].Label]->Fill(MatchingRearStrip[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel));
@@ -240,8 +243,7 @@ int main(int argc, char *argv[])
             }
         }
 
-       
-
+    
        if (NUCLEUS == "32Ar")
        {
            ComputeFakeCoincidences();

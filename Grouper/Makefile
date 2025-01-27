@@ -7,15 +7,13 @@ ROOT_LIBS       = $(shell root-config --libs) -lSpectrum
 GSL_CFLAGS      = $(shell gsl-config --cflags)
 GSL_LIBS        = $(shell gsl-config --libs)
 
-GTOOLS_L = $(shell gtools_lib)
-
 CC        = g++
 CFLAGS    = ${FASTERAC_CFLAGS} ${ROOT_CFLAGS} ${GSL_CFLAGS} -Iinclude
-LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_filesystem -lboost_system include/Detectors.hh include/Messenger.hh 
+LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GSL_LIBS} -lboost_filesystem -lboost_system include/Detectors.hh include/Messenger.hh include/Utilities.hh
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark SiPM_Time Analyser
+EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark SiPM_Time Analyser Source_Grouper
 
 all : $(EXE)
 
@@ -26,6 +24,7 @@ Merger: obj/Merger.o
 Res_electronic: obj/Res_electronic.o
 LifeTime: obj/LifeTime.o
 Defect: obj/Defect.o
+Source_Grouper: obj/Source_Grouper.o
 SIPM_Calibration: obj/SIPM_Calibration.o
 SIPM_Matching: obj/SIPM_Matching.o
 SIPM_Dark: obj/SIPM_Dark.o	
@@ -33,8 +32,8 @@ SiPM_Time: obj/SiPM_Time.o
 Bi207: obj/Bi207.o
 Analyser: obj/Analyser.o
 
-$(EXE): $(OBJS) include/Detectors.hh include/Messenger.hh
-	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so -lfftw3 
+$(EXE): $(OBJS)
+	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so -lfftw3 Dic/AutoDict_vector_vector_std__pair_Signal__Signal____cxx.so
 
 obj/%.o: src/%.c++ include/%.hh
 	@mkdir -p obj

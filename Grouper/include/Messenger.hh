@@ -1,14 +1,17 @@
+#ifndef MESSENGER_HH
+#define MESSENGER_HH
+
 #include <string>
 #include <iostream>
 #include <vector>
 #include <cmath>
 #include <fstream> 
+#include <sstream>
+#include <iomanip>
 #include <dirent.h>
 #include <gsl/gsl_statistics.h>
 #include "TFile.h"
 #include "../../../lib/SignalDict/Signal.h"
-
-#include "/home/local1/Documents/lib/GTools1.0/include/GString.hh"
 
 using namespace std;
 
@@ -21,38 +24,44 @@ string CYAN = "\033[1;36m";
 string WHITE = "\033[1;37m";
 string RESET = "\033[0m";
 
+int GENERAL_INDENT = 12;
+
 void Error(const string& message) {
-    cout << RED << "<ERROR> " << message << RESET << endl;
+    cout << RED << left << setw(GENERAL_INDENT) << " <ERROR>" << message << RESET << endl;
     exit(0);
 }
 
 void Error(const char *message) {
-    cout << RED << "<ERROR> " << message << RESET << endl;
+    cout << RED << left << setw(GENERAL_INDENT) << " <ERROR>" << message << RESET << endl;
     exit(0);
 }
 
 void Warning(const string& message) {
-    cout << YELLOW << "<WARNING> " << message << RESET << endl;
+    cout << YELLOW << left << setw(GENERAL_INDENT) << " <WARNING>" << message << RESET << endl;
 }
 
 void Warning(const char *message) {
-    cout << YELLOW << "<WARNING> " << message << RESET << endl;
+    cout << YELLOW << left << setw(GENERAL_INDENT) << " <WARNING>" << message << RESET << endl;
 }
 
-void Info(const string& message) {
-    cout << BLUE << " <INFO>  " << message << RESET << endl;
+void Info(const string& message, int indent=0) {
+    cout << BLUE << left << setw(GENERAL_INDENT) << " <INFO>  ";
+    for (int i = 0; i < indent; i++) cout << "--";
+    cout << message << RESET << endl;
 }
 
-void Info(const char *message) {
-    cout << BLUE << " <INFO>  " << message << RESET << endl;
+void Info(const char *message, int indent=0) {
+    cout << BLUE << left << setw(GENERAL_INDENT) << " <INFO>  ";
+    for (int i = 0; i < indent; i++) cout << "--";
+    cout << message << RESET << endl;
 }
 
 void Success(const string& message) {
-    cout << GREEN << "<SUCCESS> " << message << RESET << endl;
+    cout << GREEN << left << setw(GENERAL_INDENT) << " <SUCCESS>" << message << RESET << endl;
 }
 
 void Success(const char *message) {
-    cout << GREEN << "<SUCCESS> " << message << RESET << endl;
+    cout << GREEN << left << setw(GENERAL_INDENT) << " <SUCCESS>" << message << RESET << endl;
 }
 
 void Verbose(const string& message, int verbose, int this_verbose) {
@@ -64,11 +73,11 @@ void Verbose(Signal signal, int verbose, int this_verbose) {
 }
 
 void Start(const string& message) {
-    cout << CYAN << "<START> " << message << RESET << endl;
+    cout << CYAN << left << setw(GENERAL_INDENT) << " <START>"<< message << RESET << endl;
 }
 
 void Start(const char *message) {
-    cout << CYAN << "<START> " << message << RESET << endl;
+    cout << CYAN << left << setw(GENERAL_INDENT) << " <START>"<< message << RESET << endl;
 }
 
 void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, string Prefix = "")
@@ -160,4 +169,6 @@ string formatValueWithError(double value, double error, string type = "latex") {
 
     return ss.str();
 }
+
+#endif
 

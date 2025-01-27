@@ -41,7 +41,6 @@
 
 #include "../../../lib/SignalDict/Signal.h"
 #include "Detectors.hh"
-#include "/home/local1/Documents/lib/GTools1.0/include/GString.hh"
 
 #include <thread>
 #include <chrono>
@@ -79,13 +78,15 @@ TGraph *G_N[SIGNAL_MAX];
 TGraph *G_Fake;
 
 vector<Signal> MERGED_Tree_Silicon;
-vector<Signal> MERGED_Tree_SiPMHigh;
-vector<Signal> MERGED_Tree_SiPMLow;
+// vector<Signal> MERGED_Tree_SiPMHigh;
+// vector<Signal> MERGED_Tree_SiPMLow;
+vector<vector<pair<Signal, Signal>>> MERGED_Tree_SiPMGroup;
 
 
 TTreeReaderArray<Signal> *Silicon;
-TTreeReaderArray<Signal> *SiPM_High;
-TTreeReaderArray<Signal> *SiPM_Low;
+// TTreeReaderArray<Signal> *SiPM_High;
+// TTreeReaderArray<Signal> *SiPM_Low;
+TTreeReaderValue<vector<vector<pair<Signal, Signal>>>> *SiPM_Groups;
 double Channel;
 
 TH1D* H_Sum;

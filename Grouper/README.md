@@ -5,8 +5,7 @@ This code contains some routines to analyse WISArD experimental data from raw ro
 ## Prerequisites
 - **ROOT** 
 - **GSL**
-- **GTOOLS**
-- **root2mpl** for plotting some spectrums
+- **root2mpl** for plotting some spectrums in python
 
 ## Usage
 To compile the code : 
@@ -29,19 +28,27 @@ The goal is to match a run with a reference run. For all the silicon detector th
 ```bash
 Matcher <Run Number>
 ```
+or 
+
+```bash
+Matcher all
+```
 
 ### To calibrate detectors
 For silicon detectors 
-
-
 
 ## TODO
 - Gain match SiPMs
 - Calibrate SiPMs
 
 ## Sequence executing
-- **Grouper**       : Input *.root                          /           Output *_grouped.root
-- **Matcher**       : Input *_grouped.root                  /           Output matched.root
-- **Merger**        : Input *_grouped.root & matched.root   /           Output 32Ar_C1_merged.root, 32Ar_C2_merged.root, 33Ar_C1_merged.root
-- **Calibration**   : Input **_merged.root                  /           Output **_calibrated.root
-- **Analysis**      : Input **calibrated.root               /           Output **_analysed.root
+- **Grouper**           : Input *.root                              /           Output *_grouped.root
+- **Matcher**           : Input *_grouped.root                      /           Output matched.root
+- **Merger**            : Input *_grouped.root & matched.root       /           Output **_merged.root
+- **Calibration**       : Input **_merged.root                      /           Output Calibrated.root
+- **SiPM_Matching**     : Input **_merged.root                      /           Output SiPM_Matched.root
+- **SiPM_Calibration**  : Input **_merged.root & SiPM_Matched.root  /           Output SiPM_Calibrated.root
+- **Analysis**          : Input **_merged.root 
+                            & Calibrated.root                       /           Output **_analysed.root
+                            & SiPM_Calibrated.root
+

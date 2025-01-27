@@ -44,7 +44,7 @@ void Fill(double time, bool Ar, bool Beta)
     H_Time_MC->Fill(time);
 
 
-    if (Beta && !Ar)
+    if ((Beta && Ar) || (Beta && !Ar))
     {
         H_Fake->Fill(time);
         if (time > start_gate && time < end_gate)

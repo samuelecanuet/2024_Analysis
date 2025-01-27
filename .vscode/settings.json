@@ -74,6 +74,8 @@
         "ReaderGamma.C": "cpp",
         "EstimateCCDFfromHistogram.C": "cpp",
         "extract_pdf_cdf.C": "cpp",
-        "Debug.C": "cpp"
+        "Debug.C": "cpp",
+        "SiPM_Sub.C": "cpp",
+        "GenerateDic.C": "cpp"
     }
 }

@@ -164,8 +164,7 @@ int main(int argc, char *argv[])
     start = clock(), Current;
     CLEANED_Tree = new TTree("CLEANED_Tree", "CLEANED_Tree");
     CLEANED_Tree->Branch("CLEANED_Tree_Silicon", &CLEANED_Tree_Silicon);
-    CLEANED_Tree->Branch("CLEANED_Tree_SiPMHigh", &CLEANED_Tree_SiPMHigh);
-    CLEANED_Tree->Branch("CLEANED_Tree_SiPMLow", &CLEANED_Tree_SiPMLow);
+    CLEANED_Tree->Branch("CLEANED_Tree_SiPMGroup", &CLEANED_Tree_SiPMGroup);
 
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
@@ -189,6 +188,8 @@ int main(int argc, char *argv[])
 
         CleaningGroups(signals);
     }
+
+    Info("Condition = " + to_string((double)counter_condition / (double)counter_all_IAS * 100) + "%");
 
     WriteHistograms_Cleaned();
 

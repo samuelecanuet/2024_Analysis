@@ -12,10 +12,8 @@ TFile *f_tree;
 
 TTree *Tree;
 TTreeReader *Reader;
-TTreeReaderArray<Signal> *SiPM_High;
-TTreeReaderArray<Signal> *SiPM_Low;
 TTreeReaderArray<Signal> *Silicon;
-TTreeReaderArray<Signal> *signals;
+TTreeReaderValue<vector<vector<pair<Signal, Signal>>>> *SiPM_Groups;
 
 TTree *Tree_SIMULATED;
 TTreeReader *Reader_SIMULATED;
@@ -70,12 +68,12 @@ map<string, TDirectory *[SIGNAL_MAX]> dir_SiPM;
 TF1 *F_SiliconCalibration[SIGNAL_MAX];
 TF1 *f_linear = new TF1("f_linear", "[0]*x + [1]", 0, 10000e3);
 TF1 *f_erf = new TF1("f_erf", "x < [0] ? [1]*x + [2] : [3]*(erf((x-[4])/[5]))", 0, 10000e3);
-pair<double, double> Range_SiPM_LowHigh = make_pair(50e3, 200e3);
+pair<double, double> Range_SiPM_LowHigh = make_pair(50e3, 100e3);
 int current_detector;
 double SiPM_Window[10] = {0, 1500e3, 1500e3, 1500e3};
 // DATA //
 string Nuclei[1] = {"32Ar"}; //, "32Ar_thick", "33Ar"};
-string Nucleis[3] = {"32Ar", "207Bi", "90Sr"};
+string TYPE;
 string NUCLEUS;
 double SiliconCalibrationParameter[SIGNAL_MAX][3];
 map<string, TF1 *[SIGNAL_MAX]> MatchingLowHigh;
@@ -194,7 +192,7 @@ void ReadValues()
     {
         if (IsDetectorBetaHigh(det))
         {
-            for (string Nucleus : Nucleis)
+            for (string Nucleus : Nuclei)
             {
                 MatchingLowHigh[Nucleus][det] = (TF1 *)f->Get(("MatchingLowHigh_" + NUCLEUS + "_" + detectorName[det]).c_str());
                 MatchingSiPM[Nucleus][det] = (TF1 *)f->Get(("MatchingSiPM_" + NUCLEUS + "_" + detectorName[det]).c_str());
@@ -208,9 +206,8 @@ void ReadValues()
 
 void WriteTree()
 {
-
+    Info("Write Tree start");
     f_tree->cd();
-    Info("Write Tree");
     NUCLEUS = "32Ar";
     for (int peak = 1; peak <= 50; peak++)
     {
@@ -228,20 +225,23 @@ void WriteTree()
     }
     f_tree->Close();
     CALIBRATED_File->cd();
+    Info("Write Tree end");
 }
 
-void InitHistograms()
+void InitHistograms(int Verbose = 0)
 {
 
-    Info("Init Histograms");
-    for (string Nucleus : Nucleis)
+    Info("Init Histograms start");
+    for (string Nucleus : Nuclei)
     {
+        if(Verbose == 1) Info(Nucleus, 1);
         NUCLEUS = Nucleus;
         dir[NUCLEUS] = CALIBRATED_File->mkdir(NUCLEUS.c_str());
         for (int i = 0; i < SIGNAL_MAX; i++)
         {
             if (IsDetectorBetaHigh(i))
             {
+                if(Verbose == 1) Info(detectorName[i], 2);
                 H_SiPM_High[NUCLEUS][i] = new TH1D(("H_SiPM_High_" + NUCLEUS + "_" + detectorName[i]).c_str(), ("H_SiPM_High_" + NUCLEUS + "_" + detectorName[i]).c_str(), eHighN, eHighMin, eHighMax);
                 H_SiPM_High[NUCLEUS][i]->GetXaxis()->SetTitle("Channel");
                 H_SiPM_High[NUCLEUS][i]->GetYaxis()->SetTitle("Counts");
@@ -344,6 +344,7 @@ void InitHistograms()
 
             if (IsDetectorBetaLow(i))
             {
+                if(Verbose == 1) Info(detectorName[i], 2);
                 H_SiPM_Low[NUCLEUS][i] = new TH1D(("H_SiPM_Low_" + NUCLEUS + "_" + detectorName[i]).c_str(), ("H_SiPM_Low_" + NUCLEUS + "_" + detectorName[i]).c_str(), eLowN, eLowMin, eLowMax);
                 H_SiPM_Low[NUCLEUS][i]->GetXaxis()->SetTitle("Channel");
                 H_SiPM_Low[NUCLEUS][i]->GetYaxis()->SetTitle("Counts");
@@ -370,593 +371,860 @@ void InitHistograms()
             }
         }
     }
+    Info("Init Histograms done");
 }
+
+
+double fLowHigh(double *x, double *par)
+{
+    // # Double lines of gaussians
+
+    // ## PARAMETERS ##
+    double alpha = par[0];
+    double a = par[1];
+    double delta = par[2];
+    double sigma1 = par[3];
+    double sigma2 = par[4];
+
+    double first = 1/(sqrt(2*M_PI)*sigma1) * exp(-0.5*pow((x[1]-(a*x[0]))/sigma1,2));
+    double second = 1/(sqrt(2*M_PI)*sigma2) * exp(-0.5*pow((x[1]-(a*x[0]+delta))/sigma2,2));
+
+    return alpha*first + (1-alpha)*second;
+}
+
+double fdoubleGaussian(double *x, double *par)
+{
+    double A1 = par[0];
+    double mu1 = par[1];
+    double sigma1 = par[2];
+
+    double A2 = par[3];
+    double mu2 = par[4];
+    double sigma2 = par[5];
+
+    double first = A1 * exp(-0.5*pow((x[0]-mu1)/sigma1,2));
+    double second = A2 * exp(-0.5*pow((x[0]-mu1-mu2)/sigma2,2));
+
+    return first + second;
+}
+
+
 
 void FittingLowHigh()
 {
-    ////////////////////////// FITTING Low/High //////////////////////////
-    Info("Fitting Low/High SiPMs");
+    Info("Fitting High-Low gain factor");
     clock_t start = clock(), Current;
+
+    // Graph counter
     int counter[SIGNAL_MAX] = {0};
 
-    int entries = Tree->GetEntries();
     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
     {
+        ProgressBar(Reader->GetCurrentEntry(), Reader->GetEntries(), start, Current, "Reading Tree");
 
-        ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
-
-        int sili_label = (*Silicon)[1].Label;
-        double sili_energy = F_SiliconCalibration[sili_label]->Eval((*Silicon)[1].Channel / 1000);
-
-        // gate on proton peak
-        if (sili_energy < WindowsMap[NUCLEUS][14][sili_label].first || sili_energy > WindowsMap[NUCLEUS][14][sili_label].second)
-            continue;
-
-        for (int i = 0; i < SiPM_High->GetSize(); i++)
+        // In case of Silicon gate
+        if (Silicon)
         {
-            H_SiPM_High[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Channel);
-            for (int j = 0; j < SiPM_Low->GetSize(); j++)
-            {
-                if (GetDetectorChannel((*SiPM_High)[i].Label) == GetDetectorChannel((*SiPM_Low)[j].Label))
-                {
-                    H_SiPM_HighLow[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_Low)[j].Channel, (*SiPM_High)[i].Channel);
-                    G_SiPM_HighLow[NUCLEUS][(*SiPM_High)[i].Label]->SetPoint(counter[(*SiPM_High)[i].Label], (*SiPM_Low)[j].Channel, (*SiPM_High)[i].Channel);
-                    counter[(*SiPM_High)[i].Label]++;
-                }
-            }
-        }
+            int sili_label = (*Silicon)[1].Label;
+            double sili_energy = F_SiliconCalibration[sili_label]->Eval((*Silicon)[1].Channel / 1000);
 
-        for (int i = 0; i < SiPM_Low->GetSize(); i++)
-        {
-            H_SiPM_Low[NUCLEUS][(*SiPM_Low)[i].Label]->Fill((*SiPM_Low)[i].Channel);
-        }
-    }
-
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorBetaHigh(i))
-        {
-            G_SiPM_HighLow[NUCLEUS][i]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
-            MatchingLowHigh[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_linear");
-
-            // f_erf->SetParameter(0, 225e3);
-            // f_erf->SetParLimits(0, 150e3, 300e3);
-            // f_erf->SetParameter(1, 10);
-            // f_erf->SetParLimits(1, 9.5, 12);
-            // f_erf->SetParameter(2, -50000);
-            // f_erf->SetParLimits(2, -100000, 0);
-            // f_erf->SetParameter(3, 5000e3);
-            // f_erf->SetParLimits(3, 4000e3, 6000e3);
-            // f_erf->SetParameter(4, 0);
-            // f_erf->SetParLimits(4, -100000, 100000);
-            // f_erf->SetParameter(5, 280e3);
-            // f_erf->SetParLimits(5, 0, 600e3);
-            // G_SiPM_HighLow[NUCLEUS][i]->Fit(f_erf);
-            // MatchingLowHigh_erf[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_erf");
-        }
-    }
-}
-
-void FittingLowHighBi207()
-{
-    ////////////////////////// FITTING Low/High //////////////////////////
-    Info("Fitting Low/High SiPMs");
-    clock_t start = clock(), Current;
-    int counter[SIGNAL_MAX] = {0};
-    Tree = (TTree *)GROUPED_File[NUCLEUS]->Get("Tree_Group");
-    Reader = new TTreeReader(Tree);
-    signals = new TTreeReaderArray<Signal>(*Reader, "Signal");
-    Reader->Restart();
-    int entries = Tree->GetEntries();
-    while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
-    {
-
-        ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
-
-        vector<Signal> SiPM_High;
-        vector<Signal> SiPM_Low;
-        for (int i = 0; i < signals->GetSize(); i++)
-        {
-            if (IsDetectorBetaHigh((*signals)[i].Label))
-            {
-                SiPM_High.push_back((*signals)[i]);
-            }
-            if (IsDetectorBetaLow((*signals)[i].Label))
-            {
-                SiPM_Low.push_back((*signals)[i]);
-            }
-        }
-
-        for (int i = 0; i < SiPM_High.size(); i++)
-        {
-            H_SiPM_High[NUCLEUS][(SiPM_High)[i].Label]->Fill((SiPM_High)[i].Channel);
-            for (int j = 0; j < SiPM_Low.size(); j++)
-            {
-                if (GetDetectorChannel((SiPM_High)[i].Label) == GetDetectorChannel((SiPM_Low)[j].Label))
-                {
-                    H_SiPM_HighLow[NUCLEUS][(SiPM_High)[i].Label]->Fill((SiPM_Low)[j].Channel, (SiPM_High)[i].Channel);
-                    G_SiPM_HighLow[NUCLEUS][(SiPM_High)[i].Label]->SetPoint(counter[(SiPM_High)[i].Label], (SiPM_Low)[j].Channel, (SiPM_High)[i].Channel);
-                    counter[(SiPM_High)[i].Label]++;
-                }
-            }
-        }
-
-        for (int i = 0; i < SiPM_Low.size(); i++)
-        {
-            H_SiPM_Low[NUCLEUS][(SiPM_Low)[i].Label]->Fill((SiPM_Low)[i].Channel);
-        }
-    }
-
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorBetaHigh(i))
-        {
-            G_SiPM_HighLow[NUCLEUS][i]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
-            MatchingLowHigh[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_linear");
-
-            // f_erf->SetParameter(0, 225e3);
-            // f_erf->SetParLimits(0, 150e3, 300e3);
-            // f_erf->SetParameter(1, 10);
-            // f_erf->SetParLimits(1, 9.5, 12);
-            // f_erf->SetParameter(2, -50000);
-            // f_erf->SetParLimits(2, -100000, 0);
-            // f_erf->SetParameter(3, 5000e3);
-            // f_erf->SetParLimits(3, 4000e3, 6000e3);
-            // f_erf->SetParameter(4, 0);
-            // f_erf->SetParLimits(4, -100000, 100000);
-            // f_erf->SetParameter(5, 280e3);
-            // f_erf->SetParLimits(5, 0, 600e3);
-            // G_SiPM_HighLow[NUCLEUS][i]->Fit(f_erf, "Q");
-            // MatchingLowHigh_erf[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_erf");
-        }
-    }
-}
-
-void FittingSiPMs()
-{
-    ////////////////////////// FITTING SiPMs //////////////////////////
-    Info("Matching Low/High SiPM & Fitting SiPMs");
-    clock_t start = clock(), Current;
-    Reader->Restart();
-    int counter_graph[SIGNAL_MAX] = {0};
-    int counter[SIGNAL_MAX] = {0};
-    int entries = Tree->GetEntries();
-    while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
-    {
-        ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
-
-        int sili_label = (*Silicon)[1].Label;
-        double sili_energy = F_SiliconCalibration[sili_label]->Eval((*Silicon)[1].Channel / 1000);
-
-        // gate on proton peak
-        if (sili_energy < WindowsMap[NUCLEUS][14][sili_label].first || sili_energy > WindowsMap[NUCLEUS][14][sili_label].second)
-            continue;
-
-        /// WRITTING MATCHED LOW HIGH
-        for (int i = 0; i < SiPM_High->GetSize(); i++)
-        {
-            H_SiPM_HighLow_Matched[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Channel);
-        }
-
-        for (int j = 0; j < SiPM_Low->GetSize(); j++)
-        {
-            H_SiPM_HighLow_Matched[NUCLEUS][(*SiPM_Low)[j].Label]->Fill(MatchingLowHigh["32Ar"][(*SiPM_Low)[j].Label - 10]->Eval((*SiPM_Low)[j].Channel));
-        }
-
-        /// double line computing
-        for (int i = 0; i < SiPM_High->GetSize(); i++)
-        {
-            for (int j = 0; j < SiPM_Low->GetSize(); j++)
-            {
-                if (GetDetectorChannel((*SiPM_High)[i].Label) == GetDetectorChannel((*SiPM_Low)[j].Label))
-                {
-                    double high = (*SiPM_High)[i].Channel;
-                    double low = MatchingLowHigh[NUCLEUS][(*SiPM_High)[i].Label]->Eval((*SiPM_Low)[j].Channel);
-
-                    G_SiPM_HighLow_Matched[NUCLEUS][(*SiPM_High)[i].Label]->SetPoint(counter[(*SiPM_High)[i].Label], low, high);
-                    counter[(*SiPM_High)[i].Label]++;
-
-                    // H_SiPM_HighLow_Matched_diff[NUCLEUS][(*SiPM_High)[i].Label]->Fill(MatchingLowHigh[NUCLEUS][(*SiPM_High)[i].Label]->Eval((*SiPM_Low)[j].Channel)-high, (*SiPM_Low)[j].Channel);
-                }
-            }
-        }
-        ///////////////////////////////
-
-        /// MATCHING SiPMs
-        double SiPM[10] = {0};
-        for (int i = 0; i < SiPM_High->GetSize(); i++)
-        {
-            for (int j = 0; j < SiPM_Low->GetSize(); j++)
-            {
-                if (GetDetectorChannel((*SiPM_High)[i].Label) == GetDetectorChannel((*SiPM_Low)[j].Label))
-                {
-                    if ((*SiPM_High)[i].Channel < Range_SiPM_LowHigh.second)
-                    {
-                        SiPM[GetDetectorChannel((*SiPM_High)[i].Label)] = (*SiPM_High)[i].Channel;
-                    }
-                    else
-                    {
-                        SiPM[GetDetectorChannel((*SiPM_High)[i].Label)] = MatchingLowHigh[NUCLEUS][(*SiPM_High)[i].Label]->Eval((*SiPM_Low)[j].Channel);
-                    }
-                }
-            }
-        }
-
-        if (SiPM[1] != 0)
-        {
-            for (int index = 1; index <= 9; index++)
-            {
-                if (SiPM[index] == 0.)
-                    continue;
-                G_Matching_SiPM[NUCLEUS][index]->SetPoint(counter_graph[index], SiPM[index], SiPM[1]);
-                H_Matching_SiPM[NUCLEUS][index]->Fill(SiPM[index], SiPM[1]);
-                counter_graph[index]++;
-            }
-        }
-        //////////////////////
-    }
-
-    /// fitting sipms matching
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorBetaHigh(i))
-        {
-            cout << "Fitting SiPM " << i << endl;
-            f_linear->FixParameter(1, 0);
-            G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first * 10, Range_SiPM_LowHigh.second * 10);
-            MatchingSiPM[NUCLEUS][i] = G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetFunction("f_linear");
-
-            // TGraphErrors* g = new TGraphErrors();
-            // int counter = 0;
-            // for (int bin = 0; bin < H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetNbinsY(); bin+=10)
-            // {
-            //     TH1D* h = (TH1D*)H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->ProjectionY(("ap" + to_string(i)).c_str(), bin, bin+10);
-            //     if (h->GetEntries() < 100)
-            //         continue;
-            //     // h->Write();
-            //     h->Fit("gaus", "Q");
-            //     g->SetPoint(counter, H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetXaxis()->GetBinCenter(bin+50), h->GetFunction("gaus")->GetParameter(1));
-            //     g->SetPointError(counter, H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetXaxis()->GetBinCenter(25), h->GetFunction("gaus")->GetParError(1));
-            //     counter++;
-            //     delete h;
-            // }
-            // f_linear->FixParameter(1, 0);
-            // g->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first * 10 - 200e3, Range_SiPM_LowHigh.second * 10 - 400e3);
-            // MatchingSiPM[NUCLEUS][i] = g->GetFunction("f_linear");
-            // g->Write();
-        }
-    }
-
-    MatchingSiPM[NUCLEUS][104] = new TF1("MatchingSiPM_104", "[0]*x + [1]", 0, 10000e3);
-    MatchingSiPM[NUCLEUS][104]->SetParameters(1, 0);
-}
-
-void FittingSiPMsBi207()
-{
-    ////////////////////////// FITTING SiPMs //////////////////////////
-    Info("Matching Low/High SiPM & Fitting SiPMs");
-    clock_t start = clock(), Current;
-    Reader->Restart();
-    int counter_graph[SIGNAL_MAX] = {0};
-    int counter[SIGNAL_MAX] = {0};
-    Tree = (TTree *)GROUPED_File[NUCLEUS]->Get("Tree_Group");
-    Reader = new TTreeReader(Tree);
-    signals = new TTreeReaderArray<Signal>(*Reader, "Signal");
-    Reader->Restart();
-    int entries = Tree->GetEntries();
-    while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
-    {
-        ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
-
-        vector<Signal> SiPM_High;
-        vector<Signal> SiPM_Low;
-        double ref_time;
-        for (int i = 0; i < signals->GetSize(); i++)
-        {
-            if (i == 0)
-                ref_time = (*signals)[i].Time;
-            if (IsDetectorBetaHigh((*signals)[i].Label))
-            {
-                SiPM_High.push_back((*signals)[i]);
-            }
-            if (IsDetectorBetaLow((*signals)[i].Label))
-            {
-                SiPM_Low.push_back((*signals)[i]);
-            }
-        }
-
-        /// WRITTING MATCHED LOW HIGH
-        for (int i = 0; i < SiPM_High.size(); i++)
-        {
-            H_SiPM_HighLow_Matched[NUCLEUS][(SiPM_High)[i].Label]->Fill((SiPM_High)[i].Channel);
-        }
-
-        for (int j = 0; j < SiPM_Low.size(); j++)
-        {
-            H_SiPM_HighLow_Matched[NUCLEUS][(SiPM_Low)[j].Label]->Fill(MatchingLowHigh["32Ar"][(SiPM_Low)[j].Label - 10]->Eval((SiPM_Low)[j].Channel));
-        }
-
-        /// double line computing
-        for (int i = 0; i < SiPM_High.size(); i++)
-        {
-            for (int j = 0; j < SiPM_Low.size(); j++)
-            {
-                if (GetDetectorChannel((SiPM_High)[i].Label) == GetDetectorChannel((SiPM_Low)[j].Label) && abs((SiPM_High)[i].Time - (SiPM_Low)[j].Time) < 10)
-                {
-                    double high = (SiPM_High)[i].Channel;
-                    double low = MatchingLowHigh["32Ar"][(SiPM_High)[i].Label]->Eval((SiPM_Low)[j].Channel);
-
-                    G_SiPM_HighLow_Matched[NUCLEUS][(SiPM_High)[i].Label]->SetPoint(counter[(SiPM_High)[i].Label], low, high);
-                    counter[(SiPM_High)[i].Label]++;
-
-                    // H_SiPM_HighLow_Matched_diff[NUCLEUS][(SiPM_High)[i].Label]->Fill(MatchingLowHigh["32Ar"][(SiPM_High)[i].Label]->Eval((SiPM_Low)[j].Channel)-high, (SiPM_Low)[j].Channel);
-                    continue;
-                }
-            }
-        }
-        ///////////////////////////////
-
-        /// MATCHING SiPMs
-        Signal SiPM[10] = {Signal()};
-        for (int i = 0; i < SiPM_High.size(); i++)
-        {
-            // for (int j = 0; j < SiPM_Low.size(); j++)
-            // {
-            // if ((GetDetectorChannel((SiPM_High)[i].Label) == GetDetectorChannel((SiPM_Low)[j].Label)))
-            // {
-            // if ((SiPM_High)[i].Channel < Range_SiPM_LowHigh.second)
-            // {
-            SiPM[GetDetectorChannel((SiPM_High)[i].Label)] = (SiPM_High)[i];
-            // }
-            // else
-            // {
-            //     SiPM[GetDetectorChannel((SiPM_High)[i].Label)] = MatchingLowHigh["32Ar"][(SiPM_High)[i].Label]->Eval((SiPM_Low)[j].Channel);
-            // }
-            // break;
-            // }
-            // }
-        }
-
-        if (SiPM[4].isValid)
-        {
-            for (int index = 1; index <= 9; index++)
-            {
-                if (!SiPM[index].isValid)
-                    continue;
-                if (abs((SiPM[4].Time - (SiPM)[index].Time)) < 10)
-                {
-                    G_Matching_SiPM[NUCLEUS][index]->SetPoint(counter_graph[index], SiPM[index].Channel, SiPM[4].Channel);
-                    counter_graph[index]++;
-                }
-            }
-        }
-        //////////////////////
-    }
-
-    /// fitting sipms matching
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorBetaHigh(i))
-        {
-            f_linear->FixParameter(1, 0);
-            G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->Fit(f_linear, "Q");
-            MatchingSiPM[NUCLEUS][i] = G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetFunction("f_linear");
-        }
-    }
-
-    MatchingSiPM[NUCLEUS][104] = new TF1("MatchingSiPM_104", "[0]*x + [1]", 0, 10000e3);
-    MatchingSiPM[NUCLEUS][104]->SetParameters(1, 0);
-}
-
-void MergingSiPMs()
-{
-    Info("Matching SiPMs");
-
-    clock_t start = clock(), Current;
-
-    Reader->Restart();
-    int entries = Tree->GetEntries();
-    while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
-    {
-        ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
-
-        int sili_label = (*Silicon)[1].Label;
-        double sili_energy = F_SiliconCalibration[sili_label]->Eval((*Silicon)[1].Channel / 1000);
-
-        int peak_number = 0;
-        for (int i = 1; i < 100; i++)
-        {
-            if (WindowsMap[NUCLEUS][i][sili_label].first == -1 || !WindowsMap[NUCLEUS][i][sili_label].first)
+            // gate on proton peak
+            if (sili_energy < WindowsMap[NUCLEUS][14][sili_label].first || sili_energy > WindowsMap[NUCLEUS][14][sili_label].second)
                 continue;
+        }
 
-            if (sili_energy > WindowsMap[NUCLEUS][i][sili_label].first && sili_energy < WindowsMap[NUCLEUS][i][sili_label].second)
+        // Adding/Plotting all High Low Valid pairs
+        for (int i_groups = 0; i_groups < (**SiPM_Groups).size(); i_groups++)
+        {
+        //     if ((**SiPM_Groups)[i_groups].size() != 9)
+        //         continue;
+            for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_groups].size(); i_pair++)
             {
-                peak_number = i;
-                break;
+                if ((**SiPM_Groups)[i_groups][i_pair].first.isValid && (**SiPM_Groups)[i_groups][i_pair].second.isValid)
+                {
+                    H_SiPM_HighLow[NUCLEUS][(**SiPM_Groups)[i_groups][i_pair].first.Label]->Fill((**SiPM_Groups)[i_groups][i_pair].second.Channel, (**SiPM_Groups)[i_groups][i_pair].first.Channel);
+                    G_SiPM_HighLow[NUCLEUS][(**SiPM_Groups)[i_groups][i_pair].first.Label]->SetPoint(counter[(**SiPM_Groups)[i_groups][i_pair].first.Label], (**SiPM_Groups)[i_groups][i_pair].second.Channel, (**SiPM_Groups)[i_groups][i_pair].first.Channel);
+                    counter[(**SiPM_Groups)[i_groups][i_pair].first.Label]++;
+                }
+
+                if ((**SiPM_Groups)[i_groups][i_pair].first.isValid)
+                {
+                    H_SiPM_High[NUCLEUS][(**SiPM_Groups)[i_groups][i_pair].first.Label]->Fill((**SiPM_Groups)[i_groups][i_pair].first.Channel);
+                }
+
+                if ((**SiPM_Groups)[i_groups][i_pair].second.isValid)
+                {
+                    H_SiPM_Low[NUCLEUS][(**SiPM_Groups)[i_groups][i_pair].second.Label]->Fill((**SiPM_Groups)[i_groups][i_pair].second.Channel);
+                }
             }
         }
+    }
 
-        if (peak_number == 0)
-            continue;
-
-        Signal High[10] = {Signal()};
-        Signal Low[10] = {Signal()};
-
-        for (int i = 0; i < SiPM_High->GetSize(); i++)
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorBetaHigh(i))
         {
-            (*SiPM_High)[i].Channel = MatchingSiPM[NUCLEUS][100 + GetDetectorChannel((*SiPM_High)[i].Label)]->Eval((*SiPM_High)[i].Channel);
-            High[GetDetectorChannel((*SiPM_High)[i].Label)] = (*SiPM_High)[i];
-            if (peak_number == 14)
-                H_SiPM_Matched[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Channel);
-        }
-        for (int i = 0; i < SiPM_Low->GetSize(); i++)
-        {
-            (*SiPM_Low)[i].Channel = MatchingSiPM[NUCLEUS][100 + GetDetectorChannel((*SiPM_Low)[i].Label)]->Eval(MatchingLowHigh[NUCLEUS][100 + GetDetectorChannel((*SiPM_Low)[i].Label)]->Eval((*SiPM_Low)[i].Channel));
-            Low[GetDetectorChannel((*SiPM_Low)[i].Label)] = (*SiPM_Low)[i];
-            if (peak_number == 14)
-                H_SiPM_Matched[NUCLEUS][(*SiPM_Low)[i].Label]->Fill((*SiPM_Low)[i].Channel);
-        }
+            current_detector = i;
+            Info("Fitting " + detectorName[i]);
+            G_SiPM_HighLow[NUCLEUS][i]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
+            MatchingLowHigh[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_linear");
 
-        for (int det = 1; det <= 9; det++)
-        {
+            TF2 *TF2LowHigh = new TF2("fLowHigh", fLowHigh, Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second, Range_SiPM_LowHigh.first*10, Range_SiPM_LowHigh.second*10, 5);
+            
+            
+            TF2LowHigh->SetParameter(0, 0.9);
+            TF2LowHigh->SetParLimits(0, 0.6, 1.);
+            
+            TF2LowHigh->SetParameter(1, 10.);
+            TF2LowHigh->SetParLimits(1, 9., 12.);
+            
+            TF2LowHigh->FixParameter(2, -30000);
+            // TF2LowHigh->SetParLimits(2, -50000, -10000);
+            
+            TF2LowHigh->SetParameter(3, 4000);
+            TF2LowHigh->SetParLimits(3, 100, 10000);
+            
+            TF2LowHigh->SetParameter(4, 4000);
+            TF2LowHigh->SetParLimits(4, 100, 10000);
 
-            if (High[det].isValid && Low[det].isValid) /// BOTH
+
+            TH2D* H_SiPM_HighLow_NORM = (TH2D *)H_SiPM_HighLow[NUCLEUS][i]->Clone("H_SiPM_HighLow_NORM");
+
+            CALIBRATED_File->cd();
+            TGraphErrors *g1 = new TGraphErrors();
+            TGraphErrors *g2 = new TGraphErrors();
+            int counter_g = 0;
+
+            TH1D* hsigma1 = new TH1D("hsigma1", "hsigma1", 1000, 0, 1000);
+            TH1D* hsigma2 = new TH1D("hsigma2", "hsigma2", 1000, 0, 1000);
+            TH1D* hdelta = new TH1D("halpha", "halpha", 100, 0, 5000);
+
+            for (int j = 0; j < H_SiPM_HighLow_NORM->GetNbinsY(); j ++)
             {
-                if (High[det].Channel < 800e3)
+                if (H_SiPM_HighLow[NUCLEUS][i]->GetYaxis()->GetBinCenter(j) < Range_SiPM_LowHigh.first*10 || H_SiPM_HighLow[NUCLEUS][i]->GetYaxis()->GetBinCenter(j) > Range_SiPM_LowHigh.second*10)
+                    continue;
+
+                // Get Proj
+                TH1D *proj = H_SiPM_HighLow_NORM->ProjectionX("proj", j, j+1);    
+                proj->GetXaxis()->SetRangeUser(proj->GetMean() - 20000, proj->GetMean() + 10000);    
+                
+                if (proj->Integral() < 10)
+                    continue;       
+                TF1 *f = new TF1("f", fdoubleGaussian, proj->GetMean() - 20000, proj->GetMean() + 10000, 6);
+
+                f->SetParameter(0, 100);
+                f->SetParLimits(0, 0, 5000);
+
+                f->SetParameter(1, proj->GetMean() - 1000);
+                f->SetParLimits(1, proj->GetMean() - 2000, proj->GetMean() + 1000);
+
+                f->SetParameter(2, 500);
+                f->SetParLimits(2, 100, 10000);
+
+                f->SetParameter(3, 100);
+                f->SetParLimits(3, 0, 5000);
+
+                f->SetParameter(4, 3000);
+                f->SetParLimits(4, 2000, 4000);
+
+                f->SetParameter(5, 500);
+                f->SetParLimits(5, 100, 10000);
+
+                TFitResultPtr r = proj->Fit(f, "QRS", "", proj->GetMean() - 20000, proj->GetMean() + 10000);
+
+                if (r->Status() != 0 || f->GetChisquare()/f->GetNDF() > 1)
+                    continue;
+
+                g1->SetPoint(counter_g, f->GetParameter(1), H_SiPM_HighLow[NUCLEUS][i]->GetYaxis()->GetBinCenter(j));
+                g1->SetPointError(counter_g, f->GetParError(1), 0);
+                g2->SetPoint(counter_g, f->GetParameter(1) + f->GetParameter(4), H_SiPM_HighLow[NUCLEUS][i]->GetYaxis()->GetBinCenter(j));
+                g2->SetPointError(counter_g, sqrt(pow(f->GetParError(1), 2) + pow(f->GetParError(4), 2)), 0);
+
+                hsigma1->Fill(f->GetParameter(2));
+                hsigma2->Fill(f->GetParameter(5));
+                hdelta->Fill(f->GetParameter(4));
+
+                counter_g++;
+
+                
+                
+    
+            }
+
+            // H_SiPM_HighLow_NORM->Fit(TF2LowHigh, "R MULTITHREAD", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
+
+            CALIBRATED_File->cd();
+            H_SiPM_HighLow_NORM->Write();
+            TCanvas *c = new TCanvas("c", "c", 800, 800);
+            g1->SetMarkerColor(kRed);
+            g1->SetMarkerStyle(20);
+            g1->Draw("AP");
+            g2->SetMarkerColor(kBlue);
+            g2->SetMarkerStyle(20);
+            g2->Draw("P SAME");
+
+            hsigma1->Write();
+            hsigma2->Write();
+            hdelta->Write();
+
+            hdelta->GetXaxis()->SetRangeUser(hdelta->GetMean()-2*hdelta->GetRMS(), hdelta->GetMean()+2*hdelta->GetRMS());
+            hdelta->Fit("gaus", "QR", "", hdelta->GetMean()-2*hdelta->GetRMS(), hdelta->GetMean()+2*hdelta->GetRMS());
+
+            c->Write();
+
+            TCanvas *c1 = new TCanvas("c1", "c1", 800, 800);
+            H_SiPM_HighLow[NUCLEUS][i]->Draw("COLZ");
+            g1->Fit("pol1", "QR", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
+            g2->Fit("pol1", "QR", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
+
+            if (g1->GetN() > 10 && g2->GetN() > 10)
+            {
+                g1->GetFunction("pol1")->SetLineColor(kRed);
+                g1->GetFunction("pol1")->Draw("SAME");
+                g2->GetFunction("pol1")->SetLineColor(kBlue);
+                g2->GetFunction("pol1")->Draw("SAME");
+                c1->Write();
+
+                TGraphErrors *g3 = new TGraphErrors();
+                for (int j = 0; j < g1->GetN(); j++)
                 {
-                    H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel);
-                    // SiPM.push_back(High[det]);
-                    SiPMi = High[det];
-                    Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
+                    double x, y;
+                    g1->GetPoint(j, x, y);
+                    g3->SetPoint(j, x, y);
+                    g3->SetPointError(j, g1->GetErrorX(j), 0);
                 }
-                else //(Low[det].Channel > 850e3)
-                {
-                    H_SiPM[NUCLEUS][peak_number][det]->Fill(Low[det].Channel);
-                    // SiPM.push_back(Low[det]);
-                    SiPMi = Low[det];
-                    Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
-                }
-                // / make the ratio betwwen them in the range 750 and 850 to get smooth transition
-                // else
+
+                // for (int j = 0; j < g2->GetN(); j++)
                 // {
-                //     double ratio = (Low[det].Channel - 750e3) / (850e3 - 750e3);
-                //     H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel * (1 - ratio) + Low[det].Channel * ratio);
+                //     double x, y;
+                //     g2->GetPoint(j, x, y);
+                //     g3->SetPoint(j + g1->GetN(), x - hdelta->GetFunction("gaus")->GetParameter(1), y);
+                //     g3->SetPointError(j + g1->GetN(), sqrt(pow(g2->GetErrorX(j), 2) + pow(hdelta->GetFunction("gaus")->GetParError(1), 2)), 0);
                 // }
-            }
-            else if (High[det].isValid) /// High whitout Low
-            {
-                H_Channel_SiPM_High_Alone[NUCLEUS][100 + det]->Fill(High[det].Channel);
-                if (High[det].Channel < 800e3)
+
+                g3->Fit("pol1");
+
+                TCanvas *c2 = new TCanvas("c2", "c2", 800, 800);
+                c2->Divide(1, 2);    
+                c2->cd(1);
+                g3->SetMarkerColor(kBlack);
+                g3->SetMarkerStyle(20);
+                g3->Draw("AP");
+                g3->GetFunction("pol1")->SetLineColor(kRed);
+                g3->GetFunction("pol1")->Draw("SAME");
+
+                c2->cd(2);
+                TGraphErrors *g4 = new TGraphErrors();
+                for (int j = 0; j < g3->GetN(); j++)
                 {
-                    H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel);
-                    // SiPM.push_back(High[det]);
-                    SiPMi = High[det];
-                    Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
+                    double x, y;
+                    g3->GetPoint(j, x, y);
+                    g4->SetPoint(j, x, (y - g3->GetFunction("pol1")->Eval(x))/y);
+                    g4->SetPointError(j, g3->GetErrorX(j), g3->GetErrorY(j));
                 }
-                else
-                {
-                    // Mean value of other low SiPMs
-                    double sum = 0;
-                    int counter = 0;
-                    for (int i = 1; i <= 9; i++)
-                    {
-                        if (Low[i].isValid)
-                        {
-                            counter++;
-                            sum += Low[i].Channel;
-                        }
-                    }
-                    if (counter != 0)
-                    {
-                        High[det].Channel = sum / counter;
-                        H_SiPM[NUCLEUS][peak_number][det]->Fill(sum / counter);
-                        // SiPM.push_back(High[det]);
-                        SiPMi = High[det];
-                        Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
-                    }
-                }
-            }
-            else if (Low[det].isValid) /// Low whitout High
-            {
-                H_Channel_SiPM_Low_Alone[NUCLEUS][110 + det]->Fill(Low[det].Channel);
-                if (Low[det].Channel > 800e3)
-                {
-                    H_SiPM[NUCLEUS][peak_number][det]->Fill(Low[det].Channel);
-                    // SiPM.push_back(Low[det]);
-                    SiPMi = Low[det];
-                    Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
-                }
+                g4->Fit("pol0", "Q");
+                g4->Draw("AP");
+                g4->GetFunction("pol0")->SetLineColor(kRed);
+                g4->GetFunction("pol0")->Draw("SAME");
+                c2->Write();
             }
         }
-
-        // SiPM.clear();
-    }
-
-    // for general test display result on IAS
-    for (int det = 1; det <= 9; det++)
-    {
-        H_SiPM_Merged[NUCLEUS][100 + det] = (TH1D *)H_SiPM[NUCLEUS][14][det]->Clone();
-        // Tree_Peaks[NUCLEUS][14][det]->Write();
     }
 }
 
-void MergingSiPMsBi207()
-{
-    Info("Matching SiPMs for " + NUCLEUS);
+// void FittingLowHigh()
+// {
+//     ////////////////////////// FITTING Low/High //////////////////////////
+//     Info("Fitting Low/High SiPMs");
+//     clock_t start = clock(), Current;
+//     int counter[SIGNAL_MAX] = {0};
 
-    clock_t start = clock(), Current;
-    Tree = (TTree *)GROUPED_File[NUCLEUS]->Get("Tree_Group");
-    Reader = new TTreeReader(Tree);
-    signals = new TTreeReaderArray<Signal>(*Reader, "Signal");
-    Reader->Restart();
-    int entries = Tree->GetEntries();
-    while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
-    {
+//     int entries = Tree->GetEntries();
+//     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
+//     {
 
-        ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
-        int peak_number = 0;
+//         ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
 
-        vector<Signal> SiPM_High;
-        vector<Signal> SiPM_Low;
-        for (int i = 0; i < signals->GetSize(); i++)
-        {
-            if (IsDetectorBetaHigh((*signals)[i].Label))
-            {
-                SiPM_High.push_back((*signals)[i]);
-            }
-            if (IsDetectorBetaLow((*signals)[i].Label))
-            {
-                SiPM_Low.push_back((*signals)[i]);
-            }
-        }
+//         int sili_label = (*Silicon)[1].Label;
+//         double sili_energy = F_SiliconCalibration[sili_label]->Eval((*Silicon)[1].Channel / 1000);
 
-        Signal High[10] = {Signal()};
-        Signal Low[10] = {Signal()};
+//         // gate on proton peak
+//         if (sili_energy < WindowsMap[NUCLEUS][14][sili_label].first || sili_energy > WindowsMap[NUCLEUS][14][sili_label].second)
+//             continue;
 
-        for (int i = 0; i < SiPM_High.size(); i++)
-        {
-            SiPM_High[i].Channel = MatchingSiPM["207Bi"][100 + GetDetectorChannel(SiPM_High[i].Label)]->Eval(SiPM_High[i].Channel);
-            High[GetDetectorChannel(SiPM_High[i].Label)] = SiPM_High[i];
-            H_SiPM_Matched[NUCLEUS][SiPM_High[i].Label]->Fill(SiPM_High[i].Channel);
-        }
-        for (int i = 0; i < SiPM_Low.size(); i++)
-        {
-            SiPM_Low[i].Channel = MatchingSiPM["207Bi"][100 + GetDetectorChannel(SiPM_Low[i].Label)]->Eval(MatchingLowHigh["32Ar"][100 + GetDetectorChannel(SiPM_Low[i].Label)]->Eval(SiPM_Low[i].Channel));
-            Low[GetDetectorChannel(SiPM_Low[i].Label)] = SiPM_Low[i];
-            H_SiPM_Matched[NUCLEUS][SiPM_Low[i].Label]->Fill(SiPM_Low[i].Channel);
-        }
 
-        for (int det = 1; det <= 9; det++)
-        {
+//         for (int i = 0; i < SiPM_High->GetSize(); i++)
+//         {
+//             H_SiPM_High[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Channel);
+//             for (int j = 0; j < SiPM_Low->GetSize(); j++)
+//             {
+//                 if (GetDetectorChannel((*SiPM_High)[i].Label) == GetDetectorChannel((*SiPM_Low)[j].Label))
+//                 {
+//                     H_SiPM_HighLow[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_Low)[j].Channel, (*SiPM_High)[i].Channel);
+//                     G_SiPM_HighLow[NUCLEUS][(*SiPM_High)[i].Label]->SetPoint(counter[(*SiPM_High)[i].Label], (*SiPM_Low)[j].Channel, (*SiPM_High)[i].Channel);
+//                     counter[(*SiPM_High)[i].Label]++;
+//                 }
+//             }
+//         }
 
-            if (High[det].isValid) /// High whitout Low
-            {
-                H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel);
-                // SiPM.push_back(High[det]);
-                SiPMi = High[det];
-                Tree_Peaks[NUCLEUS][0][GetDetectorChannel(SiPMi.Label)]->Fill();
-            }
-        }
+//         for (int i = 0; i < SiPM_Low->GetSize(); i++)
+//         {
+//             H_SiPM_Low[NUCLEUS][(*SiPM_Low)[i].Label]->Fill((*SiPM_Low)[i].Channel);
+//         }
+//     }
 
-        SiPM.clear();
-    }
+//     for (int i = 0; i < SIGNAL_MAX; i++)
+//     {
+//         if (IsDetectorBetaHigh(i))
+//         {
+//             G_SiPM_HighLow[NUCLEUS][i]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
+//             MatchingLowHigh[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_linear");
 
-    // for general test display result on IAS
-    for (int det = 1; det <= 9; det++)
-    {
-        H_SiPM_Merged[NUCLEUS][100 + det] = (TH1D *)H_SiPM[NUCLEUS][0][det]->Clone();
-        // Tree_Peaks[NUCLEUS][0][det]->Write();
-    }
-}
+//             // f_erf->SetParameter(0, 225e3);
+//             // f_erf->SetParLimits(0, 150e3, 300e3);
+//             // f_erf->SetParameter(1, 10);
+//             // f_erf->SetParLimits(1, 9.5, 12);
+//             // f_erf->SetParameter(2, -50000);
+//             // f_erf->SetParLimits(2, -100000, 0);
+//             // f_erf->SetParameter(3, 5000e3);
+//             // f_erf->SetParLimits(3, 4000e3, 6000e3);
+//             // f_erf->SetParameter(4, 0);
+//             // f_erf->SetParLimits(4, -100000, 100000);
+//             // f_erf->SetParameter(5, 280e3);
+//             // f_erf->SetParLimits(5, 0, 600e3);
+//             // G_SiPM_HighLow[NUCLEUS][i]->Fit(f_erf);
+//             // MatchingLowHigh_erf[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_erf");
+//         }
+//     }
+// }
 
-void WriteHistograms()
+// void FittingLowHighBi207()
+// {
+//     ////////////////////////// FITTING Low/High //////////////////////////
+//     Info("Fitting Low/High SiPMs");
+//     clock_t start = clock(), Current;
+//     int counter[SIGNAL_MAX] = {0};
+//     Tree = (TTree *)GROUPED_File[NUCLEUS]->Get("Tree_Group");
+//     Reader = new TTreeReader(Tree);
+//     signals = new TTreeReaderArray<Signal>(*Reader, "Signal");
+//     Reader->Restart();
+//     int entries = Tree->GetEntries();
+//     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
+//     {
+
+//         ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
+
+//         vector<Signal> SiPM_High;
+//         vector<Signal> SiPM_Low;
+//         for (int i = 0; i < signals->GetSize(); i++)
+//         {
+//             if (IsDetectorBetaHigh((*signals)[i].Label))
+//             {
+//                 SiPM_High.push_back((*signals)[i]);
+//             }
+//             if (IsDetectorBetaLow((*signals)[i].Label))
+//             {
+//                 SiPM_Low.push_back((*signals)[i]);
+//             }
+//         }
+
+//         if (SiPM_High.size() != 9)
+//             continue;
+
+//         for (int i = 0; i < SiPM_High.size(); i++)
+//         {
+//             H_SiPM_High[NUCLEUS][(SiPM_High)[i].Label]->Fill((SiPM_High)[i].Channel);
+//             for (int j = 0; j < SiPM_Low.size(); j++)
+//             {
+//                 if (GetDetectorChannel((SiPM_High)[i].Label) == GetDetectorChannel((SiPM_Low)[j].Label))
+//                 {
+//                     if (abs((SiPM_High)[i].Time - (SiPM_Low)[i].Time) > 20)
+//                         continue;
+//                     H_SiPM_HighLow[NUCLEUS][(SiPM_High)[i].Label]->Fill((SiPM_Low)[j].Channel, (SiPM_High)[i].Channel);
+//                     G_SiPM_HighLow[NUCLEUS][(SiPM_High)[i].Label]->SetPoint(counter[(SiPM_High)[i].Label], (SiPM_Low)[j].Channel, (SiPM_High)[i].Channel);
+//                     counter[(SiPM_High)[i].Label]++;
+//                 }
+//             }
+//         }
+
+//         for (int i = 0; i < SiPM_Low.size(); i++)
+//         {
+//             H_SiPM_Low[NUCLEUS][(SiPM_Low)[i].Label]->Fill((SiPM_Low)[i].Channel);
+//         }
+//     }
+
+//     for (int i = 0; i < SIGNAL_MAX; i++)
+//     {
+//         if (IsDetectorBetaHigh(i))
+//         {
+//             G_SiPM_HighLow[NUCLEUS][i]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first, Range_SiPM_LowHigh.second);
+//             MatchingLowHigh[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_linear");
+
+//             // f_erf->SetParameter(0, 225e3);
+//             // f_erf->SetParLimits(0, 150e3, 300e3);
+//             // f_erf->SetParameter(1, 10);
+//             // f_erf->SetParLimits(1, 9.5, 12);
+//             // f_erf->SetParameter(2, -50000);
+//             // f_erf->SetParLimits(2, -100000, 0);
+//             // f_erf->SetParameter(3, 5000e3);
+//             // f_erf->SetParLimits(3, 4000e3, 6000e3);
+//             // f_erf->SetParameter(4, 0);
+//             // f_erf->SetParLimits(4, -100000, 100000);
+//             // f_erf->SetParameter(5, 280e3);
+//             // f_erf->SetParLimits(5, 0, 600e3);
+//             // G_SiPM_HighLow[NUCLEUS][i]->Fit(f_erf, "Q");
+//             // MatchingLowHigh_erf[NUCLEUS][i] = G_SiPM_HighLow[NUCLEUS][i]->GetFunction("f_erf");
+//         }
+//     }
+// }
+
+
+
+// void FittingSiPMs()
+// {
+//     ////////////////////////// FITTING SiPMs //////////////////////////
+//     Info("Matching Low/High SiPM & Fitting SiPMs");
+//     clock_t start = clock(), Current;
+//     Reader->Restart();
+//     int counter_graph[SIGNAL_MAX] = {0};
+//     int counter[SIGNAL_MAX] = {0};
+//     int entries = Tree->GetEntries();
+//     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
+//     {
+//         ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
+
+//         int sili_label = (*Silicon)[1].Label;
+//         double sili_energy = F_SiliconCalibration[sili_label]->Eval((*Silicon)[1].Channel / 1000);
+
+//         // gate on proton peak
+//         if (sili_energy < WindowsMap[NUCLEUS][14][sili_label].first || sili_energy > WindowsMap[NUCLEUS][14][sili_label].second)
+//             continue;
+
+//         /// WRITTING MATCHED LOW HIGH
+//         for (int i = 0; i < SiPM_High->GetSize(); i++)
+//         {
+//             H_SiPM_HighLow_Matched[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Channel);
+//         }
+
+//         for (int j = 0; j < SiPM_Low->GetSize(); j++)
+//         {
+//             H_SiPM_HighLow_Matched[NUCLEUS][(*SiPM_Low)[j].Label]->Fill(MatchingLowHigh["32Ar"][(*SiPM_Low)[j].Label - 10]->Eval((*SiPM_Low)[j].Channel));
+//         }
+
+//         /// double line computing
+//         for (int i = 0; i < SiPM_High->GetSize(); i++)
+//         {
+//             for (int j = 0; j < SiPM_Low->GetSize(); j++)
+//             {
+//                 if (GetDetectorChannel((*SiPM_High)[i].Label) == GetDetectorChannel((*SiPM_Low)[j].Label))
+//                 {
+//                     double high = (*SiPM_High)[i].Channel;
+//                     double low = MatchingLowHigh[NUCLEUS][(*SiPM_High)[i].Label]->Eval((*SiPM_Low)[j].Channel);
+
+//                     G_SiPM_HighLow_Matched[NUCLEUS][(*SiPM_High)[i].Label]->SetPoint(counter[(*SiPM_High)[i].Label], low, high);
+//                     counter[(*SiPM_High)[i].Label]++;
+
+//                     // H_SiPM_HighLow_Matched_diff[NUCLEUS][(*SiPM_High)[i].Label]->Fill(MatchingLowHigh[NUCLEUS][(*SiPM_High)[i].Label]->Eval((*SiPM_Low)[j].Channel)-high, (*SiPM_Low)[j].Channel);
+//                 }
+//             }
+//         }
+//         ///////////////////////////////
+
+//         /// MATCHING SiPMs
+//         double SiPM[10] = {0};
+//         for (int i = 0; i < SiPM_High->GetSize(); i++)
+//         {
+//             for (int j = 0; j < SiPM_Low->GetSize(); j++)
+//             {
+//                 if (GetDetectorChannel((*SiPM_High)[i].Label) == GetDetectorChannel((*SiPM_Low)[j].Label))
+//                 {
+//                     if ((*SiPM_High)[i].Channel < Range_SiPM_LowHigh.second)
+//                     {
+//                         SiPM[GetDetectorChannel((*SiPM_High)[i].Label)] = (*SiPM_High)[i].Channel;
+//                     }
+//                     else
+//                     {
+//                         SiPM[GetDetectorChannel((*SiPM_High)[i].Label)] = MatchingLowHigh[NUCLEUS][(*SiPM_High)[i].Label]->Eval((*SiPM_Low)[j].Channel);
+//                     }
+//                 }
+//             }
+//         }
+
+//         if (SiPM[1] != 0)
+//         {
+//             for (int index = 1; index <= 9; index++)
+//             {
+//                 if (SiPM[index] == 0.)
+//                     continue;
+//                 G_Matching_SiPM[NUCLEUS][index]->SetPoint(counter_graph[index], SiPM[index], SiPM[1]);
+//                 H_Matching_SiPM[NUCLEUS][index]->Fill(SiPM[index], SiPM[1]);
+//                 counter_graph[index]++;
+//             }
+//         }
+//         //////////////////////
+//     }
+
+//     /// fitting sipms matching
+//     for (int i = 0; i < SIGNAL_MAX; i++)
+//     {
+//         if (IsDetectorBetaHigh(i))
+//         {
+//             cout << "Fitting SiPM " << i << endl;
+//             f_linear->FixParameter(1, 0);
+//             G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first * 10, Range_SiPM_LowHigh.second * 10);
+//             MatchingSiPM[NUCLEUS][i] = G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetFunction("f_linear");
+
+//             // TGraphErrors* g = new TGraphErrors();
+//             // int counter = 0;
+//             // for (int bin = 0; bin < H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetNbinsY(); bin+=10)
+//             // {
+//             //     TH1D* h = (TH1D*)H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->ProjectionY(("ap" + to_string(i)).c_str(), bin, bin+10);
+//             //     if (h->GetEntries() < 100)
+//             //         continue;
+//             //     // h->Write();
+//             //     h->Fit("gaus", "Q");
+//             //     g->SetPoint(counter, H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetXaxis()->GetBinCenter(bin+50), h->GetFunction("gaus")->GetParameter(1));
+//             //     g->SetPointError(counter, H_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetXaxis()->GetBinCenter(25), h->GetFunction("gaus")->GetParError(1));
+//             //     counter++;
+//             //     delete h;
+//             // }
+//             // f_linear->FixParameter(1, 0);
+//             // g->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first * 10 - 200e3, Range_SiPM_LowHigh.second * 10 - 400e3);
+//             // MatchingSiPM[NUCLEUS][i] = g->GetFunction("f_linear");
+//             // g->Write();
+//         }
+//     }
+
+//     MatchingSiPM[NUCLEUS][104] = new TF1("MatchingSiPM_104", "[0]*x + [1]", 0, 10000e3);
+//     MatchingSiPM[NUCLEUS][104]->SetParameters(1, 0);
+// }
+
+// void FittingSiPMsBi207()
+// {
+//     ////////////////////////// FITTING SiPMs //////////////////////////
+//     Info("Matching Low/High SiPM & Fitting SiPMs");
+//     clock_t start = clock(), Current;
+//     Reader->Restart();
+//     int counter_graph[SIGNAL_MAX] = {0};
+//     int counter[SIGNAL_MAX] = {0};
+//     Tree = (TTree *)GROUPED_File[NUCLEUS]->Get("Tree_Group");
+//     Reader = new TTreeReader(Tree);
+//     signals = new TTreeReaderArray<Signal>(*Reader, "Signal");
+//     Reader->Restart();
+//     int entries = Tree->GetEntries();
+//     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
+//     {
+//         ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
+
+//         vector<Signal> SiPM_High;
+//         vector<Signal> SiPM_Low;
+//         double ref_time;
+//         for (int i = 0; i < signals->GetSize(); i++)
+//         {
+//             if (i == 0)
+//                 ref_time = (*signals)[i].Time;
+//             if (IsDetectorBetaHigh((*signals)[i].Label))
+//             {
+//                 SiPM_High.push_back((*signals)[i]);
+//             }
+//             if (IsDetectorBetaLow((*signals)[i].Label))
+//             {
+//                 SiPM_Low.push_back((*signals)[i]);
+//             }
+//         }
+
+//         /// WRITTING MATCHED LOW HIGH
+//         for (int i = 0; i < SiPM_High.size(); i++)
+//         {
+//             H_SiPM_HighLow_Matched[NUCLEUS][(SiPM_High)[i].Label]->Fill((SiPM_High)[i].Channel);
+//         }
+
+//         for (int j = 0; j < SiPM_Low.size(); j++)
+//         {
+//             H_SiPM_HighLow_Matched[NUCLEUS][(SiPM_Low)[j].Label]->Fill(MatchingLowHigh["32Ar"][(SiPM_Low)[j].Label - 10]->Eval((SiPM_Low)[j].Channel));
+//         }
+
+//         /// double line computing
+//         for (int i = 0; i < SiPM_High.size(); i++)
+//         {
+//             for (int j = 0; j < SiPM_Low.size(); j++)
+//             {
+//                 if (GetDetectorChannel((SiPM_High)[i].Label) == GetDetectorChannel((SiPM_Low)[j].Label) && abs((SiPM_High)[i].Time - (SiPM_Low)[j].Time) < 10)
+//                 {
+//                     double high = (SiPM_High)[i].Channel;
+//                     double low = MatchingLowHigh["32Ar"][(SiPM_High)[i].Label]->Eval((SiPM_Low)[j].Channel);
+
+//                     G_SiPM_HighLow_Matched[NUCLEUS][(SiPM_High)[i].Label]->SetPoint(counter[(SiPM_High)[i].Label], low, high);
+//                     counter[(SiPM_High)[i].Label]++;
+
+//                     // H_SiPM_HighLow_Matched_diff[NUCLEUS][(SiPM_High)[i].Label]->Fill(MatchingLowHigh["32Ar"][(SiPM_High)[i].Label]->Eval((SiPM_Low)[j].Channel)-high, (SiPM_Low)[j].Channel);
+//                     continue;
+//                 }
+//             }
+//         }
+//         ///////////////////////////////
+
+//         /// MATCHING SiPMs
+//         Signal SiPM[10] = {Signal()};
+//         for (int i = 0; i < SiPM_High.size(); i++)
+//         {
+//             // for (int j = 0; j < SiPM_Low.size(); j++)
+//             // {
+//             // if ((GetDetectorChannel((SiPM_High)[i].Label) == GetDetectorChannel((SiPM_Low)[j].Label)))
+//             // {
+//             // if ((SiPM_High)[i].Channel < Range_SiPM_LowHigh.second)
+//             // {
+//             SiPM[GetDetectorChannel((SiPM_High)[i].Label)] = (SiPM_High)[i];
+//             // }
+//             // else
+//             // {
+//             //     SiPM[GetDetectorChannel((SiPM_High)[i].Label)] = MatchingLowHigh["32Ar"][(SiPM_High)[i].Label]->Eval((SiPM_Low)[j].Channel);
+//             // }
+//             // break;
+//             // }
+//             // }
+//         }
+
+//         if (SiPM[4].isValid)
+//         {
+//             for (int index = 1; index <= 9; index++)
+//             {
+//                 if (!SiPM[index].isValid)
+//                     continue;
+//                 if (abs((SiPM[4].Time - (SiPM)[index].Time)) < 10)
+//                 {
+//                     G_Matching_SiPM[NUCLEUS][index]->SetPoint(counter_graph[index], SiPM[index].Channel, SiPM[4].Channel);
+//                     counter_graph[index]++;
+//                 }
+//             }
+//         }
+//         //////////////////////
+//     }
+
+//     /// fitting sipms matching
+//     for (int i = 0; i < SIGNAL_MAX; i++)
+//     {
+//         if (IsDetectorBetaHigh(i))
+//         {
+//             f_linear->FixParameter(1, 0);
+//             G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->Fit(f_linear, "Q");
+//             MatchingSiPM[NUCLEUS][i] = G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->GetFunction("f_linear");
+//         }
+//     }
+
+//     MatchingSiPM[NUCLEUS][104] = new TF1("MatchingSiPM_104", "[0]*x + [1]", 0, 10000e3);
+//     MatchingSiPM[NUCLEUS][104]->SetParameters(1, 0);
+// }
+
+// void MergingSiPMs()
+// {
+//     Info("Matching SiPMs");
+
+//     clock_t start = clock(), Current;
+
+//     Reader->Restart();
+//     int entries = Tree->GetEntries();
+//     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
+//     {
+//         ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
+
+//         int sili_label = (*Silicon)[1].Label;
+//         double sili_energy = F_SiliconCalibration[sili_label]->Eval((*Silicon)[1].Channel / 1000);
+
+//         int peak_number = 0;
+//         for (int i = 1; i < 100; i++)
+//         {
+//             if (WindowsMap[NUCLEUS][i][sili_label].first == -1 || !WindowsMap[NUCLEUS][i][sili_label].first)
+//                 continue;
+
+//             if (sili_energy > WindowsMap[NUCLEUS][i][sili_label].first && sili_energy < WindowsMap[NUCLEUS][i][sili_label].second)
+//             {
+//                 peak_number = i;
+//                 break;
+//             }
+//         }
+
+//         if (peak_number == 0)
+//             continue;
+
+//         Signal High[10] = {Signal()};
+//         Signal Low[10] = {Signal()};
+
+//         for (int i = 0; i < SiPM_High->GetSize(); i++)
+//         {
+//             (*SiPM_High)[i].Channel = MatchingSiPM[NUCLEUS][100 + GetDetectorChannel((*SiPM_High)[i].Label)]->Eval((*SiPM_High)[i].Channel);
+//             High[GetDetectorChannel((*SiPM_High)[i].Label)] = (*SiPM_High)[i];
+//             if (peak_number == 14)
+//                 H_SiPM_Matched[NUCLEUS][(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Channel);
+//         }
+//         for (int i = 0; i < SiPM_Low->GetSize(); i++)
+//         {
+//             (*SiPM_Low)[i].Channel = MatchingSiPM[NUCLEUS][100 + GetDetectorChannel((*SiPM_Low)[i].Label)]->Eval(MatchingLowHigh[NUCLEUS][100 + GetDetectorChannel((*SiPM_Low)[i].Label)]->Eval((*SiPM_Low)[i].Channel));
+//             Low[GetDetectorChannel((*SiPM_Low)[i].Label)] = (*SiPM_Low)[i];
+//             if (peak_number == 14)
+//                 H_SiPM_Matched[NUCLEUS][(*SiPM_Low)[i].Label]->Fill((*SiPM_Low)[i].Channel);
+//         }
+
+//         for (int det = 1; det <= 9; det++)
+//         {
+
+//             if (High[det].isValid && Low[det].isValid) /// BOTH
+//             {
+//                 if (High[det].Channel < 800e3)
+//                 {
+//                     H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel);
+//                     // SiPM.push_back(High[det]);
+//                     SiPMi = High[det];
+//                     Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
+//                 }
+//                 else //(Low[det].Channel > 850e3)
+//                 {
+//                     H_SiPM[NUCLEUS][peak_number][det]->Fill(Low[det].Channel);
+//                     // SiPM.push_back(Low[det]);
+//                     SiPMi = Low[det];
+//                     Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
+//                 }
+//                 // / make the ratio betwwen them in the range 750 and 850 to get smooth transition
+//                 // else
+//                 // {
+//                 //     double ratio = (Low[det].Channel - 750e3) / (850e3 - 750e3);
+//                 //     H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel * (1 - ratio) + Low[det].Channel * ratio);
+//                 // }
+//             }
+//             else if (High[det].isValid) /// High whitout Low
+//             {
+//                 H_Channel_SiPM_High_Alone[NUCLEUS][100 + det]->Fill(High[det].Channel);
+//                 if (High[det].Channel < 800e3)
+//                 {
+//                     H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel);
+//                     // SiPM.push_back(High[det]);
+//                     SiPMi = High[det];
+//                     Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
+//                 }
+//                 else
+//                 {
+//                     // Mean value of other low SiPMs
+//                     double sum = 0;
+//                     int counter = 0;
+//                     for (int i = 1; i <= 9; i++)
+//                     {
+//                         if (Low[i].isValid)
+//                         {
+//                             counter++;
+//                             sum += Low[i].Channel;
+//                         }
+//                     }
+//                     if (counter != 0)
+//                     {
+//                         High[det].Channel = sum / counter;
+//                         H_SiPM[NUCLEUS][peak_number][det]->Fill(sum / counter);
+//                         // SiPM.push_back(High[det]);
+//                         SiPMi = High[det];
+//                         Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
+//                     }
+//                 }
+//             }
+//             else if (Low[det].isValid) /// Low whitout High
+//             {
+//                 H_Channel_SiPM_Low_Alone[NUCLEUS][110 + det]->Fill(Low[det].Channel);
+//                 if (Low[det].Channel > 800e3)
+//                 {
+//                     H_SiPM[NUCLEUS][peak_number][det]->Fill(Low[det].Channel);
+//                     // SiPM.push_back(Low[det]);
+//                     SiPMi = Low[det];
+//                     Tree_Peaks[NUCLEUS][peak_number][GetDetectorChannel(SiPMi.Label)]->Fill();
+//                 }
+//             }
+//         }
+
+//         // SiPM.clear();
+//     }
+
+//     // for general test display result on IAS
+//     for (int det = 1; det <= 9; det++)
+//     {
+//         H_SiPM_Merged[NUCLEUS][100 + det] = (TH1D *)H_SiPM[NUCLEUS][14][det]->Clone();
+//         // Tree_Peaks[NUCLEUS][14][det]->Write();
+//     }
+// }
+
+// void MergingSiPMsBi207()
+// {
+//     Info("Matching SiPMs for " + NUCLEUS);
+
+//     clock_t start = clock(), Current;
+//     Tree = (TTree *)GROUPED_File[NUCLEUS]->Get("Tree_Group");
+//     Reader = new TTreeReader(Tree);
+//     signals = new TTreeReaderArray<Signal>(*Reader, "Signal");
+//     Reader->Restart();
+//     int entries = Tree->GetEntries();
+//     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
+//     {
+
+//         ProgressBar(Reader->GetCurrentEntry(), entries, start, Current, "Reading Tree");
+//         int peak_number = 0;
+
+//         vector<Signal> SiPM_High;
+//         vector<Signal> SiPM_Low;
+//         for (int i = 0; i < signals->GetSize(); i++)
+//         {
+//             if (IsDetectorBetaHigh((*signals)[i].Label))
+//             {
+//                 SiPM_High.push_back((*signals)[i]);
+//             }
+//             if (IsDetectorBetaLow((*signals)[i].Label))
+//             {
+//                 SiPM_Low.push_back((*signals)[i]);
+//             }
+//         }
+
+//         Signal High[10] = {Signal()};
+//         Signal Low[10] = {Signal()};
+
+//         for (int i = 0; i < SiPM_High.size(); i++)
+//         {
+//             SiPM_High[i].Channel = MatchingSiPM["207Bi"][100 + GetDetectorChannel(SiPM_High[i].Label)]->Eval(SiPM_High[i].Channel);
+//             High[GetDetectorChannel(SiPM_High[i].Label)] = SiPM_High[i];
+//             H_SiPM_Matched[NUCLEUS][SiPM_High[i].Label]->Fill(SiPM_High[i].Channel);
+//         }
+//         for (int i = 0; i < SiPM_Low.size(); i++)
+//         {
+//             SiPM_Low[i].Channel = MatchingSiPM["207Bi"][100 + GetDetectorChannel(SiPM_Low[i].Label)]->Eval(MatchingLowHigh["32Ar"][100 + GetDetectorChannel(SiPM_Low[i].Label)]->Eval(SiPM_Low[i].Channel));
+//             Low[GetDetectorChannel(SiPM_Low[i].Label)] = SiPM_Low[i];
+//             H_SiPM_Matched[NUCLEUS][SiPM_Low[i].Label]->Fill(SiPM_Low[i].Channel);
+//         }
+
+//         for (int det = 1; det <= 9; det++)
+//         {
+
+//             if (High[det].isValid) /// High whitout Low
+//             {
+//                 H_SiPM[NUCLEUS][peak_number][det]->Fill(High[det].Channel);
+//                 // SiPM.push_back(High[det]);
+//                 SiPMi = High[det];
+//                 Tree_Peaks[NUCLEUS][0][GetDetectorChannel(SiPMi.Label)]->Fill();
+//             }
+//         }
+
+//         SiPM.clear();
+//     }
+
+//     // for general test display result on IAS
+//     for (int det = 1; det <= 9; det++)
+//     {
+//         H_SiPM_Merged[NUCLEUS][100 + det] = (TH1D *)H_SiPM[NUCLEUS][0][det]->Clone();
+//         // Tree_Peaks[NUCLEUS][0][det]->Write();
+//     }
+// }
+
+void WriteHistograms(int Verbose = 0)
 {
     gStyle->SetOptStat(0);
     CALIBRATED_File->cd();
-    Info("Write Histograms");
-    for (string NUCLEUS : Nucleis)
+    Info("Write Histograms start");
+    for (string NUCLEUS : Nuclei)
     {
-        cout << "Writing Nucleus " << NUCLEUS << endl;
+         if (Verbose == 1) Info(NUCLEUS, 1);
         dir[NUCLEUS]->cd();
 
         TCanvas *cHighLowSiPM = new TCanvas(("cHighLowSiPM_" + NUCLEUS).c_str(), ("cHighLowSiPM_" + NUCLEUS).c_str(), 800, 800);
@@ -985,16 +1253,16 @@ void WriteHistograms()
         {
             if (IsDetectorBetaHigh(i))
             {
-                cout << "Writing SiPM " << i << endl;
+                if (Verbose == 1) Info(detectorName[i], 2);
                 dir_detector[NUCLEUS][i]->cd();
 
-                cout << "1" << endl;
+                // cout << "1" << endl;
                 // single histograms
                 H_SiPM_High[NUCLEUS][i]->Write();
                 H_Channel_SiPM_High_Alone[NUCLEUS][i]->Write();
                 H_SiPM_HighLow[NUCLEUS][i]->Write();
 
-                cout << "2" << endl;
+                // cout << "2" << endl;
                 // 3x3 HighLow graph fitted for matching
                 cHighLowSiPM_Fitting->cd(GetDetectorChannel(i));
                 G_SiPM_HighLow[NUCLEUS][i]->SetTitle(("SiPM " + to_string(GetDetectorChannel(i))).c_str());
@@ -1015,12 +1283,12 @@ void WriteHistograms()
                     text->Draw("SAME");
                 }
 
-                cout << "3" << endl;
+                // cout << "3" << endl;
                 // 3x3 HighLow histograms projected on diff
                 cHighLowSiPM_Diff->cd(GetDetectorChannel(i));
                 // H_SiPM_HighLow_Matched_diff[NUCLEUS][i]->Draw("COLZ");
 
-                cout << "4" << endl;
+                // cout << "4" << endl;
                 // 3x3 HighLow histograms matched
                 cHighLowSiPM->cd(GetDetectorChannel(i));
                 H_SiPM_HighLow_Matched[NUCLEUS][i]->Rebin(10);
@@ -1029,7 +1297,7 @@ void WriteHistograms()
                 H_SiPM_HighLow_Matched[NUCLEUS][i + 10]->SetLineColor(kRed);
                 H_SiPM_HighLow_Matched[NUCLEUS][i + 10]->Draw("HIST SAME");
 
-                cout << "5" << endl;
+                // cout << "5" << endl;
                 // 3x3 SIPM graph fitted for matching
                 cMatchingSiPM_Fitting->cd(GetDetectorChannel(i));
                 G_SiPM_HighLow[NUCLEUS][i]->SetTitle(("SiPM " + to_string(GetDetectorChannel(i))).c_str());
@@ -1038,19 +1306,19 @@ void WriteHistograms()
                 G_SiPM_HighLow[NUCLEUS][i]->GetXaxis()->CenterTitle();
                 G_SiPM_HighLow[NUCLEUS][i]->GetYaxis()->CenterTitle();
                 G_Matching_SiPM[NUCLEUS][GetDetectorChannel(i)]->Draw("AP");
-                if (NUCLEUS == "32Ar")
-                {
-                    TLatex *textSIPM = new TLatex();
-                    textSIPM->SetNDC();
-                    textSIPM->SetTextSize(0.1);
-                    std::ostringstream streamObjSipm;
-                    streamObjSipm << std::fixed << std::setprecision(2) << MatchingSiPM[NUCLEUS][i]->GetParameter(0);
-                    std::string parameterStrsipm = streamObjSipm.str();
-                    textSIPM->DrawLatex(0.7, 0.8, ("#color[2]{" + parameterStrsipm + "}").c_str());
-                    textSIPM->Draw("SAME");
-                }
+                // if (NUCLEUS == "32Ar")
+                // {
+                //     TLatex *textSIPM = new TLatex();
+                //     textSIPM->SetNDC();
+                //     textSIPM->SetTextSize(0.1);
+                //     std::ostringstream streamObjSipm;
+                //     streamObjSipm << std::fixed << std::setprecision(2) << MatchingSiPM[NUCLEUS][i]->GetParameter(0);
+                //     std::string parameterStrsipm = streamObjSipm.str();
+                //     textSIPM->DrawLatex(0.7, 0.8, ("#color[2]{" + parameterStrsipm + "}").c_str());
+                //     textSIPM->Draw("SAME");
+                // }
 
-                cout << "6" << endl;
+                // cout << "6" << endl;
                 // 3x3 SiPM histograms matched
                 cMatchingSiPM->cd(GetDetectorChannel(i));
                 // H_SiPM_Matched[NUCLEUS][i]->Rebin(10);

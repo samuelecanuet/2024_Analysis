@@ -12,6 +12,7 @@
 #include <string>
 #include <algorithm>
 #include <gsl/gsl_statistics.h>
+#include <filesystem>
 
 //  ROOT includes
 //// files ////
@@ -42,6 +43,7 @@
 #include "TStyle.h"
 //// functions ////
 #include "TF1.h"
+#include "TF2.h"
 #include "TFitResult.h"
 //// others ////
 #include "TRandom.h"
@@ -51,8 +53,7 @@
 #include "Math/Factory.h"
 
 #include "Messenger.hh"
-
-#include "/home/local1/Documents/lib/GTools1.0/include/GString.hh"
+#include "Utilities.hh"
 
 
 #define FDATA_MAX 80  ///< Maximum coder label
@@ -127,8 +128,8 @@ double winHighMin = 0;
 double winHighMax = 250;
 int winHighN = (abs(winHighMin) + winHighMax) / 2;
 double eHighMin = 0;
-double eHighMax = 12000000;
-int eHighN = 6000;
+double eHighMax = 6000000;
+int eHighN = 3000;
 
 /// Low
 double winLowMin = 0;
@@ -136,7 +137,7 @@ double winLowMax = 250;
 int winLowN = (abs(winLowMin) + winLowMax) / 2;
 double eLowMin = 0;
 double eLowMax = 1200000;
-int eLowN = 2400;
+int eLowN = 3000;
 
 /// TOTAL WINDOW ///
 double tabMIN[3] = {winSiliMin, winHighMin, winLowMin};

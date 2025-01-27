@@ -7,11 +7,10 @@ ROOT_LIBS       = $(shell root-config --libs) -lSpectrum
 GSL_CFLAGS      = $(shell gsl-config --cflags)
 GSL_LIBS        = $(shell gsl-config --libs)
 
-GTOOLS_L = $(shell gtools_lib)
 
 CC        = g++
 CFLAGS    = ${FASTERAC_CFLAGS} ${ROOT_CFLAGS} ${GSL_CFLAGS} -Iinclude  -I/softs/clhep/2.4.6.2/include/ -I/softs/clhep/2.4.6.2/include/CLHEP
-LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GTOOLS_L} ${GSL_LIBS} -lboost_filesystem -lboost_system ../Grouper/include/Messenger.hh -lCLHEP -L/softs/clhep/2.4.6.2/lib
+LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GSL_LIBS} -lboost_filesystem -lboost_system ../Grouper/include/Messenger.hh -lCLHEP -L/softs/clhep/2.4.6.2/lib
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
