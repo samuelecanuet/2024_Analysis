@@ -29,14 +29,20 @@ double HFake[SIGNAL_MAX][MAX_MULTIPLICTY];
 TH1D* H_SiPM_Channel_M_nocoinc[SIGNAL_MAX][MAX_MULTIPLICTY+1];
 TH1D* H_SiPM_Channel_M_coinc[SIGNAL_MAX][MAX_MULTIPLICTY+1];
 
+TH2D* H_Time_Channel[SIGNAL_MAX];
+
 /// params
-double start_gate = -12;
-double end_gate = 6;
+double start_gate = -10;
+double end_gate = 40;
 double start_gate_fake = -300;
-double end_gate_fake = -240;
+double end_gate_fake = -100;
+
+int Run=0;
+string Run_string;
 
 void InitHistograms()
 {
+    Info("Init Histograms start");
     dir_FakeCorrection = ANALYSED_File->mkdir("FakeCorrection");
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
@@ -51,6 +57,13 @@ void InitHistograms()
             H_Single[i]->GetYaxis()->SetTitle("Counts");
             H_Single[i]->GetXaxis()->CenterTitle();
             H_Single[i]->GetYaxis()->CenterTitle();
+
+            H_Time_Channel[i] = new TH2D(("H_Time_Channel_" + detectorName[i]).c_str(), ("H_Time_Channel_" + detectorName[i]).c_str(), 300, -300, 300, (WindowsMap["32Ar"][14][i].second-WindowsMap["32Ar"][14][i].first)*10, WindowsMap["32Ar"][14][i].first, WindowsMap["32Ar"][14][i].second);
+            H_Time_Channel[i]->GetXaxis()->SetTitle("Time [ns]");
+            H_Time_Channel[i]->GetYaxis()->SetTitle("Energy [keV]");
+            H_Time_Channel[i]->GetXaxis()->CenterTitle();
+            H_Time_Channel[i]->GetYaxis()->CenterTitle();
+
 
             for (int mul = 1; mul <= BETA_SIZE; mul++)
             {
@@ -137,7 +150,7 @@ void InitHistograms()
         G_NFake[mul] = new TGraph();
     }
 
-    
+    Info("Init Histograms end");
 }
 
 void InitWindows()
@@ -186,19 +199,72 @@ void InitWindows()
     }
 }
 
-
 void InitCalib()
 {
-    for (int i = 0; i < SIGNAL_MAX; i++)
+    if (FLAG2021)
     {
-        if (IsDetectorSiliStrip(i))
+        for (int i = 0; i < SIGNAL_MAX; i++)
         {
-            Calibration[i] = (TF1*)CALIBRATED_File->Get(("Calibration_" + detectorName[i]).c_str());
-
-            if (Calibration[i] == NULL)
+            if (IsDetectorSili(i))
             {
-                Calibration[i] = new TF1(("Calibration_" + detectorName[i]).c_str(), "x", 0, 10000);
+                Calibration[i] = new TF1(("Calibration_" + detectorName[i]).c_str(), "x*[0]", 0, 10000);
+                
+                // open txt file 
+                ifstream file("Config_Files/2021/2021_Calibration.txt");
+                if (!file.is_open())
+                {
+                    Error("Impossible to open 2021_Calibration.txt");
+                }
+
+                string line;
+                double a = 0;
+                string name;
+                double delta_a;
+                while (getline(file, line))
+                {
+                    if (line.empty())
+                    {
+                        continue;
+                    }
+
+                    stringstream ss(line);
+                    ss >> name >> a >> delta_a;
+                    if (name == ("H_Si"+ to_string(GetDetector(i)) + "_" + to_string(GetDetectorChannel(i))).c_str())
+                    {
+                        Calibration[i]->SetParameter(0, a*1000);
+                        break;
+                    }
+                    else if (name == ("H_Si"+ to_string(GetDetector(i)) + "_R").c_str())
+                    {
+                        Calibration[i]->SetParameter(0, a*1000);
+                        break;
+                    }
+                }
+
+                if (Calibration[i] == NULL)
+                {
+                    Calibration[i] = new TF1(("Calibration_" + detectorName[i]).c_str(), "x", 0, 10000);
+                    Warning("No calibration found for " + detectorName[i]);
+                }
             }
         }
     }
+    else
+    {
+        for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            if (IsDetectorSiliStrip(i))
+            {
+                Calibration[i] = (TF1 *)CALIBRATED_File->Get(("Calibration_" + detectorName[i]).c_str());
+
+                if (Calibration[i] == NULL)
+                {
+                    Calibration[i] = new TF1(("Calibration_" + detectorName[i]).c_str(), "x", 0, 10000);
+                    Warning("No calibration found for " + detectorName[i]);
+                }
+            }
+        }
+    }
+
+    Success("Calibration loaded");
 }

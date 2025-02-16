@@ -1,79 +1,141 @@
 #include "SIPM_Matching.hh"
 
 
-int main()
+int main(int argc, char **argv)
 {
+    if (argc == 2 && string(argv[1]) == "FULL")
+    {
+        FULL = true;
+        Info("FULL option USED");
+    }
+    else
+    {
+        Info("Genereate only histograms");
+    }
+
     // INITIALIZATION
     InitDetectors("Config_Files/sample.pid");
 
 
     ///////////////////////////////////  FILES //////////////////////////////////
-    GROUPED_File["32Ar"] = MyTFile(DIR_ROOT_DATA_GROUPED + "run_074_multifast_32Ar_grouped.root", "READ");
-    GROUPED_File["207Bi"] = MyTFile(DIR_ROOT_DATA_GROUPED + "run_137_multifast_207Bi_grouped.root", "READ");
-    GROUPED_File["90Sr"] = MyTFile(DIR_ROOT_DATA + "run_133_data_90Sr.root", "READ");
-
+    
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
-    CALIBRATED_File = MyTFile(DIR_ROOT_DATA_CALIBRATED + "SiPM_Matching.root", "RECREATE");
-    CALIBRATED_File->cd();
+    MATCHED_File = MyTFile(DIR_ROOT_DATA_MATCHED + "SiPM_Matching.root", "RECREATE");
+    MATCHED_File->cd();
 
-    NUCLEUS = "32Ar";
-    f_tree = MyTFile(DIR_ROOT_DATA_CALIBRATED + "Matching_SiPM_trees.root", "RECREATE");
-
+    init();
     InitWindows();
     InitSiliconCalibration();
-    InitHistograms(1);
+
+    bool first = true;
+
 
     Entry_MAX = 7e7;
 
-    NUCLEUS = "32Ar";
-
-    if (NUCLEUS == "32Ar")
+    // FITTING LOW HIGH ON THE PRINCIPAL LINE 
+    // # if FULL option do it and saved in SiPM_Matching_Values.root
+    // # else loaded from it
+    for (auto &pairr : Map_RunFiles)
     {
-        TYPE = "CLEANED";
+        string type = "multifast";
+        NUCLEI = pairr.first;
+        if (pairr.first == "90Sr") type = "data";
+        for (string run : pairr.second)
+        {
+            Info("Run: " + run);
+            RUN = run;
+           
+            // LOADING FILE
+            GROUPED_File[run] = MyTFile(DIR_ROOT_DATA_GROUPED + "run_" + run + "_"+type+"_" + pairr.first + "_grouped.root", "READ");
+            if (GROUPED_File[run] == NULL)
+                continue;
+                
+            InitHistograms(RUN, 0);
+
+            // LOADING TREE
+            Tree = (TTree *)GROUPED_File[run]->Get("CLEANED_Tree");
+            Reader = new TTreeReader(Tree);
+            Silicon = NULL;
+            if (pairr.first == "32Ar" || pairr.first == "32Ar"|| pairr.first == "33Ar")
+            {
+                Silicon = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_Silicon");
+            }
+
+            SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
+
+            // IF FULL OPTION
+            if (FULL)
+            {
+                // Read Data fill histograms
+                ReadData();
+                // Fitting Low-High SiPMs
+                FittingLowHigh(1);
+                FittingSiPM(1);
+                // Saving fit in file
+                WriteValues(first);
+                // Write Histograms betfore correction applyed (where fits comes from)
+                WriteHistogram(1);
+                
+               
+            }
+            else
+            {   
+                // Read Data fill histograms
+                ReadData();
+                // Load fit from file
+                int res = LoadValues();
+                if (res == 1)
+                {
+                    FittingLowHigh(1);
+                    FittingSiPM(1);
+                    // Write Histograms betfore correction applyed (where fits comes from)
+                    WriteValues(first);
+                }
+                // Write Histograms betfore correction applyed (where fits comes from)
+                WriteHistogram(1);
+
+                if (first)
+                    first = false;
+            }      
+        }
     }
-    else
+
+    WriteHistograms(1);
+
+    Info("APPLYING MATCHING");
+    // Applying corrections
+    for (auto &pairr : Map_RunFiles)
     {
-        TYPE = "CLEANED";
+        string type = "multifast";
+        NUCLEI = pairr.first;
+        if (pairr.first == "90Sr") type = "data";
+        for (string run : pairr.second)
+        {
+            Info("Run: " + run);
+            RUN = run;
+           
+            // LOADING FILE
+            GROUPED_File[run] = MyTFile(DIR_ROOT_DATA_GROUPED + "run_" + run + "_"+type+"_" + pairr.first + "_grouped.root", "READ");
+            if (GROUPED_File[run] == NULL)
+                continue;
+                
+            // LOADING TREE
+            Tree = (TTree *)GROUPED_File[run]->Get("CLEANED_Tree");
+            Reader = new TTreeReader(Tree);
+            Silicon = NULL;
+            if (pairr.first == "32Ar" || pairr.first == "32Ar"|| pairr.first == "33Ar")
+            {
+                Silicon = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_Silicon");
+            }
+
+            SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
+
+            InitHistograms(RUN, 0, true);
+            ReadDataWithCorrections();
+            WriteHistogramAfterCorrection(1);      
+        }
     }
 
-
-    // LOADING TREE
-    Tree = (TTree *)GROUPED_File[NUCLEUS]->Get((TYPE+"_Tree").c_str());
-    Reader = new TTreeReader(Tree);
-    if (NUCLEUS == "32Ar")
-    {
-        Silicon = new TTreeReaderArray<Signal>(*Reader, (TYPE+"_Tree_Silicon").c_str());
-    }
-
-    SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, (TYPE+"_Tree_SiPMGroup").c_str());
-    
-
-    // Fitting Low-High SiPMs
-
-    FittingLowHigh();
-    // FittingSiPMs();
-    // WriteValues();
-
-    // // Read values
-    // // ReadValues();
-    // MergingSiPMs();
-
-    // Bi207
-    // NUCLEUS = "207Bi";
-    // FittingLowHighBi207();
-    // FittingSiPMsBi207();
-    // MergingSiPMsBi207();
-
-    // NUCLEUS = "90Sr";
-    // FittingLowHighBi207();
-    // FittingSiPMsBi207();
-    // MergingSiPMsBi207();
-
-    // WriteTree();
-  
-    
-    WriteHistograms(0);
-    CALIBRATED_File->Close();
-    GROUPED_File["32Ar"]->Close();
+    MATCHED_File->Close();
     return 0;
 }

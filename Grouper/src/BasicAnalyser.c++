@@ -1,5 +1,6 @@
-#include "Source_Grouper.hh"
-#include <ctime>
+#include "BasicAnalyser.hh"
+
+
 
 int main(int argc, char *argv[])
 {
@@ -34,51 +35,38 @@ int main(int argc, char *argv[])
 
     Info("Current Run : " + Run_string);
     ///////////////////////////////////  INPUT ///////////////////////////////////
-    ROOT_filename = SearchFiles(DIR_ROOT_DATA, Run_string);
-    ROOT_basefilename = ROOT_filename.substr(0, ROOT_filename.find(".root"));
+    string ROOT_filename = SearchFiles(DIR_ROOT_DATA, Run_string);
+    string ROOT_basefilename = ROOT_filename.substr(0, ROOT_filename.find(".root"));
 
     TFile *ROOT_File = new TFile((DIR_ROOT_DATA + ROOT_filename).c_str(), "READ");
     TTree *Tree = (TTree *)ROOT_File->Get("Tree_Group");
-    
-    GROUPED_File = new TFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped.root").c_str(), "RECREATE");
-    GROUPED_File->cd();
-    WriteTime(ROOT_File, GROUPED_File);
-    ///////////////////////////////////  INITIALISATION ///////////////////////////////////
-    InitDetectors("Config_Files/sample.pid");
-    InitHistograms_Grouped();
-    InitCalibration();
-
-    clock_t start = clock(), Current;
-    LoadFitParameters();
-    
-    ///////////////////////////////////////////////////////////
-    start = clock(), Current;
-    CLEANED_Tree = new TTree("CLEANED_Tree", "CLEANED_Tree");
-    CLEANED_Tree->Branch("CLEANED_Tree_SiPMGroup", &CLEANED_Tree_SiPMGroup);
-
     TTreeReader *Reader = new TTreeReader(Tree);
     TTreeReaderArray<Signal> signals(*Reader, "Signal");
-    Reader->Restart();
+
+    InitDetectors("Config_Files/sample.pid");
+    
+
+    GROUPED_File = new TFile((DIR_ROOT_DATA + ROOT_basefilename + "_basic.root").c_str(), "RECREATE");
+    InitHistograms();
+
+    clock_t start = clock(), Current;
+    CLEANED_Tree = new TTree("CLEANED_Tree", "CLEANED_Tree");
+    CLEANED_Tree->Branch("CLEANED_Tree_Silicon", &CLEANED_Tree_Silicon);
+    CLEANED_Tree->Branch("CLEANED_Tree_SiPMGroup", &CLEANED_Tree_SiPMGroup);
+
     int TotalEntries = Reader->GetEntries();
-    while (Reader->Next() && Reader->GetCurrentEntry() < TotalEntries)
+    while (Reader->Next())
     {
         ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Final Cleaning : ");
 
         // for (int i = 0; i < signals.GetSize(); i++)
         //     cout << signals[i] << endl;
 
-        CleaningGroups(signals);
+        CleaningGroups(signals, 0);
     }
 
-    WriteHistograms_Cleaned();
-
-    //////////////////////////////////////////////////////////////////////////////////////////////
-    ///////////////////////////////////  Counting IAS losses /////////////////////////////////////
-    //////////////////////////////////////////////////////////////////////////////////////////////
-
-    WriteTree_Grouped();
-
+    WriteHistograms();
     GROUPED_File->Close();
     ROOT_File->Close();
-    Success("Grouped File Created");
+
 }

@@ -1041,7 +1041,8 @@ void Manual_Calibration()
     G_Calibration[NUCLEUS][current_detector]->Fit("pol1", "Q");
     Calibration_Function[current_detector] = G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1");
     ManualCalibLinear[current_detector] = make_pair(G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(0), G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(1));
-    Info(detectorName[current_detector] + "   First Calibration : a = " + to_string(G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(0)) + " b = " + to_string(G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(1)));
+    Info(detectorName[current_detector] + "   First Calibration : a = " + to_string(G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(0)) + " b = " + 
+        to_string(G_Calibration[NUCLEUS][current_detector]->GetFunction("pol1")->GetParameter(1)), 1);
 }
 
 void Fitting_Calibration()
@@ -1164,7 +1165,10 @@ void Fitting_Calibration()
     TF1 *fit = new TF1(function.c_str(), "[0] + [1] * x + [2] * x * x", 0, 6500);
 
     MG_Global_Calibration[current_detector]->Fit(function.c_str(), "Q");
-    Info(detectorName[current_detector] + "   Second Calibrarion : a = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(0)) + " b = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(1)) + " c = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(2)) + "  Chi2 = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetChisquare() / MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetNDF()));
+    Info(detectorName[current_detector] + "   Second Calibrarion : a = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(0)) + 
+        " b = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(1)) + 
+        " c = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(2)) + 
+        "  Chi2 = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetChisquare() / MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetNDF()), 1);
     MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->SetLineColor(kRed);
     MG_Global_Calibration[current_detector]->Draw("AP");
     MG_Global_Calibration[current_detector]->GetXaxis()->SetTitle("Channel");
@@ -1422,7 +1426,11 @@ void Fitting_Calibration_E0()
     TF1 *fit = new TF1(function.c_str(), "pol5", 0, 6500);
 
     MG_Global_Calibration[current_detector]->Fit(function.c_str(), "Q");
-    Info(detectorName[current_detector] + "   E0 Calibrarion : a = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(0)) + " b = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(1)) + " c = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(2)) + "  Chi2 = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetChisquare() / MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetNDF()));
+    Info(detectorName[current_detector] + 
+        "   E0 Calibrarion : a = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(0)) + 
+        " b = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(1)) + 
+        " c = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(2)) + 
+        "  Chi2 = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetChisquare() / MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetNDF()), 1);
     MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->SetLineColor(kRed);
     MG_Global_Calibration[current_detector]->Draw("AP");
     MG_Global_Calibration[current_detector]->GetXaxis()->SetTitle("Channel");

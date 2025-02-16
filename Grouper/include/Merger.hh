@@ -51,7 +51,7 @@ using namespace ROOT::Math;
 random_device rd;
 mt19937 gen(rd());
 
-vector<string> NUCLEI = {"32Ar", "32Ar_thick", "33Ar"};
+vector<string> NUCLEI = {"33Ar"};//, "32Ar_thick", "33Ar"};
 map<string, vector<string>> Map_RunFiles;
 TFile *MERGED_File;
 TFile *MATCHED_File;
@@ -93,13 +93,16 @@ TH1D* H_Sum;
 
 void Init()
 {
-  Map_RunFiles["32Ar"] = {"057", "058", "059",
-                         "061", "062", "064", "065", "066", "067", "068", "069",
+  Map_RunFiles["32Ar"] = {
+                           "057", "058", "059",
+                         "061", "062", 
+                         "064", "065", "066", "067", "068", "069",
                          "070", "071", "072", "074", "077",
                         
                         
                         
-                         "112", "113", "114", "115", "116", "118"};
+                        "112", "113", "114", "115", "116", "118"
+                        };
 
   Map_RunFiles["32Ar_thick"] = {"075", "076"};
 

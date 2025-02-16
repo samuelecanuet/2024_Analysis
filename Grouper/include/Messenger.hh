@@ -46,14 +46,16 @@ void Warning(const char *message) {
 
 void Info(const string& message, int indent=0) {
     cout << BLUE << left << setw(GENERAL_INDENT) << " <INFO>  ";
-    for (int i = 0; i < indent; i++) cout << "--";
+    if (indent > 0)
+    {
+        for (int i = 0; i < indent; i++) cout << " ";
+        cout << "├─";
+    }
     cout << message << RESET << endl;
 }
 
 void Info(const char *message, int indent=0) {
-    cout << BLUE << left << setw(GENERAL_INDENT) << " <INFO>  ";
-    for (int i = 0; i < indent; i++) cout << "--";
-    cout << message << RESET << endl;
+    Info(string(message), indent);
 }
 
 void Success(const string& message) {

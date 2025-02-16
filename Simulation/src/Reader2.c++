@@ -2,7 +2,7 @@
 
 int main()
 {
-    string name = "14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma";
+    string name = "../../../../../../../home/local1/Documents/WISArD_mydecay/Test";
     // name = "241Am_700nm_width";
     Info("Reading File: " + name);
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");

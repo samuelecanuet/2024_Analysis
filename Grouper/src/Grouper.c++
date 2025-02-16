@@ -34,23 +34,24 @@ int main(int argc, char *argv[])
 
     Info("Current Run : " + Run_string);
     ///////////////////////////////////  INPUT ///////////////////////////////////
+    DIR_ROOT_DATA = "../../../../../run/media/local1/T7/Samuel/Regrouped/ROOT/";
     ROOT_filename = SearchFiles(DIR_ROOT_DATA, Run_string);
     ROOT_basefilename = ROOT_filename.substr(0, ROOT_filename.find(".root"));
 
-    TFile *ROOT_File = new TFile((DIR_ROOT_DATA + ROOT_filename).c_str(), "READ");
+    TFile *ROOT_File = MyTFile((DIR_ROOT_DATA + ROOT_filename).c_str(), "READ");
     TTree *Tree = (TTree *)ROOT_File->Get("Tree_Group");
     TTreeReader *Reader = new TTreeReader(Tree);
     TTreeReaderArray<Signal> signals(*Reader, "Signal");
 
     ///////////////////////////////////  Grouped ///////////////////////////////////
     if (FULL)
-        GROUPED_File = new TFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped_full.root").c_str(), "RECREATE");
+        GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped_full.root").c_str(), "RECREATE");
     else
-        GROUPED_File = new TFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped.root").c_str(), "RECREATE");
+        GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped.root").c_str(), "RECREATE");
     GROUPED_File->cd();
     WriteTime(ROOT_File, GROUPED_File);
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
-    InitDetectors("Config_Files/sample.pid");
+    InitDetectors("Config_Files/sample.pid", 2021);
     InitHistograms_Grouped();
     InitCalibration();
 
@@ -92,7 +93,7 @@ int main(int argc, char *argv[])
         SiPM_High = new TTreeReaderArray<Signal>(*Reader, "GROUPED_Tree_SiPMHigh");
         SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "GROUPED_Tree_SiPMLow");
 
-        if (Run != 114) LoadFitParameters();
+        if (Run != 114 || Run != 37) LoadFitParameters();
         Reader->Restart();
         TotalEntries = Reader->GetEntries();
         while (Reader->Next())
@@ -117,7 +118,7 @@ int main(int argc, char *argv[])
         SiPM_High = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_SiPMHigh");
         SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "CUTTED_Tree_SiPMLow");
 
-        if (Run != 114) LoadFitParameters();
+        if (Run != 114 || Run != 37) LoadFitParameters();
         Reader->Restart();
         TotalEntries = Reader->GetEntries();
         while (Reader->Next())
@@ -135,7 +136,7 @@ int main(int argc, char *argv[])
         /////////////////////////////////// SiPM WALK GROUPS ////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////
         start = clock(), Current;
-        if (Run != 114) LoadFitParameters();
+        if (Run != 114 || Run != 37) LoadFitParameters();
         Reader->Restart();
         while (Reader->Next())
         {
@@ -154,7 +155,7 @@ int main(int argc, char *argv[])
 
         
 
-        SaveFitParameters();
+        if (Run == 114 || Run == 37) SaveFitParameters();
     }
     else
     {
@@ -186,7 +187,7 @@ int main(int argc, char *argv[])
         // for (int i = 0; i < signals.GetSize(); i++)
         //     cout << signals[i] << endl;
 
-        CleaningGroups(signals);
+        CleaningGroups(signals, 0);
     }
 
     Info("Condition = " + to_string((double)counter_condition / (double)counter_all_IAS * 100) + "%");

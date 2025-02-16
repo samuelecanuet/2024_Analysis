@@ -76,6 +76,8 @@
         "extract_pdf_cdf.C": "cpp",
         "Debug.C": "cpp",
         "SiPM_Sub.C": "cpp",
-        "GenerateDic.C": "cpp"
+        "GenerateDic.C": "cpp",
+        "Test copy.C": "cpp",
+        "Test2.C": "cpp"
     }
 }

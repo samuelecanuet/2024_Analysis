@@ -172,8 +172,6 @@ int main(int argc, char *argv[])
             LoadMatchingFunction(atoi(Run.c_str()));           
             TTreeReader *Reader = new TTreeReader(Tree);
             Silicon = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_Silicon");
-            // SiPM_High = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_SiPMHigh");
-            // SiPM_Low = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_SiPMLow");
             SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
 
             clock_t start = clock(), Current;
