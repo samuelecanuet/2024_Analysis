@@ -103,3 +103,21 @@ void WriteHistograms()
         H_pz[PDG]->Write();
     }
 }
+
+double GetAngleBetween2Vectors(vector<double> p1, vector<double> p2)
+{
+    double dot_product = 0;
+    double magnitude_p1 = 0;
+    double magnitude_p2 = 0;
+    for (int i = 0; i < 3; i++)
+    {
+        dot_product += p1[i] * p2[i];
+        magnitude_p1 += p1[i] * p1[i];
+        magnitude_p2 += p2[i] * p2[i];
+    }
+    magnitude_p1 = sqrt(magnitude_p1);
+    magnitude_p2 = sqrt(magnitude_p2);
+    double angle = acos(dot_product / (magnitude_p1 * magnitude_p2));
+
+    return angle;    
+}

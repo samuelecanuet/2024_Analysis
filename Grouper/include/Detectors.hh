@@ -126,7 +126,7 @@ int eSiliN = 10000;
 
 double eSiliMin_cal = 0;
 double eSiliMax_cal = 10000;
-int eSiliN_cal = 10000;
+int eSiliN_cal = 100000;
 
 /// SiPM ///
 /// High

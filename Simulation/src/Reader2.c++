@@ -2,11 +2,11 @@
 
 int main()
 {
-    string name = "../../../../../../../home/local1/Documents/WISArD_mydecay/Test";
+    string name = "/mnt/hgfs/shared-2/Test";
     // name = "241Am_700nm_width";
     Info("Reading File: " + name);
-    TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
-    ANALYSIS_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + "_analysed.root").c_str(), "RECREATE");
+    TFile *SIMULATED_File = new TFile((name + ".root").c_str(), "READ");
+    ANALYSIS_File = new TFile((name + "_analysed.root").c_str(), "RECREATE");
     TTree *tree = (TTree *)SIMULATED_File->Get("Tree");
 
     Reader = new TTreeReader(tree);

@@ -123,24 +123,29 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
   }
 }
 
-void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "")
+void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepping = 1)
 {
-    cout << BLUE
-         << Form(("\r"+Prefix+" : ").c_str())
-         << cEntry
-         << " / "
-         << TotalEntries
-         << flush;
+    if (cEntry % stepping == 0 || cEntry == TotalEntries - 1) // Refresh only at stepping intervals or the last entry
+    {
+        cout << BLUE
+             << Form(("\r" + Prefix + " : ").c_str())
+             << cEntry
+             << " / "
+             << TotalEntries
+             << flush;
+    }
 
-  if (cEntry == TotalEntries-1)
-  {
-    cout << BLUE
-         << Form(("\r"+Prefix+" : ").c_str())
-         << "Completed "
-         << RESET
-         << endl;
-  }
+    if (cEntry == TotalEntries - 1)
+    {
+        cout << BLUE
+             << Form(("\r" + Prefix + " : ").c_str())
+             << "Completed "
+             << RESET
+             << endl;
+    }
 }
+
+
 
 string formatValueWithError(double value, double error, string type = "latex") {
     // Calculate the number of decimal places in the error

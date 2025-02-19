@@ -3,8 +3,8 @@
 int main(int argc, char **argv)
 {
 
-    string filename = "33Ar";
-    int peak = 21;
+    string filename = "32Ar";
+    int peak = 14;
     string filename_for_nucleus;
     string addyear = "";
 

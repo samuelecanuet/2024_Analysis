@@ -100,13 +100,15 @@ string SearchFiles(const string &directory, const string &run_number, string OPT
       string filename = ent->d_name;
       if (filename.find(("run_" + run_number).c_str()) == 0)
       {
-		if (OPTION != "Q")
+		if (!OPTION.find("Q"))
         	Info(("Found file: " + filename).c_str());
         closedir(dir);
         return filename;
       }
     }
-    Error(("No file found for run: " + run_number).c_str());
+	if (!OPTION.find("W"))
+		Error(("No file found for run: " + run_number).c_str());
+    Warning(("No file found for run: " + run_number).c_str());
     closedir(dir);
     return "";
   }
@@ -147,33 +149,28 @@ double computeMedian(std::vector<double> &values)
 	}
 }
 
-double Convert_DatetoTime(string datestring, string refstring)
+double Convert_DatetoTimeSec(string datestring, bool FLAG2021=false)
 {
-  tm date = {}, referenceDate = {};
-  istringstream dateStream(datestring);
-  dateStream >> get_time(&date, "%Y-%m-%d at %Hh-%Mm-%Ss");
+	tm date = {}, referenceDate = {};
+	istringstream dateStream(datestring);
 
-  istringstream referenceDateStream(refstring);
-  referenceDateStream >> get_time(&referenceDate, "%Y-%m-%d at %Hh-%Mm-%Ss");
+	if (!FLAG2021)
+	{
+		dateStream >> get_time(&date, "%Y-%m-%d at %Hh-%Mm-%Ss");
+		date.tm_year += 2000;
+	}
+	else
+	{
+		dateStream >> get_time(&date, "%d-%m-%Y %H:%M:%S");
+	}
 
-  time_t timeInSeconds = mktime(&date);
-  time_t referenceTimeInSeconds = mktime(&referenceDate);
-
-  double diffInSeconds = difftime(timeInSeconds, referenceTimeInSeconds);
-
-  double diffInHours = diffInSeconds / 3600.0;
-
-  return diffInHours;
+	time_t timeInSeconds = mktime(&date);
+	return timeInSeconds;
 }
 
-double Convert_DatetoTimeSec(string datestring)
+double Diff_Date(string datestring, string refstring, bool FLAG2021=false)
 {
-  tm date = {}, referenceDate = {};
-  istringstream dateStream(datestring);
-  dateStream >> get_time(&date, "%d-%m-%Y %H:%M:%S");
-
-  time_t timeInSeconds = mktime(&date);
-  return timeInSeconds;
+  return Convert_DatetoTimeSec(datestring, FLAG2021) - Convert_DatetoTimeSec(refstring, FLAG2021);
 }
 
 const map<string, int> NametoCode_map = {

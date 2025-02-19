@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
     Info("Current Run : " + Run_string);
     ///////////////////////////////////  INPUT ///////////////////////////////////
-    DIR_ROOT_DATA = "../../../../../run/media/local1/T7/Samuel/Regrouped/ROOT/";
+    // DIR_ROOT_DATA = "../../../../../run/media/local1/T7/Samuel/Regrouped/ROOT/";
     ROOT_filename = SearchFiles(DIR_ROOT_DATA, Run_string);
     ROOT_basefilename = ROOT_filename.substr(0, ROOT_filename.find(".root"));
 
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     GROUPED_File->cd();
     WriteTime(ROOT_File, GROUPED_File);
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
-    InitDetectors("Config_Files/sample.pid", 2021);
+    InitDetectors("Config_Files/sample.pid");
     InitHistograms_Grouped();
     InitCalibration();
 
@@ -188,6 +188,8 @@ int main(int argc, char *argv[])
         //     cout << signals[i] << endl;
 
         CleaningGroups(signals, 0);
+        cout << "Event number : " << Reader->GetCurrentEntry() << endl;
+        // SameNp1(signals);
     }
 
     Info("Condition = " + to_string((double)counter_condition / (double)counter_all_IAS * 100) + "%");

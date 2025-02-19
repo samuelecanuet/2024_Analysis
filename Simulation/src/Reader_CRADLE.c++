@@ -27,6 +27,9 @@ int main()
     Info("Starting Loop");
     int Event_MAX = 1e6;
     int Event = -1;
+
+    vector<double> pe = {0, 0, 0};
+    vector<double> e_nu = {0, 0, 0};
     while (Event < Event_MAX)
     {
         ProgressBar(Event, Event_MAX, start, Current, "Reading Tree");
