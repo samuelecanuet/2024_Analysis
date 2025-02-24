@@ -76,7 +76,6 @@ int main()
     NUCLEUS = "32Ar";
     ReadTree();    
 
-
     for (int det  = 1; det <= 9; det++)
     {
         current_detector = det;

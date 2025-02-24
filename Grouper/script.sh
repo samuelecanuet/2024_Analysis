@@ -1,26 +1,26 @@
-Grouper 57 
-Grouper 58 
-Grouper 59 
-Grouper 62 
-Grouper 63 
-Grouper 64 
-Grouper 65 
-Grouper 66 
-Grouper 67 
-Grouper 68
-Grouper 69 
-Grouper 70 
-Grouper 71
-Grouper 72 
-Grouper 73 
-Grouper 74 
-Grouper 75
-Grouper 76  
-Grouper 77
-Grouper 78  
-Grouper 112 
-Grouper 113
-Grouper 114
-Grouper 115 
-Grouper 116 
-Grouper 118
+Grouper 57 full
+Grouper 58 full
+Grouper 59 full
+Grouper 62 full
+Grouper 63 full
+Grouper 64 full
+Grouper 65 full
+Grouper 66 full
+Grouper 67 full
+Grouper 68 full
+Grouper 69 full
+Grouper 70 full
+Grouper 71 full
+Grouper 72 full
+Grouper 73 full
+Grouper 74 full
+Grouper 75 full
+Grouper 76 full
+Grouper 77 full
+Grouper 78  full
+Grouper 112 full
+Grouper 113 full
+#Grouper 114 full
+Grouper 115 full
+Grouper 116 full
+Grouper 118 full

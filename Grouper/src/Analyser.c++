@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv)
 {
-
+    
     string filename = "32Ar";
     int peak = 14;
     string filename_for_nucleus;
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
                         H_SiPM_Time[Strip_Label][mul]->Fill(nearest_group_time[i_group]);
                         if (mul == 9)
                         {
-                            H_Time_Channel[Strip_Label]->Fill(nearest_group_time[i_group], energy);
+                            H_Time_Channel[Strip_Label]->Fill(mean_group_time[i_group], energy);
                         }
                     }
                 }
@@ -204,8 +204,8 @@ int main(int argc, char **argv)
 
                 H_Coinc[Strip_Label][mul]->Fill(energy);
                 H_SiPM_Time_Coinc[Strip_Label][mul]->Fill(NEAREST);
-
-                if (mul == Multiplicity) // for esual Multiplicity
+                
+                if (mul == Multiplicity) // for equal Multiplicity
                     H_Coinc_Mulitplicity[Strip_Label][mul]->Fill(energy);
 
                 for (int i = 0; i < Multiplicity; i++)
@@ -340,7 +340,7 @@ int main(int argc, char **argv)
             Info(detectorName[i]);
             for (int mul = 1; mul <= BETA_SIZE; mul++)
             {
-                Info("Multiplicity: " + to_string(mul), 1);
+                // Info("Multiplicity: " + to_string(mul), 1);
                 dir_FakeCorrection_Strip[i]->cd();
                 TCanvas *c = new TCanvas(("RAW_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("RAW_" + detectorName[i] + "_" + to_string(mul)).c_str(), 1920, 1080);
                 H_Single[i]->SetLineColor(kBlack);
@@ -374,27 +374,31 @@ int main(int argc, char **argv)
                 c_Time->Write();
 
                 // printing //
-                Info("## RAW ##", 2);
+                
+                // Info("## RAW ##", 2);
                 int nocoinc = H_NoCoinc[i][mul]->Integral();
                 int coinc = H_Coinc[i][mul]->Integral();
                 int single = H_Single[i]->Integral();
+                if (mul == 9)
+                {
                 Info("Single: " + to_string(single), 3);
-                Info("No Coinc: " + to_string(nocoinc), 3);
-                Info("Coinc: " + to_string(coinc), 3);
-                Info("Coinc/NoCoinc: " + to_string(coinc / (double)nocoinc), 3);
+                }
+                // Info("No Coinc: " + to_string(nocoinc), 3);
+                // Info("Coinc: " + to_string(coinc), 3);
+                // Info("Coinc/NoCoinc: " + to_string(coinc / (double)nocoinc), 3);
                 G_RatioCoinc_NoCoinc[mul]->AddPoint(i, coinc / (double)nocoinc);
-                Info("## CORRECTED ##", 2);
-                Info("## Fake: " + to_string(NFake[i][mul]), 3);
+                // Info("## CORRECTED ##", 2);
+                // Info("## Fake: " + to_string(NFake[i][mul]), 3);
                 nocoinc = H_NoCoinc_Corrected[i][mul]->Integral();
                 coinc = H_Coinc_Corrected[i][mul]->Integral();
-                Info("No Coinc: " + to_string(nocoinc), 3);
-                Info("Coinc: " + to_string(coinc), 3);
-                Info("Coinc/NoCoinc: " + to_string(coinc / (double)nocoinc), 3);
+                // Info("No Coinc: " + to_string(nocoinc), 3);
+                // Info("Coinc: " + to_string(coinc), 3);
+                // Info("Coinc/NoCoinc: " + to_string(coinc / (double)nocoinc), 3);
                 G_RatioCoinc_NoCoinc_Corrected[mul]->AddPoint(i, coinc / (double)nocoinc);
-                Info("## SHIFT CORRECTED ##", 2);
-                Info("No Coinc: " + to_string(H_NoCoinc_Corrected[i][mul]->GetMean()), 3);
-                Info("Coinc: " + to_string(H_Coinc_Corrected[i][mul]->GetMean()), 3);
-                Info("E: " + to_string(0.5 * abs(H_NoCoinc_Corrected[i][mul]->GetMean() - H_Coinc_Corrected[i][mul]->GetMean())), 3);
+                // Info("## SHIFT CORRECTED ##", 2);
+                // Info("No Coinc: " + to_string(H_NoCoinc_Corrected[i][mul]->GetMean()), 3);
+                // Info("Coinc: " + to_string(H_Coinc_Corrected[i][mul]->GetMean()), 3);
+                // Info("E: " + to_string(0.5 * abs(H_NoCoinc_Corrected[i][mul]->GetMean() - H_Coinc_Corrected[i][mul]->GetMean())), 3);
 
                 dir_FakeCorrection_Strip_Write[i]->cd();
                 H_NoCoinc[i][mul]->Write();

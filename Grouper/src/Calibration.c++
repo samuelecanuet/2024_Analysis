@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 
     SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma_analysed.root").c_str(), "READ");
     SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_100_5700_100_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["33Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/33Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    // SIMULATED_File["33Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/33Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
     // SIMULATED_File["18N"] = new TFile("../../WISArD/SAMPLE.root", "READ");
 
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 
     /// LINEAR MANUAL CALIB ON 32Ar
     NUCLEUS = "32Ar";
-    Info("Manuel Calibration");
+    Info("Manual Calibration");
     for (int i = first; i < last; i++)
     {
         if (IsDetectorSiliStrip(i))
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
             Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][i]);
             current_detector = i;
             Manual_Calibration();
-            ApplyCalibration();
+            ApplyCalibration(0);
         }
     }
 

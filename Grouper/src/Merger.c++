@@ -154,13 +154,17 @@ int main(int argc, char *argv[])
                 MERGED_Tree_Detector[i]->Branch("Channel", &Channel);
             }
         }
-
+        
         for (int i = 0; i < NUCLEUS_Run.second.size(); i++)
         {
             string Run = NUCLEUS_Run.second[i];
             Info("Current Run : " + Run);
             GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, Run);
-            GROUPED_File = new TFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");
+            GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");
+            if (GROUPED_File == NULL)
+            {
+                continue;
+            }
         
             TTree *Tree = (TTree *)GROUPED_File->Get("CLEANED_Tree");
             if (Tree == NULL)
@@ -190,12 +194,7 @@ int main(int argc, char *argv[])
 
                 // !!! ADDING SIPM MATCHING !!! //
                 MERGED_Tree_SiPMGroup = **SiPM_Groups;
-                
-
-                // for (Signal s : *SiPM_High)
-                //     MERGED_Tree_SiPMHigh.push_back(s);
-                // for (Signal s : *SiPM_Low)
-                //     MERGED_Tree_SiPMLow.push_back(s);
+            
 
                 MERGED_Tree->Fill();
                 MERGED_Tree_Detector[(*Silicon)[1].Label]->Fill();
@@ -211,23 +210,23 @@ int main(int argc, char *argv[])
             }
 
             /// adding histograms for fake coincidences
-            if (Run == "057")
-            {
-                for (int mul = 1; mul <= 9; mul++)
-                {
-                    H_SiPM_Full[mul] = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str());
-                }
-            }
-            else
-            {
-                for (int mul = 1; mul <= 9; mul++)
-                {
-                    TH1D * H = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str())->Clone();
-                    H_SiPM_Full[mul]->Add((TH1D*)H->Clone());
-                }
-            }
+            // if (Run == "057")
+            // {
+            //     for (int mul = 1; mul <= 9; mul++)
+            //     {
+            //         H_SiPM_Full[mul] = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str());
+            //     }
+            // }
+            // else
+            // {
+            //     for (int mul = 1; mul <= 9; mul++)
+            //     {
+            //         TH1D * H = (TH1D *)GROUPED_File->Get(("Coincidences/RearSiPM_Time_New_Nearest_M" + to_string(mul)).c_str())->Clone();
+            //         H_SiPM_Full[mul]->Add((TH1D*)H->Clone());
+            //     }
+            // }
 
-            H_Sum->Add((TH1D*)GROUPED_File->Get("Coincidences/RearSiPM_Time_New_Nearest_M9")->Clone());
+            // H_Sum->Add((TH1D*)GROUPED_File->Get("Coincidences/RearSiPM_Time_New_Nearest_M9")->Clone());
         }
         
         MERGED_File->cd();

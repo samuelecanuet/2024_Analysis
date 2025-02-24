@@ -109,6 +109,7 @@ vector<string> Particle_Used_String = {"32Ar", "32Cl", "31S", "31P", "33Ar", "33
 
 map<int, int> PDGtoIndex;
 
+double offset[SIGNAL_MAX];
 string SearchName(int PDG)
 {
     if (PDG == 0)
@@ -130,6 +131,53 @@ string SearchName(int PDG)
 
     Error("No name found for PDG: " + to_string(PDG));
     return "";
+}
+
+double Detector_Resolution[SIGNAL_MAX];
+
+void InitElectronicResolution()
+{
+    ifstream file("../Grouper/Config_Files/res_electronic.txt");
+    if (!file.is_open())
+    {
+        Error("Impossible to open res_electronic.txt");
+    }
+    Info("Reading res_electronic.txt");
+
+    string line;
+    int code;
+    double resolution;
+    double err_resolution;
+    int counter = 0;
+    while (getline(file, line))
+    {
+        counter++;
+        stringstream ss(line);
+        ss >> code >> resolution >> err_resolution;
+
+        Detector_Resolution[code] = resolution / 1000.;
+    }
+
+    file.close();
+}
+
+TF1 *Calibration_Function[SIGNAL_MAX];
+void InitCalib()
+{
+    TFile *CALIBRATED_File = MyTFile(DIR_ROOT_DATA_CALIBRATED + "Calibrated.root", "READ");
+    for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            if (IsDetectorSiliStrip(i))
+            {
+                Calibration_Function[i] = (TF1 *)CALIBRATED_File->Get(("Calibration_" + detectorName[i]).c_str());
+
+                if (Calibration_Function[i] == NULL)
+                {
+                    Calibration_Function[i] = new TF1(("Calibration_" + detectorName[i]).c_str(), "x", 0, 10000);
+                    Warning("No calibration found for " + detectorName[i]);
+                }
+            }
+        }
 }
 
 void Init()
@@ -335,7 +383,7 @@ void InitHistograms(int PDG_code)
     {
         if (IsDetectorSiliStrip(det))
         {
-            H_Silicon_Detector_Energy_Deposit_Det[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_Energy_Deposit_Det[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), eSiliN_cal, 0, 10000);
             H_Silicon_Detector_Energy_Deposit_Det[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
             H_Silicon_Detector_Energy_Deposit_Det[PDG_code][det]->GetYaxis()->SetTitle("Counts");
             H_Silicon_Detector_Energy_Deposit_Det[PDG_code][det]->GetXaxis()->CenterTitle();
@@ -343,7 +391,7 @@ void InitHistograms(int PDG_code)
 
             if (PDG_code == 0)
             {
-                H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_WithoutInterStrip_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_WithoutInterStrip_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+                H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_WithoutInterStrip_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_WithoutInterStrip_" + detectorName[det] + "_" + name).c_str(), eSiliN_cal, 0, 10000);
                 H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
                 H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det]->GetYaxis()->SetTitle("Counts");
                 H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[PDG_code][det]->GetXaxis()->CenterTitle();
@@ -363,25 +411,25 @@ void InitHistograms(int PDG_code)
             H_Silicon_Detector_Hit_Angle_Det[PDG_code][det]->GetXaxis()->CenterTitle();
             H_Silicon_Detector_Hit_Angle_Det[PDG_code][det]->GetYaxis()->CenterTitle();
 
-            H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det] = new TH1D(("Silicon_Detector_DL_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_DL_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det] = new TH1D(("Silicon_Detector_DL_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_DL_Energy_Deposit_" + detectorName[det] + "_" + name).c_str(), eSiliN_cal, 0, 10000);
             H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
             H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det]->GetYaxis()->SetTitle("Counts");
             H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det]->GetXaxis()->CenterTitle();
             H_Silicon_Detector_DL_Energy_Deposit_Det[PDG_code][det]->GetYaxis()->CenterTitle();
 
-            H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_SINGLE_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_SINGLE_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_SINGLE_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_SINGLE_" + detectorName[det] + "_" + name).c_str(), eSiliN_cal, 0, 10000);
             H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
             H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetYaxis()->SetTitle("Counts");
             H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetXaxis()->CenterTitle();
             H_Silicon_Detector_Energy_Deposit_SINGLE[PDG_code][det]->GetYaxis()->CenterTitle();
 
-            H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_NOCOINC_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_NOCOINC_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_NOCOINC_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_NOCOINC_" + detectorName[det] + "_" + name).c_str(), eSiliN_cal, 0, 10000);
             H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
             H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetYaxis()->SetTitle("Counts");
             H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetXaxis()->CenterTitle();
             H_Silicon_Detector_Energy_Deposit_NOCOINC[PDG_code][det]->GetYaxis()->CenterTitle();
 
-            H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_COINC_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_COINC_" + detectorName[det] + "_" + name).c_str(), 10000, 0, 10000);
+            H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det] = new TH1D(("Silicon_Detector_Energy_Deposit_COINC_" + detectorName[det] + "_" + name).c_str(), ("Silicon_Detector_Energy_Deposit_COINC_" + detectorName[det] + "_" + name).c_str(), eSiliN_cal, 0, 10000);
             H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det]->GetXaxis()->SetTitle("Energy [keV]");
             H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det]->GetYaxis()->SetTitle("Counts");
             H_Silicon_Detector_Energy_Deposit_COINC[PDG_code][det]->GetXaxis()->CenterTitle();
@@ -390,7 +438,7 @@ void InitHistograms(int PDG_code)
             if (GetDetectorChannel(det) != 5)
             {
                 int interstrip = GetDetector(det) * 1000 + ((GetDetectorChannel(det) * 2 + 1)) * 100 / 2;
-                H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG_code][interstrip] = new TH1D(("Silicon_Detector_InterStrip_Energy_Deposit_" + detectorName[det] + to_string(GetDetectorChannel(det) + 1) + "_" + name).c_str(), ("Silicon_Detector_InterStrip_Energy_Deposit_" + detectorName[det] + to_string(GetDetectorChannel(det) + 1) + "_" + name).c_str(), 10000, 0, 10000);
+                H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG_code][interstrip] = new TH1D(("Silicon_Detector_InterStrip_Energy_Deposit_" + detectorName[det] + to_string(GetDetectorChannel(det) + 1) + "_" + name).c_str(), ("Silicon_Detector_InterStrip_Energy_Deposit_" + detectorName[det] + to_string(GetDetectorChannel(det) + 1) + "_" + name).c_str(), eSiliN_cal, 0, 10000);
                 H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG_code][interstrip]->GetXaxis()->SetTitle("Energy [keV]");
                 H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG_code][interstrip]->GetYaxis()->SetTitle("Counts");
                 H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG_code][interstrip]->GetXaxis()->CenterTitle();
@@ -536,7 +584,9 @@ void WriteHistograms()
 
             H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->GetXaxis()->SetRangeUser(3200, 3400);
             H_Silicon_Detector_Energy_Deposit_COINC[0][det]->GetXaxis()->SetRangeUser(3200, 3400);
-            double shift = H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->GetMean() - H_Silicon_Detector_Energy_Deposit_COINC[0][det]->GetMean();
+            
+            cout << "Detector: " << detectorName[det] << endl;
+            cout << "--- Ratio : " << H_Silicon_Detector_Energy_Deposit_COINC[0][det]->Integral() / H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->Integral() * 100 << endl;
 
             TLatex *text = new TLatex();
             text->SetNDC();
@@ -549,6 +599,62 @@ void WriteHistograms()
         
         }
     }
+
+    TH1D* H_StripH_Single[SIGNAL_MAX];
+    TH1D* H_StripH_Coinc[SIGNAL_MAX];
+    TH1D* H_StripH_NOCoinc[SIGNAL_MAX];
+
+    for (int det = 0; det < SIGNAL_MAX; det++)
+    {
+        if (IsDetectorSiliStrip(det))
+        {
+            if (GetDetector(det) == 1 || GetDetector(det) == 5)
+            {
+                if (GetDetectorChannel(det) == 1)
+                {
+                    H_StripH_Single[det] = (TH1D*)H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->Clone();
+                    H_StripH_Coinc[det] = (TH1D*)H_Silicon_Detector_Energy_Deposit_COINC[0][det]->Clone();
+                    H_StripH_NOCoinc[det] = (TH1D*)H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]->Clone();
+                }
+            }
+            else
+            {
+                if (GetDetector(det) <= 4)
+                {
+                    H_StripH_Single[11]->Add(H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]);
+                    H_StripH_Coinc[11]->Add(H_Silicon_Detector_Energy_Deposit_COINC[0][det]);
+                    H_StripH_NOCoinc[11]->Add(H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]);
+                }
+                if (GetDetector(det) >= 5)
+                {
+                    H_StripH_Single[51]->Add(H_Silicon_Detector_Energy_Deposit_COINC[0][det]);
+                    H_StripH_Coinc[51]->Add(H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]);
+                    H_StripH_NOCoinc[51]->Add(H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]);
+                }
+            }
+        }
+    }
+
+    for (int det = 0; det < SIGNAL_MAX; det++)
+    {
+        if (IsDetectorSiliStrip(det))
+        {
+            if (GetDetector(det) == 1 || GetDetector(det) == 5)
+            {
+                if (GetDetectorChannel(det) == 1)
+                {
+                    TCanvas *c = new TCanvas(("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_SUMMED").c_str(), ("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_All_WithWithoutInterStrip").c_str(), 800, 600);
+                    H_StripH_Single[det]->Draw("HIST");
+                    H_StripH_Coinc[det]->SetLineColor(kRed);
+                    H_StripH_Coinc[det]->Write("HIST SAME");
+                    H_StripH_NOCoinc[det]->SetLineColor(kBlue);
+                    H_StripH_NOCoinc[det]->Write("HIST SAME");
+                    c->Write();
+                }
+            }
+        }
+    }
+
 
     TCanvas *c3 = new TCanvas("PlasticScintillator_Energy_Deposit_All", "PlasticScintillator_Energy_Deposit_All", 800, 600);
     c3->cd();

@@ -63,7 +63,7 @@ double Neighboor_C_Threshold = 3.9;
 void Init()
 {
   MAP_Filename["33Ar"] = {"run_078_multifast_33Ar_grouped.root"};
-  MAP_Filename["32Ar"] = {"run_114_multifast_32Ar_grouped.root"};
+  MAP_Filename["32Ar"] = {"run_064_multifast_32Ar_grouped.root"};
   MAP_Filename["18N"] = {"run_114_multifast_32Ar_grouped.root"};
 
   MAP_Delta_Time["33Ar"] = {0.27};
@@ -71,7 +71,7 @@ void Init()
   MAP_Delta_Time["18N"] = {0.82};
 
   MAP_Run_Number["33Ar"] = {78};
-  MAP_Run_Number["32Ar"] = {114};
+  MAP_Run_Number["32Ar"] = {64};
   MAP_Run_Number["18N"] = {114};
 
   MAP_Start["33Ar"] = 0.;
@@ -827,7 +827,7 @@ bool IsCoincidence(vector<vector<pair<Signal, Signal>>> SiPM_Groups)
 void WriteHistogram(string NUCLEUS)
 {
   Info("Writing histograms for " + NUCLEUS);
-  int Run = 114;
+  int Run = 64;
   fTime->cd();
   dir[NUCLEUS]->cd();
   H_Time_All[NUCLEUS]->Write();

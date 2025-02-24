@@ -1,8 +1,10 @@
 #include "Reader2.hh"
-
+default_random_engine generator;
 int main()
 {
-    string name = "/mnt/hgfs/shared-2/Test";
+    string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/20-02/32Ar_a1_b0";
+    // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma";
+    
     // name = "241Am_700nm_width";
     Info("Reading File: " + name);
     TFile *SIMULATED_File = new TFile((name + ".root").c_str(), "READ");
@@ -53,6 +55,9 @@ int main()
     Init();
     InitDetectors("../Grouper/Config_Files/sample.pid");
     InitHistograms(0);
+
+    InitCalib();
+    InitElectronicResolution();
 
     Info("Starting Loop");
     while (Reader->Next())
@@ -221,8 +226,11 @@ int main()
                     sili_code = i;
                     sili_e = Full_energy[i];
 
+                    // double offset = Calibration_Function[i]->GetParameter(1) * Detector_Resolution[i] + Calibration_Function[i]->GetParameter(2) * pow(Detector_Resolution[i], 2);
+                    // normal_distribution<double> distribution(Full_energy[i], offset + sqrt(3.6 * 1e-3 * 0.134) * sqrt(Full_energy[i]));
+                    // Full_energy[i] = distribution(generator);
                     H_Silicon_Detector_Energy_Deposit_SINGLE[0][i]->Fill(Full_energy[i]);
-                    if (Plastic_Full_energy > 50)
+                    if (Plastic_Full_energy > 100)
                     {
                         H_Silicon_Detector_Energy_Deposit_COINC[0][i]->Fill(Full_energy[i]);
                     }

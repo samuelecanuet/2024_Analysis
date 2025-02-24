@@ -42,12 +42,15 @@ int main(int argc, char *argv[])
     TTree *Tree = (TTree *)ROOT_File->Get("Tree_Group");
     TTreeReader *Reader = new TTreeReader(Tree);
     TTreeReaderArray<Signal> signals(*Reader, "Signal");
+    // TTreeReaderValue<Signal> signals(*Reader, "Signal");
 
     ///////////////////////////////////  Grouped ///////////////////////////////////
     if (FULL)
         GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped_full.root").c_str(), "RECREATE");
     else
         GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped.root").c_str(), "RECREATE");
+
+    // GROUPED_File = MyTFile("../../../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/run_054_lossless_grouped.root", "RECREATE");
     GROUPED_File->cd();
     WriteTime(ROOT_File, GROUPED_File);
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
@@ -188,11 +191,216 @@ int main(int argc, char *argv[])
         //     cout << signals[i] << endl;
 
         CleaningGroups(signals, 0);
-        cout << "Event number : " << Reader->GetCurrentEntry() << endl;
-        // SameNp1(signals);
     }
 
-    Info("Condition = " + to_string((double)counter_condition / (double)counter_all_IAS * 100) + "%");
+    // double past = -300;
+    // int future = 350;
+
+    // double start_gate = -50;
+    // double stop_gate = 50;  
+
+    // TH1D* H_Time_SIPMGROUPING_M[SIGNAL_MAX][BETA_SIZE+1];
+    // TH1D* H_Time_SIPMGROUPING_M_equal[SIGNAL_MAX][BETA_SIZE+1];
+    // TH1D* H_Channel_SIPMGROUPING_M[SIGNAL_MAX][BETA_SIZE+1];
+    // TH1D* H_Channel_SIPMGROUPING_Mequal[SIGNAL_MAX][BETA_SIZE+1];
+
+    // for (int i = 0; i < SIGNAL_MAX; i++)
+    // {
+    //     if (IsDetectorBetaHigh(i))
+    //     {
+    //         for (int m = 1; m <= BETA_SIZE; m++)
+    //         {
+    //             H_Time_SIPMGROUPING_M[i][m] = new TH1D(("H_Time_SIPMGROUPING_" + detectorName[i] + "_M>=" + to_string(m)).c_str(), ("H_Time_SIPMGROUPING_" + detectorName[i] + "_M>=" + to_string(m)).c_str(), 500, -500, 500);
+    //             H_Time_SIPMGROUPING_M_equal[i][m] = new TH1D(("H_Time_SIPMGROUPING_" + detectorName[i] + "_M=" + to_string(m)).c_str(), ("H_Time_SIPMGROUPING_" + detectorName[i] + "_M=" + to_string(m)).c_str(), 500, -500, 500);
+
+    //             H_Channel_SIPMGROUPING_M[i][m] = new TH1D(("H_Channel_SIPMGROUPING_" + detectorName[i] + "_M>=" + to_string(m)).c_str(), ("H_Channel_SIPMGROUPING_" + detectorName[i] + "_M>=" + to_string(m)).c_str(), eHighN, eHighMin, eHighMax);
+    //             H_Channel_SIPMGROUPING_Mequal[i][m] = new TH1D(("H_Channel_SIPMGROUPING_" + detectorName[i] + "_M=" + to_string(m)).c_str(), ("H_Channel_SIPMGROUPING_" + detectorName[i] + "_M=" + to_string(m)).c_str(), eHighN, eHighMin, eHighMax);
+    //         }
+    //     }
+    // }
+
+    // while (Reader->Next() && Reader->GetCurrentEntry() < 10000000)
+    // {
+    //     ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Final Cleaning : ");
+        
+    //     // cout << (*signals) << endl;
+    //     if ((*signals).Label == 103)
+    //     {
+    //         // cout << "NEW TRIGGER" << endl;
+    //         vector<Signal> signals_SiPM; 
+    //         signals_SiPM.push_back(*signals);   
+    //         double Trig_time = (*signals).Time;
+    //         int Trig_Entry = Reader->GetCurrentEntry(); 
+
+    //         // going in the past
+    //         while ((*signals).Time - Trig_time > past && Reader->GetCurrentEntry() > 0)
+    //         {
+    //             Reader->SetEntry(Reader->GetCurrentEntry() - 1);
+    //             if (!IsDetectorBetaHigh((*signals).Label))
+    //                 continue;
+    //             // cout << "pst : " << setprecision(15) << (*signals).Time << " - " << Trig_time << " = " << (*signals).Time - Trig_time << endl;
+    //             signals_SiPM.push_back(*signals);
+    //         }
+
+    //         Reader->SetEntry(Trig_Entry);
+
+    //         // going in the future
+    //         while ((*signals).Time - Trig_time < future && Reader->GetCurrentEntry() < TotalEntries)
+    //         {
+    //             Reader->Next();
+    //             if (!IsDetectorBetaHigh((*signals).Label))
+    //                 continue;
+    //             // cout << setprecision(15) << (*signals).Time << " - " << Trig_time << " = " << (*signals).Time - Trig_time << endl;
+    //             signals_SiPM.push_back(*signals);
+    //         }
+
+    //         // cout << "Future ok" << endl;
+        
+    //         int Multiplicity = 0;
+    //         for (auto signal : signals_SiPM)
+    //         {
+
+    //             if(signal.Time - Trig_time > future || signal.Time - Trig_time < past)
+    //                 continue;
+    //             // cout << "        " << signal << endl;
+
+    //             // cout << setprecision(15) << signal.Time << " - " << Trig_time << " = " << signal.Time - Trig_time << endl;
+
+    //             if (signal.Time - Trig_time > start_gate && signal.Time - Trig_time < stop_gate)
+    //             {
+    //                 Multiplicity++;
+    //             }
+    //         }
+
+    //         for (auto signal : signals_SiPM)
+    //         {
+    //             if(signal.Time - Trig_time > future || signal.Time - Trig_time < past)
+    //                 continue;
+    //             for (int m = 1; m <= Multiplicity; m++)
+    //             {
+    //                 H_Channel_SIPMGROUPING_M[signal.Label][m]->Fill(signal.Channel);
+    //                 H_Time_SIPMGROUPING_M[signal.Label][m]->Fill(signal.Time - Trig_time);
+    //                 // cout << "    m    " << m << endl;
+    //             }
+    //             H_Channel_SIPMGROUPING_Mequal[signal.Label][Multiplicity]->Fill(signal.Channel);
+    //             H_Time_SIPMGROUPING_M_equal[signal.Label][Multiplicity]->Fill(signal.Time - Trig_time);
+    //         }
+    //     }
+    // }
+
+    // TCanvas *c_M[BETA_SIZE+1];
+    // TLegend *leg_M[BETA_SIZE+1];
+    // TCanvas *c_M_equal[BETA_SIZE+1];
+    // TLegend *leg_M_equal[BETA_SIZE+1];
+    // TCanvas *c_det[SIGNAL_MAX];
+    // TLegend *leg_det[SIGNAL_MAX];
+    // TCanvas *c_det_equal[SIGNAL_MAX];
+    // TLegend *leg_det_equal[SIGNAL_MAX];
+    // TCanvas *c_Time[SIGNAL_MAX];
+    // TLegend *leg_Time[SIGNAL_MAX];
+
+    // TDirectory *dir_det[SIGNAL_MAX];
+    // TDirectory *dir_M[BETA_SIZE+1];
+
+
+    // for (int det = 0; det < SIGNAL_MAX; det++)
+    // {
+    //     if (IsDetectorBetaHigh(det))
+    //     {
+    //         dir_det[det] = GROUPED_File->mkdir(detectorName[det].c_str());  
+    //         c_det[det] = new TCanvas(("c_det_" + detectorName[det]).c_str(), ("c_det_" + detectorName[det]).c_str(), 800, 600);
+    //         leg_det[det] = new TLegend(0.7, 0.7, 0.9, 0.9);
+    //         c_det_equal[det] = new TCanvas(("c_det_equal_" + detectorName[det]).c_str(), ("c_det_equal_" + detectorName[det]).c_str(), 800, 600);
+    //         leg_det_equal[det] = new TLegend(0.7, 0.7, 0.9, 0.9);
+    //     }
+    // }
+    // for (int m = 1; m <= BETA_SIZE; m++)
+    // {
+    //     dir_M[m] = GROUPED_File->mkdir(("M" + to_string(m)).c_str());
+    //     c_M[m] = new TCanvas(("c_M_" + to_string(m)).c_str(), ("c_M_" + to_string(m)).c_str(), 800, 600);
+    //     leg_M[m] = new TLegend(0.7, 0.7, 0.9, 0.9);
+    //     c_M_equal[m] = new TCanvas(("c_M_equal_" + to_string(m)).c_str(), ("c_M_equal_" + to_string(m)).c_str(), 800, 600);
+    //     leg_M_equal[m] = new TLegend(0.7, 0.7, 0.9, 0.9);
+    // }
+
+    // for (int det = 0; det < SIGNAL_MAX; det++)
+    // {
+    //     if (IsDetectorBetaHigh(det))
+    //     {
+    //         for (int m = 1; m <= BETA_SIZE; m++)
+    //         {
+    //             H_Channel_SIPMGROUPING_M[det][m]->Write();
+    //             H_Channel_SIPMGROUPING_Mequal[det][m]->Write();
+    //             H_Time_SIPMGROUPING_M[det][m]->Write();
+    //             H_Time_SIPMGROUPING_M_equal[det][m]->Write();
+
+    //             c_det[det]->cd();
+    //             H_Channel_SIPMGROUPING_M[det][m]->SetLineColor(m*10+1);
+    //             leg_det[det]->AddEntry(H_Channel_SIPMGROUPING_M[det][m], ("M>=" + to_string(m)).c_str());
+    //             H_Channel_SIPMGROUPING_M[det][m]->Draw("HIST SAME");
+    //         }
+    //         for (int m = BETA_SIZE; m >= 1; m--)
+    //         {
+    //             c_det_equal[det]->cd();
+    //             H_Channel_SIPMGROUPING_Mequal[det][m]->SetLineColor(m*10+1);
+    //             leg_det_equal[det]->AddEntry(H_Channel_SIPMGROUPING_Mequal[det][m], ("M=" + to_string(m)).c_str());
+    //             H_Channel_SIPMGROUPING_Mequal[det][m]->Draw("HIST SAME");
+    //         }
+    //     }
+    // }
+                
+
+    // for (int det = 0; det < SIGNAL_MAX; det++)
+    // {
+    //     if (IsDetectorBetaHigh(det))
+    //     {
+    //         dir_det[det]->cd(); 
+    //         c_det[det]->cd();
+    //         leg_det[det]->Draw("SAME");
+    //         c_det[det]->SetTitle(detectorName[det].c_str());
+    //         c_det[det]->Write();
+    //         c_det_equal[det]->SetTitle(detectorName[det].c_str());
+    //         c_det_equal[det]->cd();
+    //         leg_det_equal[det]->Draw("SAME");
+    //         c_det_equal[det]->Write();
+    //     }
+    // }
+
+    // for (int det = 0; det < SIGNAL_MAX; det++)
+    // {
+    //     if (IsDetectorBetaHigh(det))
+    //     {
+    //         for (int m = 1; m <= BETA_SIZE; m++)
+    //         {
+
+    //             c_M[m]->cd();
+    //             H_Channel_SIPMGROUPING_M[det][m]->SetLineColor(GetDetectorChannel(det) * 10+1);
+    //             leg_M[m]->AddEntry(H_Channel_SIPMGROUPING_M[det][m], detectorName[det].c_str());
+    //             H_Channel_SIPMGROUPING_M[det][m]->Draw("HIST SAME");
+    //         }
+
+    //         for (int m = BETA_SIZE; m >= 1; m--)
+    //         {
+    //             c_M_equal[m]->cd();
+    //             H_Channel_SIPMGROUPING_Mequal[det][m]->SetLineColor(GetDetectorChannel(det) * 10+1);
+    //             leg_M_equal[m]->AddEntry(H_Channel_SIPMGROUPING_Mequal[det][m], detectorName[det].c_str());
+    //             H_Channel_SIPMGROUPING_Mequal[det][m]->Draw("HIST SAME");
+    //         }
+    //     }
+    // }
+
+    // for (int m = 1; m <= BETA_SIZE; m++)
+    // {
+    //     dir_M[m]->cd(); 
+    //     c_M[m]->cd();
+    //     c_M[m]->SetTitle(("M>=" + to_string(m)).c_str());
+    //     leg_M[m]->Draw("SAME");
+    //     c_M[m]->Write();
+    //     c_M_equal[m]->cd();
+    //     c_M_equal[m]->SetTitle(("M=" + to_string(m)).c_str());
+    //     leg_M_equal[m]->Draw("SAME");
+    //     c_M_equal[m]->Write();
+    // }
 
     WriteHistograms_Cleaned();
 

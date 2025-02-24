@@ -26,9 +26,9 @@ int main()
         {
             Info("Run " + to_string(Run));
 
-            LoadISOLDE(114);
+            LoadISOLDE(64);
 
-            string GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, to_string(Run));
+            string GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, "0"+to_string(Run));
             GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");
 
             TTree *tree = (TTree *)GROUPED_File->Get("CLEANED_Tree");
