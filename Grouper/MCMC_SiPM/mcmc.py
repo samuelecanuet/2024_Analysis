@@ -20,7 +20,7 @@ def run_root_macro(params, thread):
 
     subprocess.run(command, shell=True, stdout=subprocess.PIPE)
 
-    shm = shared_memory.SharedMemory(name=thread)
+    shm = shared_memory.SharedMemory(name=str(thread))
     chi2 = struct.unpack("d", shm.buf[:8])[0]
 
     print(chi2)
@@ -97,7 +97,7 @@ for p, _ in enumerate(parameters):
 ########################## STARTING ##########################
 if (len(sys.argv) > 1):
     if (sys.argv[1] == "run"):
-        with Pool(processes=8) as pool:
+        with Pool(processes=1) as pool:
             sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob, pool=pool)
 
             # Run MCMC with periodic saving
