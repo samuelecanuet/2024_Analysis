@@ -58,12 +58,18 @@ void Info(const char *message, int indent=0) {
     Info(string(message), indent);
 }
 
-void Success(const string& message) {
-    cout << GREEN << left << setw(GENERAL_INDENT) << " <SUCCESS>" << message << RESET << endl;
+void Success(const string& message, int indent=0) {
+    cout << GREEN << left << setw(GENERAL_INDENT) << " <SUCCESS>";
+    if (indent > 0)
+    {
+        for (int i = 0; i < indent; i++) cout << " ";
+        cout << "├─";
+    }
+    cout << message << RESET << endl;
 }
 
-void Success(const char *message) {
-    cout << GREEN << left << setw(GENERAL_INDENT) << " <SUCCESS>" << message << RESET << endl;
+void Success(const char *message, int indent=0) {
+    Success(string(message), indent);
 }
 
 void Verbose(const string& message, int verbose, int this_verbose) {
@@ -74,12 +80,18 @@ void Verbose(Signal signal, int verbose, int this_verbose) {
     if (verbose >= this_verbose) cout << MAGENTA << "<VERBOSE " << verbose << ">" << signal << RESET << endl;
 }
 
-void Start(const string& message) {
-    cout << CYAN << left << setw(GENERAL_INDENT) << " <START>"<< message << RESET << endl;
+void Start(const string& message, int indent=0) {
+    cout << CYAN << left << setw(GENERAL_INDENT) << " <START>  ";
+    if (indent > 0)
+    {
+        for (int i = 0; i < indent; i++) cout << " ";
+        cout << "├─";
+    }
+    cout << message << RESET << endl;
 }
 
-void Start(const char *message) {
-    cout << CYAN << left << setw(GENERAL_INDENT) << " <START>"<< message << RESET << endl;
+void Start(const char *message, int indent = 0) {
+    Start(string(message), indent);
 }
 
 void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, string Prefix = "")

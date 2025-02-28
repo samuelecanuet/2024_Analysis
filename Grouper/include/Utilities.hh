@@ -6,7 +6,7 @@
 
 
 // Open ROOT File
-TFile* MyTFile(string filename, string option, string myoption="")
+TFile* MyTFile(string filename, string option, string myoption="", int indent = 0)
 {
     TFile *file = new TFile(filename.c_str(), option.c_str());
     filename = filename.substr(filename.find_last_of("/\\") + 1);
@@ -19,28 +19,28 @@ TFile* MyTFile(string filename, string option, string myoption="")
     {
         if (myoption != "Q")
         {
-            Success("Read: " + filename);
+            Success("Read: " + filename, indent);
         }
     }
     else if (option == "RECREATE")
     {
         if (myoption != "Q")
         {
-        Success("Recreated: " + filename);
+        Success("Recreated: " + filename, indent);
         }
     }
     else if (option == "UPDATE")
     {
         if (myoption != "Q")
         {
-        Success("Updated: " + filename);
+        Success("Updated: " + filename, indent);
         }
     }
     else if (option == "NEW")
     {
         if (myoption != "Q")
         {
-        Success("Created: " + filename);
+        Success("Created: " + filename, indent);
         }
     }
     else

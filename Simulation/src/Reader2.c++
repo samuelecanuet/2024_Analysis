@@ -2,7 +2,7 @@
 default_random_engine generator;
 int main()
 {
-    string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/20-02/32Ar_a1_b0";
+    string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/24-02/32Ar_wvi_a1_b0";
     // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma";
     
     // name = "241Am_700nm_width";
@@ -56,8 +56,8 @@ int main()
     InitDetectors("../Grouper/Config_Files/sample.pid");
     InitHistograms(0);
 
-    InitCalib();
-    InitElectronicResolution();
+    // InitCalib();
+    // InitElectronicResolution();
 
     Info("Starting Loop");
     while (Reader->Next())
@@ -111,8 +111,8 @@ int main()
                 time_e_IAS = Tree_PlasticScintillator_Hit_Time->At(part_i);
                 Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
                 H_PlasticScintillator_Energy_Deposit[0]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-                SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
-                PlasticIASTree->Fill();
+                // SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
+                
             }
         
             //// LOOP ON HITTED SILICON DETECTORS ////
@@ -223,8 +223,14 @@ int main()
                     H_Silicon_Detector_Energy_Deposit_Det_Rear[0][i]->Fill(RearEnergy[GetDetector(i)], Full_energy[i]);
                     e = Full_energy[i];
                     OutTree[i]->Fill();
+                    
+
+                    //plastic scintillator tree
+                    SiPM_e = Plastic_Full_energy;
                     sili_code = i;
                     sili_e = Full_energy[i];
+
+                    PlasticIASTree->Fill();
 
                     // double offset = Calibration_Function[i]->GetParameter(1) * Detector_Resolution[i] + Calibration_Function[i]->GetParameter(2) * pow(Detector_Resolution[i], 2);
                     // normal_distribution<double> distribution(Full_energy[i], offset + sqrt(3.6 * 1e-3 * 0.134) * sqrt(Full_energy[i]));

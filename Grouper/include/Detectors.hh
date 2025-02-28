@@ -71,18 +71,18 @@ using namespace std;
 using namespace ROOT::Math;
 
 /// FOLDERS ///
-string DIR_FAST_DATA = "../../../../../run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/DATA/";
-string DIR_ROOT_DATA = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ROOT/";
-string DIR_ROOT_DATA_GROUPED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/GROUPED/";
-string DIR_ROOT_DATA_CLEANED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
-string DIR_ROOT_DATA_MATCHED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
-string DIR_ROOT_DATA_MERGED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
-string DIR_ROOT_DATA_ANALYSED = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ANALYSED/";
-string DIR_ROOT_DATA_CALIBRATED  = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
-string DIR_ROOT_DATA_RATE = "../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/RATE/";
-string DIR_ROOT_DATA_SIMULATED = "../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
-string DIR_DATA_ISOLDE = "../../../../../mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
-string DIR_DATA_HDD = "../../../../../run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
+string DIR_FAST_DATA = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/DATA/";
+string DIR_ROOT_DATA = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ROOT/";
+string DIR_ROOT_DATA_GROUPED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/GROUPED/";
+string DIR_ROOT_DATA_CLEANED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
+string DIR_ROOT_DATA_MATCHED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
+string DIR_ROOT_DATA_MERGED  = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
+string DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ANALYSED/";
+string DIR_ROOT_DATA_CALIBRATED  = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
+string DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/RATE/";
+string DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
+string DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
+string DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
 ///////////////
 
 
@@ -144,6 +144,9 @@ int winLowN = (abs(winLowMin) + winLowMax) / 2;
 double eLowMin = 0;
 double eLowMax = 1200000;
 int eLowN = 3000;
+
+// limit
+double eHighLowLimit = 2.e6;
 
 /// TOTAL WINDOW ///
 double tabMIN[3] = {winSiliMin, winHighMin, winLowMin};
