@@ -40,8 +40,6 @@ int sili_code;
 double sili_e;
 double SiPM_e;
 
-double size_interstrip = 0.07;
-
 double time_e_IAS;
 
 map<int, TH1D *> H_E0;
@@ -85,6 +83,7 @@ map<int, TH2D *> H_Silicon_Detector_InterStrip_xy;
 map<int, TH1D *> H_Silicon_Detector_InterStrip_z;
 map<int, TH1D * [100 * SIGNAL_MAX]> H_Silicon_Detector_InterStrip_Energy_Deposit_Det;
 TH1D *H = new TH1D("H", "H", 10000, 0, 10000);
+TH1D *H_DeltaCoincTime = new TH1D("H_DeltaCoincTime", "H_DeltaCoincTime", 650, -300, 350);
 
 map<int, TDirectory *> dir_Particle;
 map<int, TDirectory *> dir_Initial;
@@ -107,6 +106,11 @@ double InterStrip[SIGNAL_MAX];
 vector<string> Particle_Used_String = {"32Ar", "32Cl", "31S", "31P", "33Ar", "33Cl", "32S", "18N",
                                        "239Pu", "148Gd", "244Cm", "241Am",
                                        "p", "n", "enu", "enubar", "e+", "e-", "gamma", "alpha", "4He"};
+
+// DATA // 
+int integration_Time_Silicon = 44.2e3; // 44.2µs  
+int integration_Time_SiPM = 200; // 200ns
+
 
 map<int, int> PDGtoIndex;
 
@@ -191,6 +195,167 @@ void Init()
     {
         PDGtoIndex[NametoCode_map.at(Particle_Used_String.at(i))] = i;
     }
+}
+
+vector<Signal> TimeIntegration(vector<Signal> DetectorSignals_RAW[SIGNAL_MAX])
+{
+    vector<Signal> DetectorSignals[SIGNAL_MAX];
+    for (int det = 1; det < SIGNAL_MAX; det++)
+    {
+
+        if (DetectorSignals_RAW[det].size() == 0)
+        {
+            continue;
+        }
+        else if (DetectorSignals_RAW[det].size() == 1)
+        {
+            DetectorSignals[det].push_back(DetectorSignals_RAW[det][0]);
+        }
+        else
+        {
+
+            double TimeIntegration;
+            if (IsDetectorSiliStrip(det))
+            {
+                TimeIntegration = integration_Time_Silicon;
+            }
+            else
+            {
+                TimeIntegration = integration_Time_SiPM;
+            }
+
+            DetectorSignals[det].push_back(DetectorSignals_RAW[det][0]);
+            // Adding signals in the integration time
+            for (int i = 1; i < DetectorSignals_RAW[det].size(); i++)
+            {
+                bool PileUped = false;
+                for (int j = 0; j < DetectorSignals[det].size(); j++)
+                {
+                    if (abs(DetectorSignals_RAW[det][i].Time - DetectorSignals[det][j].Time) < TimeIntegration)
+                    {
+                        DetectorSignals[det][j].Channel += DetectorSignals_RAW[det][i].Channel;
+                        DetectorSignals[det][j].Pileup = 1;
+                        if (DetectorSignals_RAW[det][i].Time < DetectorSignals[det][j].Time)
+                        {
+                            DetectorSignals[det][j].Time = DetectorSignals_RAW[det][i].Time;
+                        }
+                        PileUped = true;
+                        break;
+                    }
+                }
+                if (!PileUped)
+                {
+                    DetectorSignals[det].push_back(DetectorSignals_RAW[det][i]);
+                }
+            }
+        }
+    }
+
+    // Vectorizing all the signals in a raw without the detector number
+    vector<Signal> DetectorSignals_Time_sorted;
+    for (int det = 1; det < SIGNAL_MAX; det++)
+    {
+        for (int i = 0; i < DetectorSignals[det].size(); i++)
+        {
+            DetectorSignals_Time_sorted.push_back(DetectorSignals[det][i]);
+        }
+    }
+
+    // Sorting the signals by time
+    std::sort(DetectorSignals_Time_sorted.begin(), DetectorSignals_Time_sorted.end(), [](const Signal& a, const Signal& b) {
+        return a.Time < b.Time;
+    });
+
+    return DetectorSignals_Time_sorted;
+}
+
+vector<vector<Signal>> LossLessToGroup(vector<Signal> DetectorSignals)
+{
+    vector<vector<Signal>> DetectorSignals_Group;
+
+    if (DetectorSignals.size() == 1 && IsDetectorSiliStrip(DetectorSignals[0].Label))
+    {
+        return DetectorSignals_Group;
+    }
+
+
+    for (int i = 0; i < DetectorSignals.size(); i++)
+    {
+        if (IsDetectorSiliStrip(DetectorSignals[i].Label))
+        {
+            if (DetectorSignals_Group.empty())
+            {
+                DetectorSignals_Group.push_back({DetectorSignals[i]});
+            }
+            else
+            {
+                for (int igroup = 0; igroup < DetectorSignals_Group.size(); igroup++)
+                {
+                    double dt = DetectorSignals[i].Time - DetectorSignals_Group[igroup][0].Time;
+                    if (dt < maxi && dt > mini)
+                    {
+                        DetectorSignals_Group[igroup].push_back(DetectorSignals[i]);
+                        break;
+                    }
+                    else
+                    {
+                        DetectorSignals_Group.push_back({DetectorSignals[i]});
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // grouping others
+    for (int i = 0; i < DetectorSignals.size(); i++)
+    {
+        if (IsDetectorSiliStrip(DetectorSignals[i].Label))
+        {
+            continue;
+        }
+        for (int j = 0; j < DetectorSignals_Group.size(); j++)
+        {
+            double dt = DetectorSignals[i].Time - DetectorSignals_Group[j][0].Time;
+            if (dt < maxi && dt > mini)
+            {
+                DetectorSignals_Group[j].push_back(DetectorSignals[i]);
+                break;
+            }
+        }
+    }
+
+    // // search first trigger
+    // for (int i = 0; i < DetectorSignals.size(); i++)
+    // {
+    //     if (IsDetectorSiliStrip(DetectorSignals[i].Label))
+    //     {
+    //         DetectorSignals_Group.push_back({DetectorSignals[i]});
+    //         DetectorSignals.erase(DetectorSignals.begin() + i);
+    //         break;
+    //     }
+    // }
+
+    // // grouping others
+    // for (int i = 0; i < DetectorSignals.size(); i++)
+    // {
+    //     for (int j = 0; j < DetectorSignals_Group.size(); j++)
+    //     {
+    //         double dt = DetectorSignals[i].Time - DetectorSignals_Group[j][0].Time;
+    //         if (dt < maxi*1e-9 && dt > mini*1e-9)
+    //         {
+    //             DetectorSignals_Group[j].push_back(DetectorSignals[i]);
+    //             break;
+    //         }
+    //         else if (IsDetectorSiliStrip(DetectorSignals[i].Label))
+    //         {
+    //             DetectorSignals_Group.push_back({DetectorSignals[i]});
+    //             break;
+    //         }
+    //     }
+    // }
+
+    return DetectorSignals_Group;
 }
 
 void InitHistograms(int PDG_code)
@@ -647,9 +812,9 @@ void WriteHistograms()
                     TCanvas *c = new TCanvas(("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_SUMMED").c_str(), ("Silicon_Detector_Energy_Deposit_" + detectorName[det] + "_All_WithWithoutInterStrip").c_str(), 800, 600);
                     H_StripH_Single[det]->Draw("HIST");
                     H_StripH_Coinc[det]->SetLineColor(kRed);
-                    H_StripH_Coinc[det]->Write("HIST SAME");
+                    H_StripH_Coinc[det]->Draw("HIST SAME");
                     H_StripH_NOCoinc[det]->SetLineColor(kBlue);
-                    H_StripH_NOCoinc[det]->Write("HIST SAME");
+                    H_StripH_NOCoinc[det]->Draw("HIST SAME");
                     c->Write();
                 }
             }
@@ -691,5 +856,6 @@ void WriteHistograms()
     c3->Write();
 
     H->Write();
+    H_DeltaCoincTime->Write();
 
 }

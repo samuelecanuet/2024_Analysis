@@ -26,7 +26,7 @@ int main(int argc, char **argv)
     ///////////////////////////////  INITIALISATION ///////////////////////////////
     InitWindows(0, "../");
     InitSiliconCalibration("../");
-    InitHistograms(1);
+    InitHistograms(0);
 
     ////////////////////////  EXPERIMETAL TREE FOR EACH PEAK //////////////////////
     InitTree("READ");    
@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     ////////////////////////  SIMULATION TREE FOR EACH PEAK //////////////////////
     InitSimulatedTree("READ");
 
-    current_detector = 1;
+    current_detector = 7;
     const double *bestPar = Par.data();
     VERBOSE = 1;
 
@@ -44,11 +44,8 @@ int main(int argc, char **argv)
     const char* shared_mem_name = THREAD.c_str();
     const int SIZE = sizeof(double);
 
-    // Create shared memory object
     int shm_fd = shm_open(shared_mem_name, O_CREAT | O_RDWR, 0666);
     ftruncate(shm_fd, SIZE);
-
-    // Map memory
     void* ptr = mmap(0, SIZE, PROT_WRITE, MAP_SHARED, shm_fd, 0);
 
     if (ptr == MAP_FAILED) {
@@ -56,14 +53,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    double value = chi2;  // The value you want to share
-
-    // Write the value to shared memory
+    double value = chi2; 
     memcpy(ptr, &value, sizeof(double));
-
-    std::cout << "Value written to shared memory: " << value << std::endl;
-
-    // Clean up
     munmap(ptr, SIZE);
     close(shm_fd);
 

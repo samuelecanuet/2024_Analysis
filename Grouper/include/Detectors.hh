@@ -460,6 +460,8 @@ inline void InitDetectors(const string &fname, int year = 2024)
     detectorName[label] = name;
 
   }
+
+  detectorName[100] = "SimSiPM";
 }
 
 

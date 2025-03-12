@@ -52,9 +52,10 @@ def save_progress(sampler, step, save_interval=100):
             os.remove(f"log_prob_step{step-save_interval}.npy")
 
 ########################## PARAMETERS ##########################
-nsteps = 100
-burnin = 100
+nsteps = 200
+burnin = 40
 
+nthread = 7
 ndim = 5
 nwalkers = 10*ndim
 
@@ -71,18 +72,18 @@ Coefficients1_calibration_lim = [0.2, 2]
 # Resolution
 Coefficients1_resolution = 4.5
 Coefficients1_resolution_lim = [0, 10]
-Coefficients2_resolution = 0.0005
-Coefficients2_resolution_lim = [0, 0.001]
+Coefficients2_resolution = 0.00005
+Coefficients2_resolution_lim = [0, 0.0001]
 
 
 ########## SELECTED PARAMETERS ##########
 labels = [r"$T$", r"$b$", r"$a$", r"$\sigma_{1}$", r"$\sigma_{2}$"]
-units = ["keV", "keV", "keV/CH", r"keV/CH$^\frac{1}{2}$", r"keV$^{-1}$"]
+units = [r" [keV]", r" [keV]", r" [keV/CH]", r" [keV/CH$^\frac{1}{2}]$", r" [keV$^{-1}]$"]
 parameters = [Threshold, Offset_calibration, Coefficients1_calibration, Coefficients1_resolution, Coefficients2_resolution]
 parameters_rdm = [10, 10, 0.1, 0.1, 0.0001]
 initial_position = [[] for _ in range(nwalkers)]
 parlimits = np.array([Threshold_lim, Offset_calibration_lim, Coefficients1_calibration_lim, Coefficients1_resolution_lim, Coefficients2_resolution_lim])
-bin_width = [1, 1, 0.1, 0.1, 0.0001]
+bin_width = [1, 1, 0.01, 0.1, 0.00002]
 bins =[0]*ndim
 
 for p, _ in enumerate(parameters):
@@ -97,7 +98,7 @@ for p, _ in enumerate(parameters):
 ########################## STARTING ##########################
 if (len(sys.argv) > 1):
     if (sys.argv[1] == "run"):
-        with Pool(processes=1) as pool:
+        with Pool(processes=nthread) as pool:
             sampler = emcee.EnsembleSampler(nwalkers, ndim, log_prob, pool=pool)
 
             # Run MCMC with periodic saving
@@ -105,12 +106,12 @@ if (len(sys.argv) > 1):
                 save_progress(sampler, step + 1)
     
         np.save("chain.npy", sampler.get_chain(flat=True))
-        np.save("log_prob.npy", sampler.get_log_prob())
+        np.save("lnprob.npy", sampler.get_log_prob())
 
 try:
     chain = np.load("chain.npy")
     chain = chain.reshape(-1, nwalkers, ndim)
-    lnprob = np.load("lnprob.npy")
+    lnprob = np.load("log_prob.npy")
 except FileNotFoundError:
     print("Error: chain.npy or lnprob.npy not found. Ensure they are in the current directory.")
     exit(1)
@@ -119,7 +120,8 @@ except FileNotFoundError:
 
 ########################## PLOTTING ##############################
 # Analyze the results
-# chain = chain[burnin:, :]
+chain = chain[burnin:, :]
+lnprob = lnprob[burnin:]
 # 
 # lnprob = lnprob.reshape(-1, nwalkers)
 lnprob = lnprob.flatten()
@@ -136,7 +138,7 @@ print("---- MEAN parameters:")
 param_means = np.mean(flat_chain, axis=0)
 param_stds = np.std(flat_chain, axis=0)
 for i, (mean, std) in enumerate(zip(param_means, param_stds)):
-    print(f"Parameter {i}: {mean:.4f} ± {std:.4f}")
+    print(f"Parameter {i}: {mean:.6f} ± {std:.6f}")
 
 ########################### WALKERS PLOT ##########################
 fig, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
@@ -180,7 +182,7 @@ params_error = [
 abs(np.min(params_chi2p1[:, i]))-minimum[i], abs(np.max(params_chi2p1[:, i])-minimum[i])] for i in range(ndim)
 ]
 for i, min, err, u in zip(range(ndim), minimum, params_error, units):
-    print(f"Parameter {i}: {min:.4f} ± {max(err):.4f} {u}")
+    print(f"Parameter {i}: {min:.6f} ± {max(err):.6f} {u}")
 
 ##################################################################
 
@@ -196,7 +198,7 @@ def cleaning(chain_, lnprob_, restricting):
         for par, ranges in enumerate(restricting):
             if (ranges[0] == 0) and (ranges[1] == 0):
                 continue
-            elif (ranges[0] < chain[step][par] < ranges[1]):
+            elif (ranges[0] < chain_[step][par] < ranges[1]):
                 continue
             else:
                 taking = False
@@ -214,6 +216,11 @@ def cleaning(chain_, lnprob_, restricting):
 
 
 restricting = [
+    [0, 100], # Threshold
+    [0, 0], # Offset_calibration
+    [0, 1.2], # Coefficients1_calibration
+    [2, 7], # Coefficients1_resolution
+    [0, 0.0004], # Coefficients2_resolution
 ]
 
 filtered_chain, filtered_ln_prob = cleaning(flat_chain, lnprob, restricting)
@@ -266,19 +273,19 @@ params_error = [
 abs(np.min(params_chi2p1[:, i])-minimum[i]), abs(np.max(params_chi2p1[:, i])-minimum[i])] for i in range(ndim)
 ]
 for i, min, err, u in zip(range(ndim), minimum, params_error, units):
-    print(f"Parameter {i}: {min:.4f} ± {max(err):.4f} {u}")
+    print(f"Parameter {i}: {min:.6f} ± {max(err):.6f} {u}")
 
-filtered_chain = filtered_chain.reshape(-1, nwalkers, ndim)
-fig, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
-for i in range(ndim):
-    ax = axes[i]
-    ax.plot(filtered_chain[:, :, i], "k", alpha=0.3)
-    ax.set_xlim(0, len(filtered_chain))
-    ax.set_ylabel(labels[i])
-    ax.yaxis.set_label_coords(-0.1, 0.5)
+# filtered_chain = filtered_chain.reshape(-1, nwalkers, ndim)
+# fig, axes = plt.subplots(ndim, figsize=(10, 7), sharex=True)
+# for i in range(ndim):
+#     ax = axes[i]
+#     ax.plot(filtered_chain[:, :, i], "k", alpha=0.3)
+#     ax.set_xlim(0, len(filtered_chain))
+#     ax.set_ylabel(labels[i])
+#     ax.yaxis.set_label_coords(-0.1, 0.5)
 
-axes[-1].set_xlabel("step number")
-fig.savefig("Walkers_restricted.png")
+# axes[-1].set_xlabel("step number")
+# fig.savefig("Walkers_restricted.png")
 
 ####################################################################
 ########################### SPECTRUM PLOT ##########################
@@ -481,7 +488,7 @@ fig.savefig("Walkers_restricted.png")
 # s = r"$\chi^{2}_{\nu}$ = " + "{:.2f}".format(np.min(-2*filtered_ln_prob_wonan)/2/ny)
 # print("---- BEST ANALYSIS parameters: ", "{:.2f}".format(np.sum(chi2_mins)))
 # for i, min, err, u in zip(range(ndim), minimum, paramaters_error, units):
-#     print(f"Parameter {i}: {min:.4f} ± {err:.4f} {u}")
+#     print(f"Parameter {i}: {min:.6f} ± {err:.6f} {u}")
 
 # fig.savefig("Spectrum.png", dpi=600)
 # plt.show()

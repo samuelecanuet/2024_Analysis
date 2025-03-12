@@ -9,7 +9,7 @@ int main(int argc, char *argv[])
     MERGED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
     MERGED_File["33Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
 
-    SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma_analysed.root").c_str(), "READ");
+    SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/24-02/32Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_100_5700_100_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     // SIMULATED_File["33Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/33Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");

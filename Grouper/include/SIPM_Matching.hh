@@ -91,10 +91,21 @@ void init()
 
     Map_RunFiles["207Bi"] = {"137"};
 
-    // Map_RunFiles["90Sr"] = {"133"};
-    Map_RunFiles["32Ar"] = {"114"};
+    Map_RunFiles["90Sr"] = {"133"};
+    Map_RunFiles["32Ar"] = {"077"};
 
 }
+
+TF1 *InvertingLinear(TF1 *f)
+{
+    TF1 *f_inv = new TF1("f_inv", "[0]*x + [1]", 0, 10000e3);
+    double a = f->GetParameter(0);
+    double b = f->GetParameter(1);
+    f_inv->SetParameter(0, 1 / a);
+    f_inv->SetParameter(1, -b / a);
+    return f_inv;
+}
+
 void InitWindows()
 {
     string direction[2] = {"Up", "Down"};
@@ -177,7 +188,7 @@ int LoadValues()
     {
         if (IsDetectorBeta(det))
         {
-            MatchingSiPM[RUN][det] = (TF1 *)f->Get(("MatchingSiPM_" + RUN + "_" + detectorName[det]).c_str());
+            MatchingSiPM[RUN][det] = InvertingLinear((TF1 *)f->Get(("MatchingSiPM_" + RUN + "_" + detectorName[det]).c_str()));
             if (IsDetectorBetaHigh(det))
             {
                 MatchingLowHigh[RUN][det] = (TF1 *)f->Get(("MatchingLowHigh_" + RUN + "_" + detectorName[det]).c_str());
@@ -394,6 +405,8 @@ void ReadDataWithCorrections()
     int counterSiPM[SIGNAL_MAX] = {0};
     Reader->Restart();
 
+    
+
     while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
     {
         ProgressBar(Reader->GetCurrentEntry(), Reader->GetEntries(), start, Current, "Reading Tree");
@@ -412,36 +425,47 @@ void ReadDataWithCorrections()
 
         }
 
+        // cout << "Applying correction" << endl;
         for (int i_groups = 0; i_groups < (**SiPM_Groups).size(); i_groups++)
         {
+            // cout << "Group " << i_groups << endl;
             for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_groups].size(); i_pair++)
             {
                 // APPLYING MATCHING High Low
+                // cout << "Applying correction HL" << endl;
                 if ((**SiPM_Groups)[i_groups][i_pair].second.isValid)
                 {
-                    (**SiPM_Groups)[i_groups][i_pair].second.Channel = MatchingLowHigh[RUN][(**SiPM_Groups)[i_groups][i_pair].second.Label]->Eval((**SiPM_Groups)[i_groups][i_pair].second.Channel);
+                    // cout << "Applying on " << (**SiPM_Groups)[i_groups][i_pair].second.Label << endl;
+                    (**SiPM_Groups)[i_groups][i_pair].second.Channel = MatchingLowHigh[RUN][(**SiPM_Groups)[i_groups][i_pair].second.Label-10]->Eval((**SiPM_Groups)[i_groups][i_pair].second.Channel);
                 }
 
+                // cout << "Applying correction SiPM" << endl;
                 // APPLYING MATCHING SiPM
                 if ((**SiPM_Groups)[i_groups][i_pair].first.isValid)
                 {
+                    // cout << "Applying on " << (**SiPM_Groups)[i_groups][i_pair].first.Label << endl;
                     (**SiPM_Groups)[i_groups][i_pair].first.Channel = MatchingSiPM[RUN][(**SiPM_Groups)[i_groups][i_pair].first.Label]->Eval((**SiPM_Groups)[i_groups][i_pair].first.Channel);
                 }
                 if ((**SiPM_Groups)[i_groups][i_pair].second.isValid)
                 {
+                    // cout << "Applying on " << (**SiPM_Groups)[i_groups][i_pair].second.Label << endl;
                     (**SiPM_Groups)[i_groups][i_pair].second.Channel = MatchingSiPM[RUN][(**SiPM_Groups)[i_groups][i_pair].second.Label-10]->Eval((**SiPM_Groups)[i_groups][i_pair].second.Channel);
                 }
             }
         }
+        // cout << "Correction applied" << endl;
+        
 
-
+        // cout << "Filling histograms" << endl;
         // Looping on SiPM groups
         for (int i_groups = 0; i_groups < (**SiPM_Groups).size(); i_groups++)
         {
+            // cout << "Group " << i_groups << endl;
             if ((**SiPM_Groups)[i_groups].size() != 9)
                 continue;
             for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_groups].size(); i_pair++)
             {
+                // cout << "Pair " << i_pair << endl;
                 // Compare High Low for each SiPM
                 if ((**SiPM_Groups)[i_groups][i_pair].first.isValid && (**SiPM_Groups)[i_groups][i_pair].second.isValid)
                 {
@@ -461,12 +485,13 @@ void ReadDataWithCorrections()
                     H_SiPM_Low[RUN][(**SiPM_Groups)[i_groups][i_pair].second.Label]->Fill((**SiPM_Groups)[i_groups][i_pair].second.Channel);
                 }
 
-
+                // cout << "SiPM 104 comparison" << endl;
                 // Compare SiPMS to 104
                 if ((**SiPM_Groups)[i_groups][i_pair].first.Label == 104)
                 {
                     for (int i_pair_compare = 0; i_pair_compare < (**SiPM_Groups)[i_groups].size(); i_pair_compare++)
                     {
+                        // cout << "Pair compare " << i_pair_compare << endl;
                         if ((**SiPM_Groups)[i_groups][i_pair].first.isValid && (**SiPM_Groups)[i_groups][i_pair_compare].first.isValid)
                         {
                             H_SiPM_Gain[RUN][(**SiPM_Groups)[i_groups][i_pair_compare].first.Label]->Fill((**SiPM_Groups)[i_groups][i_pair].first.Channel , (**SiPM_Groups)[i_groups][i_pair_compare].first.Channel);
@@ -484,6 +509,7 @@ void ReadDataWithCorrections()
                 }
             }
         }
+        // cout << "Histograms filled" << endl;
     }
 }
 
@@ -507,6 +533,7 @@ void FittingLowHigh(int Verbose = 0)
 void FittingSiPM(int Verbose = 0)
 {
     Info("Fitting SiPM gain factor for run " + RUN);
+    f_linear->FixParameter(1, 0);
 
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
@@ -518,7 +545,7 @@ void FittingSiPM(int Verbose = 0)
             if (IsDetectorBetaLow(i))
                 G_SiPM_Gain[RUN][i]->Fit(f_linear, "Q");
             else
-                G_SiPM_Gain[RUN][i]->Fit(f_linear, "QR", "", Range_SiPM_LowHigh.first*10, Range_SiPM_LowHigh.second*10);
+                G_SiPM_Gain[RUN][i]->Fit(f_linear, "QR", "", 200e3, Range_SiPM_LowHigh.second*10);
             MatchingSiPM[RUN][i] = G_SiPM_Gain[RUN][i]->GetFunction("f_linear");
         }
     }

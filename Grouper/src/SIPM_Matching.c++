@@ -75,8 +75,8 @@ int main(int argc, char **argv)
                 WriteValues(first);
                 // Write Histograms betfore correction applyed (where fits comes from)
                 WriteHistogram(1);
-                
-               
+                if (first)
+                    first = false;
             }
             else
             {   
@@ -131,6 +131,7 @@ int main(int argc, char **argv)
             SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
 
             InitHistograms(RUN, 0, true);
+            LoadValues();
             ReadDataWithCorrections();
             WriteHistogramAfterCorrection(1);      
         }

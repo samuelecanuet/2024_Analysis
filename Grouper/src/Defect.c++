@@ -11,11 +11,11 @@ int main()
     SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
     SIMULATED_File["148Gd"] = new TFile((DIR_ROOT_DATA_SIMULATED + "148Gd_700nm_width_analysed.root").c_str(), "READ");
     SIMULATED_File["239Pu"] = new TFile((DIR_ROOT_DATA_SIMULATED + "239Pu_700nm_width_analysed.root").c_str(), "READ");
-    SIMULATED_File["241Am"] = new TFile((DIR_ROOT_DATA_SIMULATED + "241Am_700nm_width_analysed.root").c_str(), "READ");
-    SIMULATED_File["244Cm"] = new TFile((DIR_ROOT_DATA_SIMULATED + "244Cm_700nm_width_analysed.root").c_str(), "READ");
+    SIMULATED_File["241Am"] = new TFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-09/" + "241Am_inter0025_a1_b0_analysed.root").c_str(), "READ");
+    SIMULATED_File["244Cm"] = new TFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-09/" + "244Cm_inter0025_a1_b0_analysed.root").c_str(), "READ");
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
-    DEFECT_File = new TFile((DIR_ROOT_DATA_MATCHED + "defect.root").c_str(), "RECREATE");
+    DEFECT_File = new TFile((DIR_ROOT_DATA_MATCHED + "defect2.root").c_str(), "RECREATE");
     DEFECT_File->cd();
     // WriteTime(GROUPED_File[], MATCHED_File);
 

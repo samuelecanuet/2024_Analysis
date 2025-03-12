@@ -74,8 +74,8 @@ map<string, TDirectory *[50]> dir_peaks;
 
 // FUCNTIONS //
 TF1 *F_SiliconCalibration[SIGNAL_MAX];
-TF1 *F_MatchingSiPM[SIGNAL_MAX];
-TF1 *F_MatchingLowHigh[SIGNAL_MAX];
+map<string, TF1 *[SIGNAL_MAX]> F_MatchingSiPM;
+map<string, TF1 *[SIGNAL_MAX]> F_MatchingLowHigh;
 TF1 *f_linear = new TF1("f_linear", "[0]*x + [1]", 0, 10000e3);
 TF1 *f_erf = new TF1("f_erf", "x < [0] ? [1]*x + [2] : [3]*(erf((x-[4])/[5]))", 0, 10000e3);
 pair<double, double> Range_SiPM_LowHigh = make_pair(50e3, 200e3);
@@ -83,7 +83,9 @@ TF1 *gauss;
 TF1 *Threshold_f;
 int current_detector;
 double SiPM_Window[10] = {0, 1500e3, 1500e3, 1500e3};
-vector<double> res;
+vector<double> Resolution_OffSet_det;
+vector<double> Resolution_SQRT_det;
+vector<double> Resolution_2_det;
 // DATA //
 string Nuclei[1] = {"32Ar"}; //, "32Ar_thick", "33Ar"};
 string Nucleis[3] = {"32Ar", "207Bi", "90Sr"};
@@ -94,7 +96,10 @@ map<string, TF1 *[SIGNAL_MAX]> MatchingLowHigh_erf;
 map<string, TF1 *[SIGNAL_MAX]> MatchingSiPM;
 map<string, pair<double, double>> SiPM_Range;
 
-void InitWindows(int verbose = 0, string addpath="")
+bool FLAGSAVINGCHI2 = false;
+map<string, double[50][SIGNAL_MAX]> CHI2;
+
+void InitWindows(int verbose = 0, string addpath = "")
 {
     Info("Init Windows");
     string direction[2] = {"Up", "Down"};
@@ -158,9 +163,9 @@ pair<double, double> PointProjection(double xA, double yA, TF1 *f)
     return make_pair(xB, yB);
 }
 
-TF1* InvertingLinear(TF1* f)
+TF1 *InvertingLinear(TF1 *f)
 {
-    TF1* f_inv = new TF1("f_inv", "[0]*x + [1]", 0, 10000e3);
+    TF1 *f_inv = new TF1("f_inv", "[0]*x + [1]", 0, 10000e3);
     double a = f->GetParameter(0);
     double b = f->GetParameter(1);
     f_inv->SetParameter(0, 1 / a);
@@ -177,30 +182,24 @@ void InitMatchingSiPM()
     {
         if (IsDetectorBetaHigh(i))
         {
-            F_MatchingSiPM[GetDetectorChannel(i)] = InvertingLinear((TF1 *)f->Get(("MatchingSiPM_077_" + detectorName[i]).c_str()));
-            if (F_MatchingSiPM[GetDetectorChannel(i)] == nullptr)
-            {
-                Error("No MatchingSiPM_077_" + detectorName[i] + " found");
-            }
+            F_MatchingSiPM["32Ar"][GetDetectorChannel(i)] = InvertingLinear((TF1 *)f->Get(("MatchingSiPM_077_" + detectorName[i]).c_str()));
+            F_MatchingSiPM["207Bi"][GetDetectorChannel(i)] = InvertingLinear((TF1 *)f->Get(("MatchingSiPM_137_" + detectorName[i]).c_str()));
+            F_MatchingSiPM["90Sr"][GetDetectorChannel(i)] = InvertingLinear((TF1 *)f->Get(("MatchingSiPM_133_" + detectorName[i]).c_str()));
         }
 
         if (IsDetectorBetaHigh(i))
         {
-            F_MatchingLowHigh[GetDetectorChannel(i)] = (TF1 *)f->Get(("MatchingLowHigh_077_" + detectorName[i]).c_str());
-            if (F_MatchingLowHigh[GetDetectorChannel(i)] == nullptr)
-            {
-                Error("No MatchingLowHigh_077_" + detectorName[i] + " found");
-            }
+            F_MatchingLowHigh["32Ar"][GetDetectorChannel(i)] = (TF1 *)f->Get(("MatchingLowHigh_077_" + detectorName[i]).c_str());
+            F_MatchingLowHigh["207Bi"][GetDetectorChannel(i)] = (TF1 *)f->Get(("MatchingLowHigh_137_" + detectorName[i]).c_str());
+            F_MatchingLowHigh["90Sr"][GetDetectorChannel(i)] = (TF1 *)f->Get(("MatchingLowHigh_133_" + detectorName[i]).c_str());
         }
     }
 }
 
-
-
 void ReadTree()
 {
     Info("Read Tree");
-    
+
     for (int peak = 0; peak <= 50; peak++)
     {
         for (int det = 1; det <= 9; det++)
@@ -299,19 +298,19 @@ void ExtractingTree()
                     if ((**SiPM_Groups)[i_group][i_pair].first.isValid)
                     {
                         // cout << (**SiPM_Groups)[i_group][i_pair].first.Channel << endl;
-                        (**SiPM_Groups)[i_group][i_pair].first.Channel = F_MatchingSiPM[GetDetectorChannel((**SiPM_Groups)[i_group][i_pair].first.Label)]->Eval((**SiPM_Groups)[i_group][i_pair].first.Channel);
+                        (**SiPM_Groups)[i_group][i_pair].first.Channel = F_MatchingSiPM[NUCLEUS][GetDetectorChannel((**SiPM_Groups)[i_group][i_pair].first.Label)]->Eval((**SiPM_Groups)[i_group][i_pair].first.Channel);
                         // cout << (**SiPM_Groups)[i_group][i_pair].first.Channel << endl;
                         if ((**SiPM_Groups)[i_group][i_pair].first.Channel < eHighLowLimit)
                         {
                             SiPMi = (**SiPM_Groups)[i_group][i_pair].first;
                         }
+                    }
 
-                        else if ((**SiPM_Groups)[i_group][i_pair].second.isValid)
-                        {
-                            SiPMi = (**SiPM_Groups)[i_group][i_pair].second;
-                            SiPMi.Channel = F_MatchingSiPM[GetDetectorChannel(SiPMi.Label)]->Eval(SiPMi.Channel);
-                            SiPMi.Channel = F_MatchingLowHigh[GetDetectorChannel(SiPMi.Label)]->Eval(SiPMi.Channel);
-                        }
+                    if ((**SiPM_Groups)[i_group][i_pair].second.isValid && !SiPMi.isValid)
+                    {
+                        SiPMi = (**SiPM_Groups)[i_group][i_pair].second;
+                        SiPMi.Channel = F_MatchingLowHigh[NUCLEUS][GetDetectorChannel(SiPMi.Label)]->Eval(SiPMi.Channel);
+                        SiPMi.Channel = F_MatchingSiPM[NUCLEUS][GetDetectorChannel(SiPMi.Label)]->Eval(SiPMi.Channel);
                     }
 
                     if (!SiPMi.isValid)
@@ -379,14 +378,13 @@ void InitTree(string option = "READ")
     }
 }
 
-
 void ReadSimulatedTree()
 {
     Info("Read Simulated Tree");
     for (int peak = 0; peak <= 50; peak++)
     {
         if (WindowsMap["32Ar"][peak][11].first == -1 || !WindowsMap["32Ar"][peak][11].first)
-                continue;
+            continue;
         Tree_Peaks_Simulated["32Ar"][peak] = (TTree *)f_simulated_tree->Get(("Tree_Peaks_Simulated_32Ar_" + to_string(peak)).c_str());
     }
     Tree_Peaks_Simulated["207Bi"][0] = (TTree *)f_simulated_tree->Get(("Tree_Peaks_Simulated_207Bi_" + to_string(0)).c_str());
@@ -400,7 +398,7 @@ void WriteSimulatedTree()
     for (int peak = 0; peak <= 50; peak++)
     {
         if (WindowsMap["32Ar"][peak][11].first == -1 || !WindowsMap["32Ar"][peak][11].first)
-                continue;
+            continue;
         Tree_Peaks_Simulated["32Ar"][peak]->Write();
     }
     Tree_Peaks_Simulated["207Bi"][0]->Write();
@@ -423,7 +421,7 @@ void ExtractingSimulatedTree()
 
         clock_t start = clock(), Current;
         int Entries = Reader_SIMULATED->GetEntries();
-        while (Reader_SIMULATED->Next() && Reader_SIMULATED->GetCurrentEntry() < 2e6)
+        while (Reader_SIMULATED->Next())
         {
             ProgressBar(Reader_SIMULATED->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
             int sili_code = **Silicon_code;
@@ -516,14 +514,17 @@ void InitHistograms(int verbose = 0)
     Info("Init Histograms");
     for (string Nucleus : Nucleis)
     {
-        if (verbose == 1) Info("Nucleus: " + Nucleus, 1);
+        if (verbose == 1)
+            Info("Nucleus: " + Nucleus, 1);
         NUCLEUS = Nucleus;
-        if (CALIBRATED_File != nullptr) dir[NUCLEUS] = CALIBRATED_File->mkdir(NUCLEUS.c_str());       
+        if (CALIBRATED_File != nullptr)
+            dir[NUCLEUS] = CALIBRATED_File->mkdir(NUCLEUS.c_str());
         for (int i = 0; i < SIGNAL_MAX; i++)
         {
             if (IsDetectorBetaHigh(i))
             {
-                if (verbose == 1) Info("Detector: " + detectorName[i], 2);
+                if (verbose == 1)
+                    Info("Detector: " + detectorName[i], 2);
                 for (int peak = 0; peak <= 50; peak++)
                 {
                     if ((WindowsMap[NUCLEUS][peak][11].first == -1 || !WindowsMap[NUCLEUS][peak][11].first))
@@ -531,7 +532,8 @@ void InitHistograms(int verbose = 0)
 
                     if (i == 101)
                     {
-                        if (CALIBRATED_File != nullptr) dir_peaks[NUCLEUS][peak] = dir[NUCLEUS]->mkdir(("Peak_" + to_string(peak)).c_str());
+                        if (CALIBRATED_File != nullptr)
+                            dir_peaks[NUCLEUS][peak] = dir[NUCLEUS]->mkdir(("Peak_" + to_string(peak)).c_str());
                     }
 
                     H_SiPM[NUCLEUS][peak][GetDetectorChannel(i)] = new TH1D(("H_SiPM_" + NUCLEUS + "_Peak_" + to_string(peak) + "_SiPM" + to_string(GetDetectorChannel(i))).c_str(), ("H_SiPM_" + NUCLEUS + "_Peak_" + to_string(peak) + "_SiPM" + to_string(GetDetectorChannel(i))).c_str(), eHighN / 10, eHighMin, eHighMax);
@@ -610,145 +612,162 @@ double Chi2TreeHist_conv(const double *par)
     vector<double> chi2;
     for (string NUCLEUS : Nucleis)
     {
-        if (NUCLEUS == "207Bi")
-            continue;
+        Info("Nucleus: " + NUCLEUS);
+        // if (NUCLEUS == "32Ar")
+        //     continue;
         ////////////////////////////////////////////////////////////////
         // Init Histograms
-        if (VERBOSE == 1) Info("Init Histograms", 1);
-        for (int peak = 0; peak <= 50; peak++)
+        if (VERBOSE == 1)
+            Info("Init Histograms", 1);
+        for (int peak_number = 0; peak_number <= 50; peak_number++)
         {
-            if ((WindowsMap[NUCLEUS][peak][11].first == -1 || !WindowsMap[NUCLEUS][peak][11].first))
-                continue;
-            H_Sim_Conv[NUCLEUS][peak][current_detector]->Reset();
-            H_SiPM_Calibrated[NUCLEUS][peak][current_detector]->Reset();
-        }
-
-        if (NUCLEUS == "207Bi" || NUCLEUS == "90Sr")
-        {
-            cout << NUCLEUS << endl;
-            H_Sim_Conv[NUCLEUS][0][current_detector]->Reset();
-            H_SiPM_Calibrated[NUCLEUS][0][current_detector]->Reset();
-        }
-
-        ////////////////////////////////////////////////////////////////
-
-        ////////////////////////////////////////////////////////////////
-        // parameters
-        if (VERBOSE == 1) Info("Setting Parameters", 1);
-        double Calibration_OffSet = par[0];
-        double Calibration = par[1];
-        double Resolution_OffSet = par[2];
-        double Resolution_SQRT = par[3];
-        double Resolution_2 = par[4];
-        double Threshold = par[5];
-        double Threshold_STD = 0;
-        ////////////////////////////////////////////////////////////////
-
-        if (VERBOSE == 1) Info("Calibration of Experimental data", 1);
-        int peak_number = 14;
-        if (NUCLEUS == "207Bi" || NUCLEUS == "90Sr")
-        {
-            peak_number = 0;
-        }
-
-        TTreeReader *Reader_IAS = new TTreeReader(Tree_Peaks[NUCLEUS][peak_number][current_detector]);
-        TTreeReaderValue<Signal> *SiPM = new TTreeReaderValue<Signal>(*Reader_IAS, "SiPM");
-
-        Reader_IAS->Restart();
-        double energy;
-        while (Reader_IAS->Next())
-        {
-            energy = Calibration * (**SiPM).Channel / 1000 + Calibration_OffSet;
-            H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->Fill(energy);
-        }
-
-        if (VERBOSE == 1) Info("Convolution with detector resolution", 1);
-        // convoluting resolution on histogram
-        // for (int i = 1; i <= H_Sim[NUCLEUS][peak_number]->GetNbinsX(); i++)
-        // {
-        //     if (H_Sim[NUCLEUS][peak_number]->GetBinContent(i) == 0)
-        //         continue;
-        //     energy = H_Sim[NUCLEUS][peak_number]->GetBinCenter(i);
-        //     double sigma_resolution = sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(energy), 2) + pow(Resolution_2 * pow(energy, 2), 2));
-        //     // double sigma_resolution = sqrt(pow(coefficents[2].second, 2) + pow(coefficents[3].second * sqrt(energy), 2));
-
-        //     gauss = new TF1("gauss", "gaus", 0, eSiliMax_cal);
-        //     gauss->SetNpx(eSiliN_cal/10);
-        //     gauss->SetParameters(H_Sim[NUCLEUS][peak_number]->GetBinContent(i) / (sigma_resolution * sqrt(2 * M_PI)), energy, sigma_resolution); /// weighted gaussian
-
-        //     H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Add(gauss->GetHistogram());
-
-        //     delete gauss;
-        // }
-        ///////////////
-        // random convoluting resolution on histogram
-        TTreeReader *Reader_Sim = new TTreeReader(Tree_Peaks_Simulated[NUCLEUS][peak_number]);
-        TTreeReaderValue<double> *Energy = new TTreeReaderValue<double>(*Reader_Sim, "SiPM");
-
-        while (Reader_Sim->Next())
-        {
-            double sigma_resolution = sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(**Energy), 2) + pow(Resolution_2 * pow(**Energy, 2), 2));
-            // shoot in a gaussian with ramdom engine
-            double energy_conv = gRandom->Gaus(**Energy, sigma_resolution);
-
-            if (energy_conv < Threshold)
-                continue;
-
-            bool flagUntriggered = false;
-            for (int sipm = 1; sipm <= 8; sipm++)
+            if ((WindowsMap[NUCLEUS][peak_number][11].first == -1 || !WindowsMap[NUCLEUS][peak_number][11].first) && NUCLEUS == "32Ar")
             {
-                if (gRandom->Gaus(**Energy, sigma_resolution) < Threshold)
-                    flagUntriggered = true;
+                continue;
+            }
+            if (peak_number != 0 && (NUCLEUS == "207Bi" || NUCLEUS == "90Sr"))
+            {
+                continue;
+            }
+            Info("Peak: " + to_string(peak_number), 2);
+                
+            H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Reset();
+            H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->Reset();
+
+            ////////////////////////////////////////////////////////////////
+
+            ////////////////////////////////////////////////////////////////
+            // parameters
+            if (VERBOSE == 1)
+                Info("Setting Parameters", 1);
+            double Calibration_OffSet = par[0];
+            double Calibration = par[1];
+            double Resolution_OffSet = par[2];
+            double Resolution_SQRT = par[3];
+            double Resolution_2 = par[4];
+            double Threshold = par[5];
+            double Threshold_STD = par[6];
+            ////////////////////////////////////////////////////////////////
+
+            if (VERBOSE == 1)
+                Info("Calibration of Experimental data", 1);
+
+            TTreeReader *Reader_IAS = new TTreeReader(Tree_Peaks[NUCLEUS][peak_number][current_detector]);
+            TTreeReaderValue<Signal> *SiPM = new TTreeReaderValue<Signal>(*Reader_IAS, "SiPM");
+
+            Reader_IAS->Restart();
+            double energy;
+            if (Reader_IAS->GetEntries() == 0) continue;
+            while (Reader_IAS->Next())
+            {
+                energy = Calibration * (**SiPM).Channel / 1000 + Calibration_OffSet;
+                H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->Fill(energy);
             }
 
-            if (flagUntriggered)
-                continue;
+            if (VERBOSE == 1)
+                Info("Convolution with detector resolution", 1);
+            // convoluting resolution on histogram
+            // for (int i = 1; i <= H_Sim[NUCLEUS][peak_number]->GetNbinsX(); i++)
+            // {
+            //     if (H_Sim[NUCLEUS][peak_number]->GetBinContent(i) == 0)
+            //         continue;
+            //     energy = H_Sim[NUCLEUS][peak_number]->GetBinCenter(i);
+            //     double sigma_resolution = sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(energy), 2) + pow(Resolution_2 * pow(energy, 2), 2));
+            //     // double sigma_resolution = sqrt(pow(coefficents[2].second, 2) + pow(coefficents[3].second * sqrt(energy), 2));
 
-            H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Fill(gRandom->Gaus(**Energy, sigma_resolution));
+            //     gauss = new TF1("gauss", "gaus", 0, eSiliMax_cal);
+            //     gauss->SetNpx(eSiliN_cal/10);
+            //     gauss->SetParameters(H_Sim[NUCLEUS][peak_number]->GetBinContent(i) / (sigma_resolution * sqrt(2 * M_PI)), energy, sigma_resolution); /// weighted gaussian
+
+            //     H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Add(gauss->GetHistogram());
+
+            //     delete gauss;
+            // }
+            ///////////////
+            // random convoluting resolution on histogram
+            TTreeReader *Reader_Sim = new TTreeReader(Tree_Peaks_Simulated[NUCLEUS][peak_number]);
+            TTreeReaderValue<double> *Energy = new TTreeReaderValue<double>(*Reader_Sim, "SiPM");
+            if (Reader_Sim->GetEntries() == 0) continue;
+
+            while (Reader_Sim->Next())
+            {
+                double th = gRandom->Gaus(Threshold, Threshold_STD);
+                double sigma_resolution = sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(**Energy), 2) + pow(Resolution_2 * pow(**Energy, 2), 2));
+                // shoot in a gaussian with ramdom engine
+                double energy_conv = gRandom->Gaus(**Energy, sigma_resolution);
+
+                if (energy_conv < th)
+                    continue;
+
+                bool flagUntriggered = false;
+                for (int sipm = 1; sipm <= 9; sipm++)
+                {
+                    if (sipm == current_detector)
+                        continue;
+
+                    double sigma_resolution_sipm = sqrt(pow(Resolution_OffSet_det[sipm], 2) + pow(Resolution_SQRT_det[sipm] * sqrt(**Energy), 2) + pow(Resolution_2_det[sipm] * pow(**Energy, 2), 2));
+                    if (gRandom->Gaus(**Energy, sigma_resolution) < th)
+                    {
+                        flagUntriggered = true;
+                        break;
+                    }
+                }
+
+                if (flagUntriggered)
+                    continue;
+
+                H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Fill(energy_conv);
+            }
+            ///////////////
+
+            if (VERBOSE == 1)
+                Info("Adding threshold", 1);
+
+            // if (NUCLEUS == "207Bi")
+            // {
+            //     TF1 *fexp = new TF1("fexp", "expo", 0, 10000);
+            //     fexp->SetNpx(10000);
+
+            //     fexp->SetParLimits(0, 0, 200);
+            //     fexp->SetParameter(0, 13);
+            //     fexp->SetParLimits(1, -0.1, 0);
+            //     fexp->SetParameter(1, -0.05);
+
+            //     H_SiPM_Calibrated[NUCLEUS][0][current_detector]->Fit(fexp, "QR", "", 60, 100);
+
+            //     TH1D *h = (TH1D *)fexp->GetHistogram()->Clone();
+            //     H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Add(h);
+            // }
+
+            ////////// CONVOLUTING THRESHOLD//////////
+            // Threshold_f = new TF1("Threshold", "0.5*(1+erf((x-[0])/[1]))", eSiliMin_cal, eSiliMax_cal);
+            // Threshold_STD = 1. * sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(Threshold), 2) + pow(Resolution_2 * pow(Threshold, 2), 2));
+            // Threshold_f->SetParameters(Threshold, Threshold_STD);
+
+            // for (int i = 1; i <= H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetNbinsX(); i++)
+            // {
+            //     H_Sim_Conv[NUCLEUS][peak_number][current_detector]->SetBinContent(i, H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetBinContent(i) * Threshold_f->Eval(H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetBinCenter(i)));
+            // }
+
+            // delete Threshold_f;
+
+            //////////////// CHI2 ////////////////
+
+            // NUCLEUS = "207Bi";
+            H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(300, -111);
+            H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(300, -1111);
+            chi2.push_back(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->Chi2Test(H_Sim_Conv[NUCLEUS][peak_number][current_detector], "CHI2/NDF"));
+            // cout << chi2[chi2.size()-1] << "   " << Calibration_OffSet << "   " << Calibration << "   " << Resolution_OffSet << "   " << Resolution_SQRT << "   " << Resolution_2 << "   " << Threshold << "   " << Threshold_STD << endl;
+
+            H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Scale(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->Integral() / H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Integral());
+            H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(0, SiPM_Range[NUCLEUS].second);
+            H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(0, SiPM_Range[NUCLEUS].second);
+
+            if (FLAGSAVINGCHI2)
+            {
+                CHI2[NUCLEUS][peak_number][current_detector] = chi2[chi2.size() - 1];
+            }
         }
-        ///////////////
-
-        if (VERBOSE == 1) Info("Adding threshold", 1);
-
-        // if (NUCLEUS == "207Bi")
-        // {
-        //     TF1 *fexp = new TF1("fexp", "expo", 0, 10000);
-        //     fexp->SetNpx(10000);
-
-        //     fexp->SetParLimits(0, 0, 200);
-        //     fexp->SetParameter(0, 13);
-        //     fexp->SetParLimits(1, -0.1, 0);
-        //     fexp->SetParameter(1, -0.05);
-
-        //     H_SiPM_Calibrated[NUCLEUS][0][current_detector]->Fit(fexp, "QR", "", 60, 100);
-
-        //     TH1D *h = (TH1D *)fexp->GetHistogram()->Clone();
-        //     H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Add(h);
-        // }
-
-        ////////// CONVOLUTING THRESHOLD//////////
-        // Threshold_f = new TF1("Threshold", "0.5*(1+erf((x-[0])/[1]))", eSiliMin_cal, eSiliMax_cal);
-        // Threshold_STD = 1. * sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(Threshold), 2) + pow(Resolution_2 * pow(Threshold, 2), 2));
-        // Threshold_f->SetParameters(Threshold, Threshold_STD);
-
-        // for (int i = 1; i <= H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetNbinsX(); i++)
-        // {
-        //     H_Sim_Conv[NUCLEUS][peak_number][current_detector]->SetBinContent(i, H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetBinContent(i) * Threshold_f->Eval(H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetBinCenter(i)));
-        // }
-
-        // delete Threshold_f;
-
-        //////////////// CHI2 ////////////////
-
-        // NUCLEUS = "207Bi";
-        H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(300, -111);
-        H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(300, -1111);
-        chi2.push_back(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->Chi2Test(H_Sim_Conv[NUCLEUS][peak_number][current_detector], "CHI2/NDF"));
-        // cout << chi2[chi2.size()-1] << "   " << Calibration_OffSet << "   " << Calibration << "   " << Resolution_OffSet << "   " << Resolution_SQRT << "   " << Resolution_2 << "   " << Threshold << "   " << Threshold_STD << endl;
-
-        H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Scale(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->Integral() / H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Integral());
-        H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(0, SiPM_Range[NUCLEUS].second);
-        H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(0, SiPM_Range[NUCLEUS].second);
     }
 
     double mean = accumulate(chi2.begin(), chi2.end(), 0.0) / chi2.size();
@@ -761,28 +780,34 @@ void CalibrationSiPM()
 {
     VERBOSE = 0;
     Info("Calibration", 1);
-    res = {0, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5, 4.5};
     Minimizer *minimizer = Factory::CreateMinimizer("Minuit2", "Migrad");
     ROOT::Math::Functor functor(&Chi2TreeHist_conv, 7);
-    vector<double> Par = {30.3, 0.68, 0, 4.0, 1e-05, 50, 15.0801};
+    vector<double> Par = {180.43, 0.7229, 0, Resolution_SQRT_det[current_detector], 2.5e-05, 195.13, 20};
+
+
+    for (int i = 0; i <= 10; i++)
+    {
+        Resolution_OffSet_det.push_back(0);
+        Resolution_2_det.push_back(Par[4]);
+    }
+
     minimizer->SetFunction(functor);
     minimizer->SetLimitedVariable(0, "Calibration_OffSet", Par[0], 10, 0, 100);
     minimizer->SetLimitedVariable(1, "Calibration", Par[1], 0.1, 0.5, 1.2);
     minimizer->SetFixedVariable(2, "Resolution_OffSet", Par[2]);
     minimizer->SetLimitedVariable(3, "Resolution_SQRT", Par[3], 0.1, 2., 10);
     minimizer->SetLimitedVariable(4, "Resolution_2", Par[4], 0.1e-5, 1e-6, 8e-5);
-    // minimizer->SetLimitedVariable(5, "Threshold", Par[5], 5, 20, 100);
-    // minimizer->SetLimitedVariable(6, "Threshold_STD", Par[6], 10, 2, 20);
     minimizer->SetFixedVariable(5, "Threshold", Par[5]);
     minimizer->SetFixedVariable(6, "Threshold_STD", Par[6]);
     minimizer->SetMaxFunctionCalls(10000000);
     minimizer->SetMaxIterations(100000000);
     minimizer->SetTolerance(1e-3);
     minimizer->SetPrecision(10);
-    // const double *bestPar = Par.data();
-    minimizer->Minimize();
+    const double *bestPar = Par.data();
+    // minimizer->Minimize();
 
-    const double *bestPar = minimizer->X();
+    // const double *bestPar = minimizer->X();
+    FLAGSAVINGCHI2 = true;
     double chi2 = Chi2TreeHist_conv(bestPar);
 }
 
@@ -822,6 +847,13 @@ void WriteHistograms()
             {
                 H_Sim_Conv[NUCLEUS][peak][det]->SetLineColor(kRed);
                 H_Sim_Conv[NUCLEUS][peak][det]->Draw("HIST SAME");
+
+                // write chi2 in txt on the canvas
+                TLatex *latex = new TLatex();
+                latex->SetNDC();
+                latex->SetTextSize(0.04);
+                latex->DrawLatex(0.1, 0.92, ("#chi^{2}_{#nu}: " + to_string(CHI2[NUCLEUS][peak][det])).c_str());
+                latex->Draw("SAME");
             }
             cExp_Sim1->Write();
 
@@ -831,6 +863,13 @@ void WriteHistograms()
             {
                 H_Sim_Conv[NUCLEUS][peak][det]->SetLineColor(kRed);
                 H_Sim_Conv[NUCLEUS][peak][det]->Draw("HIST SAME");
+
+                // write chi2 in txt on the canvas
+                TLatex *latex = new TLatex();
+                latex->SetNDC();
+                latex->SetTextSize(0.04);
+                latex->DrawLatex(0.1, 0.92, ("#chi^{2}_{#nu}: " + to_string(CHI2[NUCLEUS][peak][det])).c_str());
+                latex->Draw("SAME");
             }
         }
     }
@@ -858,6 +897,12 @@ void WriteHistograms()
         // H_Sim[NUCLEUS][peak]->Draw("HIST SAME");
         H_Sim_Conv[NUCLEUS][peak][det]->SetLineColor(kRed);
         H_Sim_Conv[NUCLEUS][peak][det]->Draw("HIST SAME");
+        // write chi2 in txt on the canvas
+        TLatex *latex1 = new TLatex();
+        latex1->SetNDC();
+        latex1->SetTextSize(0.04);
+        latex1->DrawLatex(0.1, 0.92, ("#chi^{2}_{#nu}: " + to_string(CHI2[NUCLEUS][peak][det])).c_str());
+        latex1->Draw("SAME");
         cExp_Sim1->Write();
 
         cExp_Sim_all->cd(det);
@@ -865,6 +910,12 @@ void WriteHistograms()
         H_SiPM_Calibrated[NUCLEUS][peak][det]->Draw("HIST");
         H_Sim_Conv[NUCLEUS][peak][det]->SetLineColor(kRed);
         H_Sim_Conv[NUCLEUS][peak][det]->Draw("HIST SAME");
+        // write chi2 in txt on the canvas
+        TLatex *latex = new TLatex();
+        latex->SetNDC();
+        latex->SetTextSize(0.04);
+        latex->DrawLatex(0.1, 0.92, ("#chi^{2}_{#nu}: " + to_string(CHI2[NUCLEUS][peak][det])).c_str());
+        latex->Draw("SAME");
     }
     cExp_Sim_all->Write();
 
@@ -884,6 +935,12 @@ void WriteHistograms()
         // H_Sim[NUCLEUS][peak]->Draw("HIST SAME");
         H_Sim_Conv[NUCLEUS][peak][det]->SetLineColor(kRed);
         H_Sim_Conv[NUCLEUS][peak][det]->Draw("HIST SAME");
+        // write chi2 in txt on the canvas
+        TLatex *latex1= new TLatex();
+        latex1->SetNDC();
+        latex1->SetTextSize(0.04);
+        latex1->DrawLatex(0.1, 0.92, ("#chi^{2}_{#nu}: " + to_string(CHI2[NUCLEUS][peak][det])).c_str());
+        latex1->Draw("SAME");
         cExp_Sim1->Write();
 
         cExp_Sim_all_90Sr->cd(det);
@@ -891,6 +948,12 @@ void WriteHistograms()
         H_SiPM_Calibrated[NUCLEUS][peak][det]->Draw("HIST");
         H_Sim_Conv[NUCLEUS][peak][det]->SetLineColor(kRed);
         H_Sim_Conv[NUCLEUS][peak][det]->Draw("HIST SAME");
+        // write chi2 in txt on the canvas
+        TLatex *latex = new TLatex();
+        latex->SetNDC();
+        latex->SetTextSize(0.04);
+        latex->DrawLatex(0.1, 0.92, ("#chi^{2}_{#nu}: " + to_string(CHI2[NUCLEUS][peak][det])).c_str());
+        latex->Draw("SAME");
     }
     cExp_Sim_all_90Sr->Write();
 }
@@ -900,7 +963,7 @@ void InitSiliconCalibration(string addpath = "")
 
     string CalibFileName;
 
-    CalibFileName = addpath+"./Config_Files/Calibration.txt";
+    CalibFileName = addpath + "./Config_Files/Calibration.txt";
 
     ifstream file(CalibFileName);
 
@@ -936,8 +999,5 @@ void InitSiliconCalibration(string addpath = "")
         }
     }
 }
-
-
-
 
 #endif
