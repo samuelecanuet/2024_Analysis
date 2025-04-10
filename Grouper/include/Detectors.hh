@@ -71,23 +71,26 @@ using namespace std;
 using namespace ROOT::Math;
 
 /// FOLDERS ///
-string DIR_FAST_DATA = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/DATA/";
-string DIR_ROOT_DATA = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ROOT/";
-string DIR_ROOT_DATA_GROUPED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/GROUPED/";
-string DIR_ROOT_DATA_CLEANED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
-string DIR_ROOT_DATA_MATCHED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
-string DIR_ROOT_DATA_MERGED  = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
-string DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ANALYSED/";
-string DIR_ROOT_DATA_CALIBRATED  = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
-string DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/RATE/";
-string DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
-string DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
-string DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
+string DIR_FAST_DATA;
+string DIR_ROOT_DATA;
+string DIR_ROOT_DATA_GROUPED;
+string DIR_ROOT_DATA_CLEANED;
+string DIR_ROOT_DATA_MATCHED;
+string DIR_ROOT_DATA_MERGED;
+string DIR_ROOT_DATA_ANALYSED;
+string DIR_ROOT_DATA_CALIBRATED;
+string DIR_ROOT_DATA_MCP;
+string DIR_ROOT_DATA_RATE;
+string DIR_ROOT_DATA_SIMULATED;
+string DIR_DATA_ISOLDE;
+string DIR_DATA_HDD;
 ///////////////
 
 
 // 
 bool FLAG2021 = false;
+bool FLAG2024 = true;
+bool FLAG2025 = false;
 // 
 
 string detectorFileName; ///< Detectors definition file name
@@ -462,6 +465,59 @@ inline void InitDetectors(const string &fname, int year = 2024)
   }
 
   detectorName[100] = "SimSiPM";
+
+
+  // INIT PATHS
+  if (FLAG2025)
+  {
+    DIR_FAST_DATA = "/run/media/local1/Disque_Dur/2025_DATA/DETECTOR_DATA/DATA/";
+    DIR_ROOT_DATA = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/ROOT/";
+    DIR_ROOT_DATA_GROUPED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/GROUPED/";
+    DIR_ROOT_DATA_CLEANED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/CLEANED/";
+    DIR_ROOT_DATA_MATCHED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/MATCHED/";
+    DIR_ROOT_DATA_MERGED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/MERGED/";
+    DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/ANALYSED/";
+    DIR_ROOT_DATA_CALIBRATED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/CALIBRATED/";
+    DIR_ROOT_DATA_MCP = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/";
+    DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/RATE/";
+    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2025_DATA/SIMULATED_DATA/";
+    DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2025_DATA/ISOLDE_DATA/";
+    DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2025_DATA/DETECTOR_DATA/";
+  }
+  else if (FLAG2024)
+  {
+    DIR_FAST_DATA = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/DATA/";
+    DIR_ROOT_DATA = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ROOT/";
+    DIR_ROOT_DATA_GROUPED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/GROUPED/";
+    DIR_ROOT_DATA_CLEANED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
+    DIR_ROOT_DATA_MATCHED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
+    DIR_ROOT_DATA_MERGED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
+    DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ANALYSED/";
+    DIR_ROOT_DATA_CALIBRATED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
+    DIR_ROOT_DATA_MCP = "/mnt/hgfs/shared-2/2024_DATA/MCP_DATA/";
+    DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/RATE/";
+    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
+    DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
+    DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
+  }
+  else if (FLAG2021)
+  {
+    DIR_FAST_DATA = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/DATA/";
+    DIR_ROOT_DATA = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ROOT/";
+    DIR_ROOT_DATA_GROUPED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/GROUPED/";
+    DIR_ROOT_DATA_CLEANED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
+    DIR_ROOT_DATA_MATCHED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
+    DIR_ROOT_DATA_MERGED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
+    DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ANALYSED/";
+    DIR_ROOT_DATA_CALIBRATED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
+    DIR_ROOT_DATA_MCP = "/mnt/hgfs/shared-2/2024_DATA/MCP_DATA/";
+    DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/RATE/";
+    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
+    DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
+    DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
+  }
+
+
 }
 
 

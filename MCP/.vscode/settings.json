@@ -59,6 +59,7 @@
         "typeinfo": "cpp",
         "cutter.C": "cpp",
         "Plotting_function.C": "cpp",
-        "Plotting_points.C": "cpp"
+        "Plotting_points.C": "cpp",
+        ".Plotting_points.C": "cpp"
     }
 }

@@ -2,10 +2,11 @@
 default_random_engine generator;
 int main()
 {
+    InitDetectors("../Grouper/Config_Files/sample.pid");
     // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/24-02/207Bi_thin";
-    // string name = "/run/media/local1/Disque_Dur/2024_DATA/SIMULATED_DATA/02-24/32Ar_full_CS0_CSP0_CV1_CVP1";
-    //  string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/Time_test_2";
-         string name = "/run/media/local1/Disque_Dur/2024_DATA/SIMULATED_DATA/03-09/32Ar_inter02000150_a1_b0";
+    // string name = "/run/media/local1/Disque_Dur/2024_DATA/SIMULATED_DATA/03-17/207Bi_100um_CS0_CSP0_CV1_CVP1"; 
+    // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/Time_test_2";
+    string name = DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_thick_CS0_CSP0_CV1_CVP1";
 
     
     // name = "241Am_700nm_width";
@@ -64,7 +65,7 @@ int main()
     // InitElectronicResolution();
 
     Info("Starting Loop");
-    while (Reader->Next() && Reader->GetCurrentEntry() < 45000000)
+    while (Reader->Next())
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
 
@@ -199,18 +200,19 @@ int main()
         }
 
         // counting if x strips triggered
-        // int counter_strip_trigger = 0;
-        // for (int i = 0; i < SIGNAL_MAX; i++)
-        // {
-        //     if (IsDetectorSiliStrip(i))
-        //     {
-        //         if (Full_energy[i] > 400)
-        //         {
-        //             counter_strip_trigger++;
-        //         }
-        //     }
-        // }
+        int counter_strip_trigger = 0;
+        for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            if (IsDetectorSiliStrip(i))
+            {
+                if (Full_energy[i] > 400)
+                {
+                    counter_strip_trigger++;
+                }
+            }
+        }
 
+    
         // filling energy deposit by all particle 
 
         // calculating "rear" energy
@@ -228,13 +230,14 @@ int main()
         {
             if (IsDetectorSiliStrip(i))
             {
-                if (Full_energy[i] >= 0)
+                if (Full_energy[i] > 0)
                 {
                     H_Silicon_Detector_Energy_Deposit_Det[0][i]->Fill(Full_energy[i]); 
                     H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[0][i]->Fill(Full_energy_without_interstrip[i]);   
                     H_Silicon_Detector_Energy_Deposit_Det_Rear[0][i]->Fill(RearEnergy[GetDetector(i)], Full_energy[i]);
                     e = Full_energy[i];
-                    OutTree[i]->Fill();
+                    if (counter_strip_trigger == 1)
+                        OutTree[i]->Fill();
                     
 
                     //plastic scintillator tree

@@ -1,5 +1,8 @@
 ////// README FOR PLOTTING ////////
 
+A) Use the GUI to generate the guess corner txt file
+B) Fitting:
+
 - analysis explain in google slides
 - use Calibration.xx (writting true)
 - running with Calibration 1 2 3 4 5 6 7 8 9 (par of fit if not fixed and thread where chi2 written)

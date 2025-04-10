@@ -18,11 +18,11 @@ EXE       = Calibration
 all : $(EXE)
 
 $(EXE): $(OBJS)
-	${CC} -std=c++17 ${CFLAGS} ${LIBS} obj/$@.o -o $@
+	${CC} -std=c++17 obj/$@.o -o $@ ${CFLAGS} ${LIBS}
 
 obj/%.o: src/%.c++ include/%.hh
 	@mkdir -p obj
-	${CC} -std=c++17 -c ${CFLAGS} $< -o $@
+	${CC} -std=c++17 -c $< -o $@ ${CFLAGS}
 
 clean :
 	rm -f obj/*.o

@@ -5,7 +5,7 @@
 #include "Detectors.hh"
 
 default_random_engine generator;
-
+int VERBOSE = 0;
 /// FILE ///
 string MERGED_filename;
 string MERGED_basefilename;
@@ -22,7 +22,7 @@ double Channel;
 
 // CALIBRATION PEAKS
 map<string, vector<int>> CalibrationPeaks;
-string Nuclei[2] = {"32Ar", "32Ar_thick"};//"33Ar"};
+vector<string> Nuclei = {"32Ar", "32Ar_thick", "33Ar"};
 bool Resolution_applied = false;
 
 // HISTOGRAMS
@@ -48,7 +48,7 @@ TGraphErrors *G_Mean[SIGNAL_MAX];
 TGraphErrors *G_Chi2[SIGNAL_MAX];
 // Function
 TF1 *Calibration_Function[SIGNAL_MAX];
-TF1 *Background_function[SIGNAL_MAX];
+map<string, TF1 *[SIGNAL_MAX]>Background_function;
 TF1 *Threshold_function[SIGNAL_MAX];
 TF1 *Alpha1_function;
 TF1 *Alpha2_function;
@@ -74,6 +74,8 @@ pair<double, double> ManualCalibLinear[SIGNAL_MAX];
 vector<double> ManualCalibFitted[SIGNAL_MAX];
 vector<double> ManualCalibFitted_Alpha[SIGNAL_MAX];
 double Detector_Resolution[SIGNAL_MAX];
+double PileUp_Sigma;
+double PileUp_Probability[10];
 
 map<string, pair<double, double>[100][SIGNAL_MAX]> WindowsMap;
 map<string, pair<int, int>> CanvasMap;
@@ -297,6 +299,16 @@ void InitElectronicResolution()
     file.close();
 }
 
+void InitPileUp()
+{     
+    PileUp_Sigma = 20;
+    PileUp_Probability[1] = 0.025;
+    PileUp_Probability[2] = 0.020;
+    PileUp_Probability[3] = 0.020;
+    PileUp_Probability[4] = 0.015;
+    PileUp_Probability[5] = 0.01;                                 
+}
+
 void InitEnergyErrors()
 {
 
@@ -350,23 +362,25 @@ void FillingSimHitograms()
     ScalerPeak["18N"] = 1;
 
     CalibrationPeaks["32Ar"] =  {5, 8, 9, 14, 23, 25, 28, 29, 30};
-    CalibrationPeaks["32Ar_thick"] = {};//{5, 8, 14};
+    CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
     CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
 
     for (auto &pair : SIMULATED_File)
     {
+        Info("Nucleus : " + pair.first, 1);
         for (int i = 0; i < detectorNum; i++)
         {
+            
             if (IsDetectorSiliStrip(i))
             {
+                if (VERBOSE  == 1) Info("Detector : " + detectorName[i], 2);
 
-                string h_name = detectorName[i] + "_single";
-
-                if (pair.first != "18N")
-                {
-                    h_name = "p/Silicon_Detector/D." + to_string(GetDetector(i)) + "/Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_p";
-                    h_name = "Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_All";
-                }
+                string h_name = "Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_All";
+                // if (pair.first != "18N")
+                // {
+                //     h_name = "p/Silicon_Detector/D." + to_string(GetDetector(i)) + "/Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_p";
+                //     
+                // }
                 H_Sim[pair.first][i] = (TH1D *)pair.second->Get((h_name).c_str());
                 H_Sim[pair.first][i]->SetName(("H_Sim_" + detectorName[i]).c_str());
                 H_Sim[pair.first][i]->SetTitle(("H_Sim_" + detectorName[i]).c_str());
@@ -374,16 +388,15 @@ void FillingSimHitograms()
                 H_Sim[pair.first][i]->GetYaxis()->SetTitle("Counts");
                 H_Sim[pair.first][i]->GetXaxis()->CenterTitle();
                 H_Sim[pair.first][i]->GetYaxis()->CenterTitle();
-
                 for (int j = 0; j < detectorNum; j++)
                 {
-                    string h_name = detectorName[i] + "_single";
+                    string h_name = "Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_All";
 
-                    if (pair.first != "18N")
-                    {
-                        h_name = "p/Silicon_Detector/D." + to_string(GetDetector(i)) + "/Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_p";
-                        h_name = "Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_All";
-                    }
+                    // if (pair.first != "18N")
+                    // {
+                    //     h_name = "p/Silicon_Detector/D." + to_string(GetDetector(i)) + "/Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_p";
+                    //     h_name = "Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_All";
+                    // }
                     if ((GetDetector(i) != GetDetector(j)) && (GetDetectorChannel(i) == GetDetectorChannel(j)) && IsDetectorSiliStrip(j))
                     {
                         if (GetDetector(i) <= 4 && GetDetector(j) <= 4)
@@ -392,23 +405,9 @@ void FillingSimHitograms()
                             H_Sim[pair.first][i]->Add((TH1D *)pair.second->Get((h_name).c_str()));
                     }
                 }
-
-                if (pair.first == "18N")
-                {
-                    H_Sim[pair.first][i]->Rebin(10);
-                }
             }
         }
     }
-
-    // for (int i = 0; i < detectorNum; i++)
-    //     {
-    //         if (IsDetectorSiliStrip(i))
-    //         {
-    //             string h_name = "Silicon_Detector_Energy_Deposit_" + detectorName[i] + "_All";
-    //             H_Sim["32Ar"][i]->Add((TH1D *)CRADLE_File->Get((h_name).c_str()));
-    //         }
-    //     }
 }
 
 void WriteCalibInFile()
@@ -455,10 +454,11 @@ TF1*InvertFunction(TF1 *f)
     else
     {
         Error("Function not implemented : Degree = " + to_string(f->GetNpar()-1));
+        return nullptr;
     }
 
 }
-TH1D *RemoveBKG(TH1D *H, bool finished)
+TH1D *RemoveBKG(TH1D *H, bool finished, string NUCLEUS)
 {
     double MINIMUM = 0;
     double MAXIMUM = 0;
@@ -507,31 +507,31 @@ TH1D *RemoveBKG(TH1D *H, bool finished)
     }
 
     // BKG_function->SetParameters(1000, (Mean_A1_low+Mean_A1_high)/2, 25/coef, 500, (Mean_A2_low+Mean_A2_high)/2, 25/coef, 1000, -3e-3*coef, 500., 25.);
-    BKG_function->SetParLimits(0, 5, 30000);
+    BKG_function->SetParLimits(0, 5, 30000);                                // ALPHA1 - AMPLITUDE
     BKG_function->SetParameter(0, 1000);
-    BKG_function->SetParLimits(1, Mean_A1_low, Mean_A1_high);
+    BKG_function->SetParLimits(1, Mean_A1_low, Mean_A1_high);               // ALPHA1 - MEAN
     BKG_function->SetParameter(1, (Mean_A1_low + Mean_A1_high) / 2);
-    BKG_function->SetParLimits(2, 5 / coef, 100 / coef);
+    BKG_function->SetParLimits(2, 5 / coef, 100 / coef);                    // ALPHA1 - SIGMA
     BKG_function->SetParameter(2, 25 / coef);
-    BKG_function->SetParLimits(3, 5, 30000);
+    BKG_function->SetParLimits(3, 5, 30000);                                // ALPHA2 - AMPLITUDE
     BKG_function->SetParameter(3, 500);
-    BKG_function->SetParLimits(4, Mean_A2_low, Mean_A2_high);
+    BKG_function->SetParLimits(4, Mean_A2_low, Mean_A2_high);               // ALPHA2 - MEAN
     BKG_function->SetParameter(4, (Mean_A2_low + Mean_A2_high) / 2);
-    BKG_function->SetParLimits(5, 5 / coef, 75 / coef);
+    BKG_function->SetParLimits(5, 5 / coef, 75 / coef);                     // ALPHA2 - SIGMA
     BKG_function->SetParameter(5, 25 / coef);
-    BKG_function->SetParLimits(6, 5, 15000);
+    BKG_function->SetParLimits(6, 5, 15000);                                // EXP - AMPLITUDE
     BKG_function->SetParameter(6, 1000);
-    BKG_function->SetParLimits(7, -1e-2 * coef, 0);
+    BKG_function->SetParLimits(7, -1e-2 * coef, 0);                         // EXP - SLOPE
     BKG_function->SetParameter(7, -3e-3 * coef);
-    BKG_function->SetParLimits(8, (400 - offset) / coef, (Mean_A1_low + Mean_A1_high) / 2);
+    BKG_function->SetParLimits(8, (400 - offset) / coef, (Mean_A1_low + Mean_A1_high) / 2);     // THRESHOLD - MEAN
     BKG_function->SetParameter(8, 500);
-    BKG_function->SetParLimits(9, 5 / coef, 100 / coef);
+    BKG_function->SetParLimits(9, 5 / coef, 100 / coef);                    // THRESHOLD - SIGMA
     BKG_function->SetParameter(9, 25);
-    BKG_function->SetParLimits(10, 5, 30000);
+    BKG_function->SetParLimits(10, 5, 30000);                               // ALPHA3 - AMPLITUDE
     BKG_function->SetParameter(10, 2000);
-    BKG_function->SetParLimits(11, 1800, 2500);
+    BKG_function->SetParLimits(11, 1800, 2500);                             // ALPHA3 - MEAN
     BKG_function->SetParameter(11, 1900);
-    BKG_function->SetParLimits(12, 50, 500);
+    BKG_function->SetParLimits(12, 50, 500);                                // ALPHA3 - SIGMA
     BKG_function->SetParameter(12, 250);
 
     Selection->Fit("BKG_function", "QRN", "", (400 - offset) / coef, (1900 - offset) / coef);
@@ -548,11 +548,11 @@ TH1D *RemoveBKG(TH1D *H, bool finished)
     Alpha3_function = new TF1("Alpha3_function", "gaus(0)", MINIMUM, MAXIMUM);
     Alpha3_function->SetParameters(BKG_function->GetParameter(10), BKG_function->GetParameter(11), BKG_function->GetParameter(12));
 
-    Background_function[current_detector] = new TF1(("BKG_function_sub_" + detectorName[current_detector]).c_str(), "[0]*exp([1] * x) * 0.5 * erfc((x-[2])/[3])", MINIMUM, MAXIMUM);
-    Background_function[current_detector]->SetNpx(N);
+    Background_function[NUCLEUS][current_detector] = new TF1(("BKG_function_sub_" + detectorName[current_detector]).c_str(), "[0]*exp([1] * x) * 0.5 * erfc((x-[2])/[3])", MINIMUM, MAXIMUM);
+    Background_function[NUCLEUS][current_detector]->SetNpx(N);
     double mean_erfc = ManualCalibFitted[current_detector][0] + ManualCalibFitted[current_detector][1] * 24.1198 * 1.02 + ManualCalibFitted[current_detector][2] * 24.1198 * 24.1198 * 1.02 * 1.02;
     double sigma_erfc = ManualCalibFitted[current_detector][0] + ManualCalibFitted[current_detector][1] * 3.821 + ManualCalibFitted[current_detector][2] * 3.821 * 3.821;
-    Background_function[current_detector]->SetParameters(BKG_function->GetParameter(6), BKG_function->GetParameter(7), mean_erfc, sigma_erfc);
+    Background_function[NUCLEUS][current_detector]->SetParameters(BKG_function->GetParameter(6), BKG_function->GetParameter(7), mean_erfc, sigma_erfc);
     Threshold_function[current_detector] = new TF1(("Threshold_function_" + detectorName[current_detector]).c_str(), "0.5*(1+TMath::Erf((x-[0])/[1]))", MINIMUM, MAXIMUM);
     Threshold_function[current_detector]->SetNpx(N);
     Threshold_function[current_detector]->SetParameters(BKG_function->GetParameter(8), BKG_function->GetParameter(9));
@@ -612,192 +612,116 @@ TH1D *RemoveBKG(TH1D *H, bool finished)
 void ApplyCalibration(int verbose = 0)
 {
     if (verbose == 1) Info("Applying Calibration", 1);
-    
-    plotting = true;
-    /// 32Ar
-    NUCLEUS = "32Ar";
-    H_Sim_Conv[NUCLEUS][current_detector] = (TH1D *)H_Sim["32Ar"][current_detector]->Clone();
-    H_Sim_Conv[NUCLEUS][current_detector]->Reset();
-    Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
-    Reader->Restart();
 
-    H_Exp[NUCLEUS][current_detector]->Reset();
-    TTreeReaderValue<double> ChannelDet(*Reader, "Channel");
-    while (Reader->Next())
+    // LOOP ON NUCLEUS //
+    for (string NUCLEUS: Nuclei)
     {
-        double value = *ChannelDet / 1000;
-        H_Exp[NUCLEUS][current_detector]->Fill(Calibration_Function[current_detector]->Eval(value));
+        if (verbose == 1) Info("NUCLEUS : " + NUCLEUS, 1);
+
+        Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
+        Reader->Restart();
+        H_Exp[NUCLEUS][current_detector]->Reset();
+        TTreeReaderValue<double> ChannelDet(*Reader, "Channel");
+        while (Reader->Next())
+        {
+            double value = *ChannelDet / 1000;
+            H_Exp[NUCLEUS][current_detector]->Fill(Calibration_Function[current_detector]->Eval(value));
+        }
     }
-
-    if (verbose == 1) Info("Applying Calibration -- 1", 1);
-    
-
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
-
-    /// 32Ar_thick
-    NUCLEUS = "32Ar_thick";
-    H_Sim_Conv[NUCLEUS][current_detector] = (TH1D *)H_Sim["32Ar_thick"][current_detector]->Clone();
-    H_Sim_Conv[NUCLEUS][current_detector]->Reset();
-    Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
-    Reader->Restart();
-    TTreeReaderValue<double> ChannelDet32Ar_thick(*Reader, "Channel");
-    H_Exp["32Ar_thick"][current_detector]->Reset();
-    while (Reader->Next())
-    {
-        double value = *ChannelDet32Ar_thick / 1000;
-        H_Exp["32Ar_thick"][current_detector]->Fill(Calibration_Function[current_detector]->Eval(value));
-    }
-
-    if (verbose == 1) Info("Applying Calibration -- 2", 1);
-
-    /// 33Ar
-    // NUCLEUS = "33Ar";
-    // H_Sim_Conv[NUCLEUS][current_detector] = (TH1D *)H_Sim["33Ar"][current_detector]->Clone();
-    // H_Sim_Conv[NUCLEUS][current_detector]->Reset();
-    // Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
-    // Reader->Restart();
-    // TTreeReaderValue<double> ChannelDet33(*Reader, "Channel");
-    // H_Exp["33Ar"][current_detector]->Reset();
-    // while (Reader->Next())
-    // {
-    //     double value = *ChannelDet33 / 1000;
-    //     H_Exp["33Ar"][current_detector]->Fill(Calibration_Function[current_detector]->Eval(value));
-    // }
-
-    if (verbose == 1) Info("Applying Calibration -- 3", 1);
 }
 
 double FunctionToMinimize(const double *par)
 {
-    NUCLEUS = "32Ar";
+    double chi2 = 0;
+    // LOOP ON NUCLEUS
+    for (string NUCLEUS: Nuclei)
+    {
+        if (VERBOSE == 1) Info("NUCLEUS : " + NUCLEUS, 1);
+        // ### CONVOLUTION OF THE SIMULATED SPECTRUM ### //
+        if (VERBOSE == 1) Info("CONVOLUTION OF THE SIMULATED SPECTRUM", 2);
 
-    // H_Sim_Conv[NUCLEUS][current_detector]->Reset();
-    // for (int i = 0; i < H_Sim["32Ar"][current_detector]->GetNbinsX(); i++)
-    // {
-    //     double value = H_Sim["32Ar"][current_detector]->GetBinCenter(i);
-    //     TF1 *g_res = new TF1(to_string(i).c_str(), "gaus(0)", 0, 10000);
-    //     double sigma = par[0] + par[1] * sqrt(value);
-    //     g_res->SetParameters(1 / (sigma * sqrt(2 * M_PI)), value, sigma);
-    //     for (int j = i-100; j < i+100; j++)
-    //     {
-    //         if (j < 0 || j > H_Sim["32Ar"][current_detector]->GetNbinsX())
-    //         {
-    //             continue;
-    //         }
-    //         if (H_Sim["32Ar"][current_detector]->GetBinContent(i) != 0)
-    //             H_Sim_Conv[NUCLEUS][current_detector]->SetBinContent(j, H_Sim_Conv[NUCLEUS][current_detector]->GetBinContent(j) + g_res->Eval(H_Sim_Conv[NUCLEUS][current_detector]->GetBinCenter(j))*H_Sim["32Ar"][current_detector]->GetBinContent(i));
-    //     }
-    // }
+        // Resetting histograms
+        H_Sim_Conv[NUCLEUS][current_detector] = (TH1D *)H_Sim[NUCLEUS][current_detector]->Clone();
+        H_Sim_Conv[NUCLEUS][current_detector]->Reset();
+
+        // Tree Method
+        for (int det = 1 ; det <= 4; det++)
+        {
+            int detector = det;
+            if (current_detector > 50) detector += 4;
+            int detector_number = detector * 10 + GetDetectorChannel(current_detector);
+            TTree *SIMULATED_Tree_Detectors = (TTree*)SIMULATED_File[NUCLEUS]->Get(("Tree_" + detectorName[detector_number]).c_str());
+            Reader = new TTreeReader(SIMULATED_Tree_Detectors);
+            TTreeReaderValue<double> Simulated_Energy(*Reader, "Energy");
+            Reader->Restart();
+            int Entries = SIMULATED_Tree_Detectors->GetEntries();
+            clock_t start = clock(), Current;
+            while(Reader->Next())
+            {
+                ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Progress: ");
+                normal_distribution<double> distribution(*Simulated_Energy, par[0] + par[1]* sqrt(*Simulated_Energy));
+                double pileup = 0;
+                double probability = PileUp_Probability[GetDetectorChannel(current_detector)];
+                if (GetDetector(current_detector) <= 4)
+                {
+                    probability = PileUp_Probability[GetDetectorChannel(current_detector)] / 10 ;
+                }
+                if (gRandom->Uniform() < probability)
+                {
+                    pileup = gRandom->Gaus(0, PileUp_Sigma);
+                }
+                H_Sim_Conv[NUCLEUS][current_detector]->Fill(distribution(generator) + pileup);
+            }
+        }
+
+        // Hist Method
+        // for (int i = 0; i < H_Sim[NUCLEUS][current_detector]->GetEntries(); i++)
+        // {
+        //     double Simulated_Energy = H_Sim[NUCLEUS][current_detector]->GetRandom();
+        //     normal_distribution<double> distribution(Simulated_Energy, par[0] + par[1]* sqrt(Simulated_Energy));
+        //     double pileup = 0;
+        //     double probability = PileUp_Probability[GetDetectorChannel(current_detector)];
+        //     if (GetDetector(current_detector) <= 4)
+        //     {
+        //         probability = PileUp_Probability[GetDetectorChannel(current_detector)] / 10 ;
+        //     }
+        //     if (gRandom->Uniform() < probability)
+        //     {
+        //         pileup = gRandom->Gaus(0, PileUp_Sigma);
+        //     }
+        //     H_Sim_Conv[NUCLEUS][current_detector]->Fill(distribution(generator) + pileup);
+        // }
+        
+
+        // ### SCALING OF THE SIMULATED SPECTRUM ### //
+        if (VERBOSE == 1) Info("SCALING OF THE SIMULATED SPECTRUM", 2);
+
+        H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].first, WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].second);
+        H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].first, WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].second);
+        H_Sim_Conv[NUCLEUS][current_detector]->Scale(H_Exp[NUCLEUS][current_detector]->GetMaximum() / H_Sim_Conv[NUCLEUS][current_detector]->GetMaximum());
+
+        // Adding Beta Background
+        if (NUCLEUS == "32Ar")
+        {
+            H_Sim_Conv[NUCLEUS][current_detector]->Add((TH1D *)Background_function[NUCLEUS][current_detector]->GetHistogram(), 1);
+        }
+
+        // ### CHI2 CALCULATION ### //
+        if (VERBOSE == 1) Info("CHI2 CALCULATION", 2);
+
+        H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].first, WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].second);
+        H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].first, WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].second);
+        chi2 += H_Exp[NUCLEUS][current_detector]->Chi2Test(H_Sim_Conv[NUCLEUS][current_detector], "UU CHI2/NDF NORM");
+        H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
+        H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
+
+        dir_nuclei_detector[NUCLEUS][current_detector]->cd();
+        H_Exp[NUCLEUS][current_detector]->Write();
+        H_Sim_Conv[NUCLEUS][current_detector]->Write();
     
-
-    // Reader = new TTreeReader(SIMULATED_Tree_Detectors[NUCLEUS][current_detector]);
-    // Reader->Restart();
-    // while(Reader->Next())
-    // {
-    //     normal_distribution<double> distribution(Simulated_energy, par[0] + par[1]* sqrt(Simulated_energy));
-    //     H_Sim_Conv[NUCLEUS][current_detector]->Fill(par[0] + par[1] * (**Simulated_energy) / 1000);
-    // }
-
-    TH1D *H = (TH1D *)H_Sim["32Ar"][current_detector]->Clone();
-    H->Reset();
-    for (int i = 0; i < H_Sim["32Ar"][current_detector]->GetEntries(); i++)
-    {
-        double value = H_Sim["32Ar"][current_detector]->GetRandom();
-        normal_distribution<double> distribution(value, par[0] + par[1] * sqrt(value));
-        H->Fill(distribution(generator));
     }
-
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].first, WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].second);
-    H->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].first, WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].second);
-    H->Scale(H_Exp[NUCLEUS][current_detector]->GetMaximum() / H->GetMaximum());
-    H_Sim_Conv[NUCLEUS][current_detector] = H;
-
-     TH1D *h = (TH1D *)Background_function[current_detector]->GetHistogram();
-    H_Sim_Conv[NUCLEUS][current_detector]->Add(h, 1);
-    // H_Exp[NUCLEUS][current_detector]->Add(h, -1);
-
-    // 32Ar_thick
-    NUCLEUS = "32Ar_thick";
-
-    TH1D *H32Ar_thick = (TH1D *)H_Sim["32Ar_thick"][current_detector]->Clone();
-    H32Ar_thick->Reset();
-    for (int i = 0; i < H_Sim["32Ar_thick"][current_detector]->GetEntries(); i++)
-    {
-        double value = H_Sim["32Ar_thick"][current_detector]->GetRandom();
-        normal_distribution<double> distribution(value, par[0] + par[1] * sqrt(value));
-        H32Ar_thick->Fill(distribution(generator));
-    }
-
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].first, WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].second);
-    H32Ar_thick->GetXaxis()->SetRangeUser(WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].first, WindowsMap["32Ar_thick"][ScalerPeak["32Ar_thick"]][current_detector].second);
-    H32Ar_thick->Scale(H_Exp[NUCLEUS][current_detector]->Integral() / H32Ar_thick->Integral());
-    H_Sim_Conv[NUCLEUS][current_detector] = H32Ar_thick;
-
-    // NUCLEUS = "33Ar";
-    // TH1D *H33Ar = (TH1D *)H_Sim["33Ar"][current_detector]->Clone();
-    // H33Ar->Reset();
-    // for (int i = 0; i < H_Sim["33Ar"][current_detector]->GetEntries(); i++)
-    // {
-    //     double value = H_Sim["33Ar"][current_detector]->GetRandom();
-    //     normal_distribution<double> distribution(value, par[0] + par[1] * sqrt(value));
-    //     H33Ar->Fill(distribution(generator));
-    // }
-
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].first, WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].second);
-    // H33Ar->GetXaxis()->SetRangeUser(WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].first, WindowsMap["33Ar"][ScalerPeak["33Ar"]][current_detector].second);
-    // H33Ar->Scale(H_Exp[NUCLEUS][current_detector]->GetMaximum() / H33Ar->GetMaximum());
-    // H_Sim_Conv[NUCLEUS][current_detector] = H33Ar;
-
-    //////////////////////////
-    // H_Sim_Conv[NUCLEUS][current_detector]->Write();
-
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(1900, 6000);
-    // H_Sim[current_detector]->GetXaxis()->SetRangeUser(1900, 6000);
-    // double offset = H_Exp[NUCLEUS][current_detector]->GetBinCenter(H_Exp[NUCLEUS][current_detector]->GetMaximumBin()) - H_Sim[current_detector]->GetBinCenter(H_Sim[current_detector]->GetMaximumBin());
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
-    // H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
-
-    // Reader->Restart();
-    // H_Exp[NUCLEUS][current_detector]->Reset();
-    // while (Reader->Next())
-    // {
-    //     H_Exp[NUCLEUS][current_detector]->Fill(-offset + *ChannelDet / 1000 * par[0]);
-    // }
-
-    // H_Exp[NUCLEUS][current_detector] = RemoveBKG(H_Exp[NUCLEUS][current_detector], par, plotting);
-
-    // for (int bin = 0; bin < H_Exp[NUCLEUS][current_detector]->GetNbinsX(); bin++)
-    // {
-    //     if (H_Exp[NUCLEUS][current_detector]->GetBinContent(bin) <= 1)
-    //     {
-    //         H_Exp[NUCLEUS][current_detector]->SetBinContent(bin, 1);
-    //     }
-
-    //     if (H_Sim_Conv[NUCLEUS][current_detector]->GetBinContent(bin) == 0)
-    //     {
-    //         H_Sim_Conv[NUCLEUS][current_detector]->SetBinContent(bin, 1);
-    //     }
-    // }
-
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(1900, 6000);
-    // H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(1900, 6000);
-    // double chi2 = H_Exp[NUCLEUS][current_detector]->Chi2Test(H_Sim_Conv[NUCLEUS][current_detector], "CHI2/NDF");
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
-    // H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
+    
     //////////////////////
-    NUCLEUS = "32Ar";
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].first, WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].second);
-    H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].first, WindowsMap["32Ar"][ScalerPeak["32Ar"]][current_detector].second);
-    double chi2 = H_Exp[NUCLEUS][current_detector]->Chi2Test(H_Sim_Conv[NUCLEUS][current_detector], "UU CHI2/NDF NORM");
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
-    H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
-
-    // NUCLEUS = "33Ar";
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(400, 6500);
-    // H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(400, 6500);
-    // chi2 += H_Exp[NUCLEUS][current_detector]->Chi2Test(H_Sim_Conv[NUCLEUS][current_detector], "UW CHI2/NDF");
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
-    // H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(-1111, -1111);
 
     cout << "CHI2 : " << chi2;
     cout << setprecision(5) << "    PAR : " << par[0] << " " << par[1];
@@ -813,13 +737,6 @@ double FunctionToMinimize(const double *par)
     {
         cout << endl;
     }
-
-    dir_nuclei_detector["32Ar"][current_detector]->cd();
-    H_Exp["32Ar"][current_detector]->Write();
-    H_Sim_Conv["32Ar"][current_detector]->Write();
-    // dir_nuclei_detector["33Ar"][current_detector]->cd();
-    // H_Exp["33Ar"][current_detector]->Write();
-    // H_Sim_Conv["33Ar"][current_detector]->Write();
 
     return chi2;
 }
@@ -855,22 +772,22 @@ void CHI2Minimization()
     const double par2[2] = {offset, sqrt(3.6 * 1e-3 * 0.134)};
     FunctionToMinimize(par2);
     plotting = false;
+    NUCLEUS = "32Ar";
 
     ///// ALPHA BACKGROUND ///
-   
-
     /// 18N
-    TH1D *H_Exp_Without_Background = RemoveBKG(H_Exp["32Ar"][current_detector], true);
+    TH1D *H_Exp_Without_Background = RemoveBKG(H_Exp["32Ar"][current_detector], true, "32Ar");
+    // RemoveBKG(H_Exp["32Ar_thick"][current_detector], true, "32Ar_thick");
     if (SIMULATED_File["18N"])
     {
-        double alpha_res = 0.0;
+        double alpha_res = 0.021964;
         TH1D *H1 = (TH1D *)H_Sim["18N"][current_detector]->Clone();
         H1->Reset();
         for (int i = 0; i < H_Sim["18N"][current_detector]->GetEntries(); i++)
         {
             double value_corrected = (H_Sim["18N"][current_detector]->GetRandom() - ManualCalibFitted_Alpha[current_detector][0]) / ManualCalibFitted_Alpha[current_detector][1];
             double value = ManualCalibFitted[current_detector][0] + ManualCalibFitted[current_detector][1] * value_corrected + ManualCalibFitted[current_detector][2] * value_corrected * value_corrected;
-            normal_distribution<double> distribution(value, alpha_res * sqrt(value));
+            normal_distribution<double> distribution(value, 1.4969 + alpha_res * sqrt(value));
             H1->Fill(distribution(generator));
         }
 
@@ -878,7 +795,7 @@ void CHI2Minimization()
         TH1D *H11 = (TH1D *)H1->Clone();
         H_Exp_Without_Background->GetXaxis()->SetRangeUser(WindowsMap["18N"][1][current_detector].first, WindowsMap["18N"][1][current_detector].second);
         H11->GetXaxis()->SetRangeUser(WindowsMap["18N"][1][current_detector].first, WindowsMap["18N"][1][current_detector].second);
-        H11->Scale(H_Exp_Without_Background->GetMaximum() / H11->GetMaximum());
+        H11->Scale(0.016);
         for (int bin = 0; bin < H11->GetNbinsX(); bin++)
         {
             if (H11->GetBinCenter(bin) < WindowsMap["18N"][1][current_detector].first || H11->GetBinCenter(bin) > WindowsMap["18N"][1][current_detector].second)
@@ -891,7 +808,7 @@ void CHI2Minimization()
         TH1D *H12 = (TH1D *)H1->Clone();
         H_Exp_Without_Background->GetXaxis()->SetRangeUser(WindowsMap["18N"][2][current_detector].first, WindowsMap["18N"][2][current_detector].second);
         H12->GetXaxis()->SetRangeUser(WindowsMap["18N"][2][current_detector].first, WindowsMap["18N"][2][current_detector].second);
-        H12->Scale(H_Exp_Without_Background->GetMaximum() / H12->GetMaximum());
+        H12->Scale(0.016);
         for (int bin = 0; bin < H12->GetNbinsX(); bin++)
         {
             if (H12->GetBinCenter(bin) < WindowsMap["18N"][2][current_detector].first || H12->GetBinCenter(bin) > WindowsMap["18N"][2][current_detector].second)
@@ -927,7 +844,7 @@ void CHI2Minimization()
         }
 
         TH1D *H13 = (TH1D *)H1->Clone();
-        H13->Scale(0.6);
+        H13->Scale(0.016);
         for (int bin = 0; bin < H13->GetNbinsX(); bin++)
         {
             if (H13->GetBinCenter(bin) < WindowsMap["18N"][2][current_detector].second)
@@ -940,78 +857,47 @@ void CHI2Minimization()
         H_Sim_Conv[NUCLEUS][current_detector]->Add(H12, 1);
         H_Sim_Conv[NUCLEUS][current_detector]->Add(H13, 1);
     }
-    
 
-    /// apply thrshold
-    for (int bin = 0; bin < H_Exp[NUCLEUS][current_detector]->GetNbinsX(); bin++)
+    /// apply thrshold and plot the results
+    for (string NUCLEUS : Nuclei)
     {
-        H_Sim_Conv[NUCLEUS][current_detector]->SetBinContent(bin, H_Sim_Conv[NUCLEUS][current_detector]->GetBinContent(bin) * Threshold_function[current_detector]->Eval(H_Sim_Conv[NUCLEUS][current_detector]->GetBinCenter(bin)));
-        // if (H_Sim_Conv[NUCLEUS][current_detector]->GetBinContent(bin) < 1)
-        // {
-        //     H_Sim_Conv[NUCLEUS][current_detector]->SetBinContent(bin, 0);
-        // }
+        for (int bin = 0; bin < H_Exp[NUCLEUS][current_detector]->GetNbinsX(); bin++)
+        {
+            if (H_Sim_Conv[NUCLEUS][current_detector]->GetBinCenter(bin) < 800)
+            {
+                H_Sim_Conv[NUCLEUS][current_detector]->SetBinContent(bin, H_Sim_Conv[NUCLEUS][current_detector]->GetBinContent(bin) * Threshold_function[current_detector]->Eval(H_Sim_Conv[NUCLEUS][current_detector]->GetBinCenter(bin)));
+            }
+            if (H_Sim_Conv[NUCLEUS][current_detector]->GetBinContent(bin) < 0.1)
+            {
+                H_Sim_Conv[NUCLEUS][current_detector]->SetBinContent(bin, 0);
+            }
+        }
+
+        TCanvas *c1 = new TCanvas((detectorName[current_detector] + "_" + NUCLEUS).c_str(), (detectorName[current_detector] + "_" + NUCLEUS).c_str(), 1920, 1080);
+        c1->cd();
+        c1->SetLogy();
+        H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].first, WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].second);
+        H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].first, WindowsMap[NUCLEUS][ScalerPeak[NUCLEUS]][current_detector].second);
+        H_Sim_Conv[NUCLEUS][current_detector]->Scale(H_Exp[NUCLEUS][current_detector]->Integral() / H_Sim_Conv[NUCLEUS][current_detector]->Integral());
+        H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
+        H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
+
+        H_Exp[NUCLEUS][current_detector]->Draw("HIST");
+        H_Sim_Conv[NUCLEUS][current_detector]->SetLineColor(kRed);
+        H_Sim_Conv[NUCLEUS][current_detector]->Draw("HIST SAME");
+        dir_detector[current_detector]->cd();
+        c1->Write();
+
+        dir_nuclei_detector[NUCLEUS][current_detector]->cd();
+        H_Exp[NUCLEUS][current_detector]->Write();
+        H_Sim[NUCLEUS][current_detector]->Write();
     }
 
-    NUCLEUS = "32Ar";
-    TCanvas *c1 = new TCanvas((detectorName[current_detector] + "_" + NUCLEUS).c_str(), (detectorName[current_detector] + "_" + NUCLEUS).c_str(), 1920, 1080);
-    c1->cd();
-    c1->SetLogy();
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][14][current_detector].first, WindowsMap["32Ar"][14][current_detector].second);
-    H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][14][current_detector].first, WindowsMap["32Ar"][14][current_detector].second);
-    H_Sim_Conv[NUCLEUS][current_detector]->Scale(H_Exp[NUCLEUS][current_detector]->Integral() / H_Sim_Conv[NUCLEUS][current_detector]->Integral());
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
-    H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
-
-    H_Exp[NUCLEUS][current_detector]->Draw("HIST");
-    H_Sim_Conv[NUCLEUS][current_detector]->SetLineColor(kRed);
-    H_Sim_Conv[NUCLEUS][current_detector]->Draw("HIST SAME");
-    dir_detector[current_detector]->cd();
-    c1->Write();
-
-    NUCLEUS = "32Ar_thick";
-    TCanvas *c3 = new TCanvas((detectorName[current_detector] + "_" + NUCLEUS).c_str(), (detectorName[current_detector] + "_" + NUCLEUS).c_str(), 1920, 1080);
-    c3->cd();
-    c3->SetLogy();
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar_thick"][14][current_detector].first, WindowsMap["32Ar_thick"][14][current_detector].second);
-    H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["32Ar_thick"][14][current_detector].first, WindowsMap["32Ar_thick"][14][current_detector].second);
-    H_Sim_Conv[NUCLEUS][current_detector]->Scale(H_Exp[NUCLEUS][current_detector]->GetMaximum() / H_Sim_Conv[NUCLEUS][current_detector]->GetMaximum());
-    H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
-    H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
-    H_Exp[NUCLEUS][current_detector]->Draw("HIST");
-    H_Sim_Conv[NUCLEUS][current_detector]->SetLineColor(kRed);
-    H_Sim_Conv[NUCLEUS][current_detector]->Draw("HIST SAME");
-
-    dir_detector[current_detector]->cd();
-    c3->Write();
-
-    // NUCLEUS = "33Ar";
-    // TCanvas *c2 = new TCanvas((detectorName[current_detector] + "_" + NUCLEUS).c_str(), (detectorName[current_detector] + "_" + NUCLEUS).c_str(), 1920, 1080);
-    // c2->cd();
-    // c2->SetLogy();
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["33Ar"][21][current_detector].first, WindowsMap["33Ar"][21][current_detector].second);
-    // H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(WindowsMap["33Ar"][21][current_detector].first, WindowsMap["33Ar"][21][current_detector].second);
-    // H_Sim_Conv[NUCLEUS][current_detector]->Scale(H_Exp[NUCLEUS][current_detector]->GetMaximum() / H_Sim_Conv[NUCLEUS][current_detector]->GetMaximum());
-    // H_Exp[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
-    // H_Sim_Conv[NUCLEUS][current_detector]->GetXaxis()->SetRangeUser(0, 6500);
-
-    // H_Exp[NUCLEUS][current_detector]->Draw("HIST");
-    // H_Sim_Conv[NUCLEUS][current_detector]->SetLineColor(kRed);
-    // H_Sim_Conv[NUCLEUS][current_detector]->Draw("HIST SAME");
-
-    // dir_detector[current_detector]->cd();
-    // c2->Write();
-    NUCLEUS = "32Ar";
-
-    dir_nuclei_detector["32Ar"][current_detector]->cd();
-    H_Exp["32Ar"][current_detector]->Write();
-    H_Sim["32Ar"][current_detector]->Write();
+    if (dir_nuclei_detector["18N"][current_detector] == NULL)
+        dir_nuclei_detector["18N"][current_detector] = dir_detector[current_detector]->mkdir("18N");
+    dir_nuclei_detector["18N"][current_detector]->cd();
     H_Sim["18N"][current_detector]->Write();
-    dir_nuclei_detector["32Ar_thick"][current_detector]->cd();
-    H_Exp["32Ar_thick"][current_detector]->Write();
-    H_Sim["32Ar_thick"][current_detector]->Write();
-//     dir_nuclei_detector["33Ar"][current_detector]->cd();
-//     H_Sim["33Ar"][current_detector]->Write();
-//     H_Exp["33Ar"][current_detector]->Write();
+
 }
 
 void Manual_Calibration()
@@ -1115,6 +1001,8 @@ void Fitting_Calibration()
                 H_Simulation = (TH1D *)H_Sim[NUCLEUS][current_detector]->Clone();
             else
                 H_Simulation = (TH1D *)H_Sim_Conv[NUCLEUS][current_detector]->Clone();
+            
+            H_Simulation->Rebin(10);
 
             c2->cd(2);
             F_Peak_Sim[NUCLEUS][peak][current_detector] = new TF1((detectorName[current_detector] + "_Sim" + to_string(peak) + NUCLEUS).c_str(), "gaus(0)", 0, 6500);
@@ -1124,7 +1012,7 @@ void Fitting_Calibration()
             TH1D *H1 = (TH1D *)H_Simulation->Clone();
             H1->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][peak][current_detector].first, WindowsMap[NUCLEUS][peak][current_detector].second);
             H1->Draw("HIST");
-            F_Peak_Sim[NUCLEUS][peak][current_detector]->SetNpx(eSiliN_cal * 10);
+            F_Peak_Sim[NUCLEUS][peak][current_detector]->SetNpx(eSiliN_cal);
             F_Peak_Sim[NUCLEUS][peak][current_detector]->SetLineColor(kRed);
             F_Peak_Sim[NUCLEUS][peak][current_detector]->Draw("SAME L ");
 
@@ -1159,12 +1047,12 @@ void Fitting_Calibration()
     G_Calibration["32Ar_thick"][current_detector]->SetMarkerColor(kBlue+3);
     G_Calibration["32Ar_thick"][current_detector]->SetMarkerSize(1);
     G_Calibration["32Ar_thick"][current_detector]->SetMarkerStyle(20);
-    // G_Calibration["33Ar"][current_detector]->SetMarkerColor(7);
-    // G_Calibration["33Ar"][current_detector]->SetMarkerSize(1);
-    // G_Calibration["33Ar"][current_detector]->SetMarkerStyle(20);
+    G_Calibration["33Ar"][current_detector]->SetMarkerColor(7);
+    G_Calibration["33Ar"][current_detector]->SetMarkerSize(1);
+    G_Calibration["33Ar"][current_detector]->SetMarkerStyle(20);
     MG_Global_Calibration[current_detector]->Add(G_Calibration["32Ar"][current_detector]);
     MG_Global_Calibration[current_detector]->Add(G_Calibration["32Ar_thick"][current_detector]);
-    // MG_Global_Calibration[current_detector]->Add(G_Calibration["33Ar"][current_detector]);
+    MG_Global_Calibration[current_detector]->Add(G_Calibration["33Ar"][current_detector]);
 
     TCanvas *c1 = new TCanvas((detectorName[current_detector] + "_Calibration").c_str(), (detectorName[current_detector] + "_Calibration").c_str(), 1920, 1080);
     c1->Divide(1, 2);
@@ -1173,7 +1061,7 @@ void Fitting_Calibration()
     TF1 *fit = new TF1(function.c_str(), "[0] + [1] * x + [2] * x * x", 0, 6500);
 
     MG_Global_Calibration[current_detector]->Fit(function.c_str(), "Q");
-    Info(detectorName[current_detector] + "   Second Calibrarion : a = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(0)) + 
+    Info(detectorName[current_detector] + "   Second Calibration : a = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(0)) + 
         " b = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(1)) + 
         " c = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetParameter(2)) + 
         "  Chi2 = " + to_string(MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetChisquare() / MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->GetNDF()), 1);
@@ -1187,11 +1075,11 @@ void Fitting_Calibration()
     linear->SetLineColor(kGreen);
     linear->Draw("SAME");
     c1->cd(2);
-    // draw diff between fet and data
+    // draw diff between fit and data
     TMultiGraph *MG_Global_Calibration_diff = new TMultiGraph();
     TGraphErrors *G_Calibration_diff_32Ar = (TGraphErrors *)G_Calibration["32Ar"][current_detector]->Clone();
     TGraphErrors *G_Calibration_diff_32Ar_thick = (TGraphErrors *)G_Calibration["32Ar_thick"][current_detector]->Clone();
-    // TGraphErrors *G_Calibration_diff_33Ar = (TGraphErrors *)G_Calibration["33Ar"][current_detector]->Clone();
+    TGraphErrors *G_Calibration_diff_33Ar = (TGraphErrors *)G_Calibration["33Ar"][current_detector]->Clone();
 
     for (int i = 0; i < G_Calibration_diff_32Ar->GetN(); i++)
     {
@@ -1207,16 +1095,16 @@ void Fitting_Calibration()
         G_Calibration_diff_32Ar_thick->SetPoint(i, x, y - MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->Eval(x));
     }
 
-    // for (int i = 0; i < G_Calibration_diff_33Ar->GetN(); i++)
-    // {
-        // double x, y;
-        // G_Calibration_diff_33Ar->GetPoint(i, x, y);
-        // G_Calibration_diff_33Ar->SetPoint(i, x, y - MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->Eval(x));
-    // }
+    for (int i = 0; i < G_Calibration_diff_33Ar->GetN(); i++)
+    {
+        double x, y;
+        G_Calibration_diff_33Ar->GetPoint(i, x, y);
+        G_Calibration_diff_33Ar->SetPoint(i, x, y - MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->Eval(x));
+    }
 
     MG_Global_Calibration_diff->Add(G_Calibration_diff_32Ar);
     MG_Global_Calibration_diff->Add(G_Calibration_diff_32Ar_thick);
-    // MG_Global_Calibration_diff->Add(G_Calibration_diff_33Ar);
+    MG_Global_Calibration_diff->Add(G_Calibration_diff_33Ar);
     MG_Global_Calibration_diff->Draw("AP");
     MG_Global_Calibration_diff->GetXaxis()->SetTitle("Channel");
     MG_Global_Calibration_diff->GetYaxis()->SetTitle("Energy [keV]");
@@ -1238,7 +1126,7 @@ void Fitting_Calibration()
     TLegend *l = new TLegend(0.1, 0.7, 0.3, 0.9);
     l->AddEntry(G_Calibration["32Ar"][current_detector], "^{32}Ar", "p");
     l->AddEntry(G_Calibration["32Ar_thick"][current_detector], "^{32}Ar_thick", "p");
-    // l->AddEntry(G_Calibration["33Ar"][current_detector], "^{33}Ar", "p");
+    l->AddEntry(G_Calibration["33Ar"][current_detector], "^{33}Ar", "p");
     l->Draw("SAME");
 
     dir_detector[current_detector]->cd();
@@ -1249,7 +1137,8 @@ void Fitting_Calibration()
     // vector<double> vec = {G_Calibration[current_detector]->GetFunction("pol2")->GetParameter(0), G_Calibration[current_detector]->GetFunction("pol2")->GetParameter(1)};
     ManualCalibFitted[current_detector] = vec;
 
-    /// ALPHA
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    // BACKGROUND ///////////////////////////////////////////////////////////////////////////////////////
     NUCLEUS = "32Ar";
     int counter = 0;
     Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
@@ -1262,8 +1151,23 @@ void Fitting_Calibration()
         H_Exp[NUCLEUS][current_detector]->Fill(Calibration_Function[current_detector]->Eval(value));
     }
 
-    RemoveBKG(H_Exp[NUCLEUS][current_detector], false);
+    RemoveBKG(H_Exp[NUCLEUS][current_detector], false, NUCLEUS);
 
+    // NUCLEUS = "32Ar_thick";
+    // counter = 0;
+    // Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][current_detector]);
+    // Reader->Restart();
+    // H_Exp[NUCLEUS][current_detector]->Reset();
+    // while (Reader->Next())
+    // {
+    //     double value = *ChannelDet1 / 1000;
+    //     H_Exp[NUCLEUS][current_detector]->Fill(Calibration_Function[current_detector]->Eval(value));
+    // }
+
+    // RemoveBKG(H_Exp[NUCLEUS][current_detector], false, NUCLEUS);
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    /// ALPHA
     for (int peak = 1; peak < CanvasMap["18N"].first * CanvasMap["18N"].second; peak++)
     {
         if (WindowsMap["18N"][peak][current_detector].first == -1 || !WindowsMap["18N"][peak][current_detector].first)
@@ -1420,12 +1324,12 @@ void Fitting_Calibration_E0()
     G_Calibration["32Ar_thick"][current_detector]->SetMarkerColor(kBlue+3);
     G_Calibration["32Ar_thick"][current_detector]->SetMarkerSize(1);
     G_Calibration["32Ar_thick"][current_detector]->SetMarkerStyle(20);
-    // G_Calibration["33Ar"][current_detector]->SetMarkerColor(7);
-    // G_Calibration["33Ar"][current_detector]->SetMarkerSize(1);
-    // G_Calibration["33Ar"][current_detector]->SetMarkerStyle(20);
+    G_Calibration["33Ar"][current_detector]->SetMarkerColor(7);
+    G_Calibration["33Ar"][current_detector]->SetMarkerSize(1);
+    G_Calibration["33Ar"][current_detector]->SetMarkerStyle(20);
     MG_Global_Calibration[current_detector]->Add(G_Calibration["32Ar"][current_detector]);
     MG_Global_Calibration[current_detector]->Add(G_Calibration["32Ar_thick"][current_detector]);
-    // MG_Global_Calibration[current_detector]->Add(G_Calibration["33Ar"][current_detector]);
+    MG_Global_Calibration[current_detector]->Add(G_Calibration["33Ar"][current_detector]);
 
     TCanvas *c1 = new TCanvas((detectorName[current_detector] + "_Calibration_E0").c_str(), (detectorName[current_detector] + "_Calibration_E0").c_str(), 1920, 1080);
     c1->Divide(1, 2);
@@ -1453,7 +1357,7 @@ void Fitting_Calibration_E0()
     TMultiGraph *MG_Global_Calibration_diff = new TMultiGraph();
     TGraphErrors *G_Calibration_diff_32Ar = (TGraphErrors *)G_Calibration["32Ar"][current_detector]->Clone();
     TGraphErrors *G_Calibration_diff_32Ar_thick = (TGraphErrors *)G_Calibration["32Ar_thick"][current_detector]->Clone();
-    // TGraphErrors *G_Calibration_diff_33Ar = (TGraphErrors *)G_Calibration["33Ar"][current_detector]->Clone();
+    TGraphErrors *G_Calibration_diff_33Ar = (TGraphErrors *)G_Calibration["33Ar"][current_detector]->Clone();
 
     for (int i = 0; i < G_Calibration_diff_32Ar->GetN(); i++)
     {
@@ -1469,16 +1373,16 @@ void Fitting_Calibration_E0()
         G_Calibration_diff_32Ar_thick->SetPoint(i, x, y - MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->Eval(x));
     }
 
-    // for (int i = 0; i < G_Calibration_diff_33Ar->GetN(); i++)
-    // {
-        // double x, y;
-        // G_Calibration_diff_33Ar->GetPoint(i, x, y);
-        // G_Calibration_diff_33Ar->SetPoint(i, x, y - MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->Eval(x));
-    // }
+    for (int i = 0; i < G_Calibration_diff_33Ar->GetN(); i++)
+    {
+        double x, y;
+        G_Calibration_diff_33Ar->GetPoint(i, x, y);
+        G_Calibration_diff_33Ar->SetPoint(i, x, y - MG_Global_Calibration[current_detector]->GetFunction(function.c_str())->Eval(x));
+    }
 
     MG_Global_Calibration_diff->Add(G_Calibration_diff_32Ar);
     MG_Global_Calibration_diff->Add(G_Calibration_diff_32Ar_thick);
-    // MG_Global_Calibration_diff->Add(G_Calibration_diff_33Ar);
+    MG_Global_Calibration_diff->Add(G_Calibration_diff_33Ar);
     MG_Global_Calibration_diff->Draw("AP");
     MG_Global_Calibration_diff->GetXaxis()->SetTitle("Channel");
     MG_Global_Calibration_diff->GetYaxis()->SetTitle("Energy [keV]");
@@ -1500,7 +1404,7 @@ void Fitting_Calibration_E0()
     TLegend *l = new TLegend(0.1, 0.7, 0.3, 0.9);
     l->AddEntry(G_Calibration["32Ar"][current_detector], "^{32}Ar", "p");
     l->AddEntry(G_Calibration["32Ar_thick"][current_detector], "^{32}Ar_thick", "p");
-    // l->AddEntry(G_Calibration["33Ar"][current_detector], "^{33}Ar", "p");
+    l->AddEntry(G_Calibration["33Ar"][current_detector], "^{33}Ar", "p");
     l->Draw("SAME");
 
     dir_detector[current_detector]->cd();
@@ -1524,9 +1428,6 @@ void PlottingWindows()
 
                 TCanvas *c = new TCanvas((nucleus + "_" + detectorName[i]).c_str(), (nucleus + "_" + detectorName[i]).c_str(), 1920, 1080);
                 c->Divide(CanvasMap[nucleus].first, CanvasMap[nucleus].second);
-                // H_Exp[nucleus][i]->GetXaxis()->SetRangeUser(WindowsMap[nucleus][14][i].first, WindowsMap[nucleus][14][i].second);
-                // H_Sim_Conv[nucleus][i]->GetXaxis()->SetRangeUser(WindowsMap[nucleus][14][i].first, WindowsMap[nucleus][14][i].second);
-                // H_Sim_Conv[nucleus][i]->Scale(H_Exp[nucleus][i]->Integral() / H_Sim_Conv[nucleus][i]->Integral());
                 for (int peak = 1; peak < CanvasMap[nucleus].first * CanvasMap[nucleus].second; peak++)
                 {
                     c->cd(peak);

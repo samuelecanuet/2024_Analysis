@@ -32,7 +32,7 @@ int main(int argc, char **argv)
     InitTree("READ");    
 
     ////////////////////////  SIMULATION TREE FOR EACH PEAK //////////////////////
-    InitSimulatedTree("READ");
+    InitSimulatedTree();
 
     current_detector = 7;
     const double *bestPar = Par.data();

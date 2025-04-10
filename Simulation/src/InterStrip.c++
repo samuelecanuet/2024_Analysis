@@ -5,15 +5,15 @@ int main()
     InitDetectors("../Grouper/Config_Files/sample.pid");
     InitWindows();
     TFile *final_f = MyTFile("InterStrip.root", "RECREATE");
-    string path = DIR_DATA_HDD + "../SIMULATED_DATA/03-09/";
+    string path = DIR_DATA_HDD + "../SIMULATED_DATA/03-17/";
     // FILES.push_back(make_pair(250, MyTFile(path + "32Ar_inter025_a1_b0_analysed.root", "READ")));
-    FILES.push_back(make_pair(200.150, MyTFile(path + "32Ar_inter02000150_a1_b0_analysed.root", "READ")));
+    //FILES.push_back(make_pair(200.150, MyTFile(path + "32Ar_inter02000150_a1_b0_analysed.root", "READ")));
     // FILES.push_back(make_pair(150, MyTFile(path + "32Ar_inter015_a1_b0_analysed.root", "READ")));
     // FILES.push_back(make_pair(50, MyTFile(path + "32Ar_inter005_a1_b0_analysed3.root", "READ")));
-    FILES.push_back(make_pair(25, MyTFile(path + "32Ar_inter0025_a1_b0_analysed.root", "READ")));
+    //FILES.push_back(make_pair(25, MyTFile(path + "32Ar_inter0025_a1_b0_analysed.root", "READ")));
     // FILES.push_back(make_pair(0, MyTFile(path + "32Ar_inter000_a1_b0_analysed.root", "READ")));
-
-    TFile *exp_f = MyTFile(DIR_ROOT_DATA_CALIBRATED + "Calibrated.root", "READ");
+    FILES.push_back(make_pair(0, MyTFile(DIR_ROOT_DATA_SIMULATED + "03-09/32Ar_ION_a1_b0_analysed.root", "READ")));
+    TFile *exp_f = MyTFile(DIR_ROOT_DATA_CALIBRATED + "Calibrated (copy).root", "READ");
 
     InitCalib();
     InitElectronicResolution();

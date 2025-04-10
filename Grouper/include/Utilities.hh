@@ -170,7 +170,31 @@ double Convert_DatetoTimeSec(string datestring, bool FLAG2021=false)
 
 double Diff_Date(string datestring, string refstring, bool FLAG2021=false)
 {
-  return Convert_DatetoTimeSec(datestring, FLAG2021) - Convert_DatetoTimeSec(refstring, FLAG2021);
+	return Convert_DatetoTimeSec(datestring, FLAG2021) - Convert_DatetoTimeSec(refstring, FLAG2021);
+}
+
+int Freedman_Diaconis(TH1 *hist)
+{
+	int nEntries = hist->GetEntries();
+	int nBins = hist->GetNbinsX();
+	double xmin = hist->GetXaxis()->GetXmin();
+	double xmax = hist->GetXaxis()->GetXmax();	
+	double q1, q3;
+	hist->GetQuantiles(1, &q1, new double[1]{0.25}); 
+	hist->GetQuantiles(1, &q3, new double[1]{0.75}); 
+
+	double IQR = q3 - q1; 
+	double binWidth = 2 * IQR / pow(nEntries, 1.0 / 3.0);
+	int nBins_corrected = (xmax - xmin) / binWidth;
+
+	int Rebin_factor = nBins / nBins_corrected;
+
+	while (nBins % Rebin_factor != 0 && Rebin_factor > 1)
+	{
+		Rebin_factor--;
+	}
+
+	return Rebin_factor;
 }
 
 const map<string, int> NametoCode_map = {

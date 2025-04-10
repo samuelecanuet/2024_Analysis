@@ -10,7 +10,7 @@ map<string, pair<double, double>[100][SIGNAL_MAX]> WindowsMap;
 TF1 *Calibration_Function[SIGNAL_MAX];
 void InitCalib()
 {
-    TFile *CALIBRATED_File = MyTFile(DIR_ROOT_DATA_CALIBRATED + "Calibrated.root", "READ");
+    TFile *CALIBRATED_File = MyTFile(DIR_ROOT_DATA_CALIBRATED + "Calibrated (copy).root", "READ");
     for (int i = 0; i < SIGNAL_MAX; i++)
         {
             if (IsDetectorSiliStrip(i))

@@ -94,9 +94,9 @@ void Start(const char *message, int indent = 0) {
     Start(string(message), indent);
 }
 
-void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, string Prefix = "")
+void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, string Prefix = "", int Step=10000)
 {
-  if (cEntry % 10000 == 0 && cEntry > 2 * 1000)
+  if (cEntry % Step == 0 && cEntry > 2 * 1000)
   {
     Current = clock();
     const Char_t *Color;

@@ -43,9 +43,20 @@
 #include "TVirtualFitter.h"
 #include <gsl/gsl_statistics.h>
 
+#include "../../Grouper/include/Detectors.hh"
+
 using namespace std;
 using namespace ROOT::Math;
 default_random_engine generator;
+
+template <size_t ROWS, size_t COLS>
+vector<vector<bool>> ConvertToVector(bool (&array)[ROWS][COLS]) {
+    vector<vector<bool>> vec(ROWS, vector<bool>(COLS));
+    for (size_t i = 0; i < ROWS; i++)
+        for (size_t j = 0; j < COLS; j++)
+            vec[i][j] = array[i][j];
+    return vec;
+}
 
 /// FILE ///
 
@@ -55,8 +66,12 @@ TTreeReader *Reader;
 TTree *Tree;
 TTree *Cleaned_Tree;
 
+string Calibration_Filename;
+string Measurement_Filename;
+
 TFile* fSaved;
 bool WRITTING;
+string year;
 
 TH1D *H_RAW[5];
 TH2D *H_RAW_2D;
@@ -73,15 +88,14 @@ int C = 4;
 int D = 2;
 
 double rho_real = 2;
-double l_real = 1.2;
+double l_real;
 double rho = 0.1;
 double l = 0.08;
 double limit_real = 7.5;
-int n = 8;
+int n;
 double limit = limit_real * rho / rho_real;
-int MAXI = 10;
-int DegX = 4;
-int DegY = 4;
+int MAXI = 30;
+
 TF2 *FittedFunction;
 TF2 *FinalFunction;
 TF2 *MeasurementFunction;
@@ -106,7 +120,7 @@ const int Nparam = (NparX + 1) * (NparY + 1);
 double param_X[NparX];
 double param_Y[NparY];
 
-bool M8[8][8] = {
+bool M8_2024[8][8] = {
     {false, false, false, false, false, false, false, false},
     {false, false, true, true, true, true, false, false},
     {false, true, true, true, true, true, true, false},
@@ -116,11 +130,39 @@ bool M8[8][8] = {
     {false, false, true, true, true, true, false, false},
     {false, false, false, false, false, false, false, false}};
 
-double x_final_max = 4;
-double x_final_min = -4;
-double y_final_max = 4;
-double y_final_min = -4;
-bool M_final[8][8] = {
+bool M7_2025[7][7] = {
+    {false, true, true, true, true, true, false},
+    {true, true, true, true, true, true, true},
+    {true, true, true, true, true, true, true},
+    {true, true, true, true, true, true, true},
+    {true, true, true, true, true, true, true},
+    {true, true, true, true, true, true, true},
+    {false, true, true, true, true, true, false}};
+
+    // {false, false, false, false, false, false, false},
+    // {false, true, true, true, true, true, false},
+    // {false, true, true, true, true, true, false},
+    // {false, true, true, true, true, true, false},
+    // {false, true, true, true, true, true, false},
+    // {false, true, true, true, true, true, false},
+    // {false, false, false, false, false, false, false}};
+
+    // {false, false, false, false, false, false, false},
+    // {false, false, false, false, false, false, false},
+    // {false, false, true, true, true, false, false},
+    // {false, false, true, true, true, false, false},
+    // {false, false, true, true, true, false, false},
+    // {false, false, false, false, false, false, false},
+    // {false, false, false, false, false, false, false}};
+
+vector<vector<bool>> M;
+
+double x_final_max = 8;
+double x_final_min = -8;
+double y_final_max = 8;
+double y_final_min = -8;
+
+bool M_final_2024[8][8] = {
     {false, false, false, false, false, false, false, false},
     {false, false, false, false, false, false, false, false},
     {false, false, true, true, true, true, false, false},
@@ -129,13 +171,24 @@ bool M_final[8][8] = {
     {false, false, true, true, true, true, false, false},
     {false, false, false, false, false, false, false, false},
     {false, false, false, false, false, false, false, false}};
+
+bool M_final_2025[7][7] = {
+    {false, false, false, false, false, false, false},
+    {false, false, false, false, false, false, false},
+    {false, false, true, true, true, false, false},
+    {false, false, true, true, true, false, false},
+    {false, false, true, true, true, false, false},
+    {false, false, false, false, false, false, false},
+    {false, false, false, false, false, false, false}};
+
+vector<vector<bool>> M_final;
 
 double x_measurement_min = -2.;
 double x_measurement_max = 2.;
 double y_measurement_min = -2.;
 double y_measurement_max = 2.;
 
-bool M_measurement[8][8] = {
+bool M_measurement_2024[8][8] = {
     {false, false, false, false, false, false, false, false},
     {false, false, false, false, false, false, false, false},
     {false, false, false, false, false, false, false, false},
@@ -145,7 +198,19 @@ bool M_measurement[8][8] = {
     {false, false, false, false, false, false, false, false},
     {false, false, false, false, false, false, false, false}};
 
-pair<double, double> M8_center[64];
+bool M_measurement_2025[7][7] = {
+    {false, false, false, false, false, false, false},
+    {false, false, false, false, false, false, false},
+    {false, false, true, true, true, false, false},
+    {false, false, true, true, true, false, false},
+    {false, false, true, true, true, false, false},
+    {false, false, false, false, false, false, false},
+    {false, false, false, false, false, false, false}};
+
+vector<vector<bool>> M_measurement;
+
+pair<double, double> M_center[64];
+vector<pair<double, double>> M_corner[64];
 
 Double_t fit_points(pair<double, double> x, Double_t *par)
 {
@@ -161,9 +226,41 @@ Double_t fit_points(pair<double, double> x, Double_t *par)
     return res;
 }
 
-void readfit()
+void writefit()
 {
-    ifstream infile("fit_params.txt");
+    ofstream outfile(("fit_params_"+year+".txt").c_str());
+    // outfile << xmax << " " << xmin << " " << ymax << " " << ymin << endl;
+    // for (int i = 0; i < Nparam; i++)
+    // {
+    //     outfile << f_X->GetParameter(i) << " ";
+    // }
+
+    for (int i = 0; i <= NparX; i++)
+    {
+        for (int j = 0; j <= NparY; j++)
+        {
+            outfile << f_X->GetParameter(i * (NparX + 1) + j) << " ";
+        }
+    }
+    outfile << endl;
+    // for (int i = 0; i < Nparam; i++)
+    // {
+    //     outfile << f_Y->GetParameter(i) << " ";
+    // }
+    for (int i = 0; i <= NparX; i++)
+    {
+        for (int j = 0; j <= NparY; j++)
+        {
+            outfile << f_Y->GetParameter(i * (NparX + 1) + j) << " ";
+        }
+    }
+    outfile << endl;
+    outfile.close();
+}
+
+void readfit(string Year = "2024")
+{
+    ifstream infile(("fit_params_"+Year+".txt").c_str());
     // double xmax, xmin, ymax, ymin;
     // infile >> xmax >> xmin >> ymax >> ymin;
 
@@ -667,6 +764,35 @@ double Fitting()
 //////////// NEW 2D FULL FITTING ////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
+
+void InitYearConfiguration(string Year = "2024")
+{   
+    if (Year == "2024")
+    {
+        M = ConvertToVector(M8_2024);
+        M_final = ConvertToVector(M_final_2024);
+        M_measurement = ConvertToVector(M_measurement_2024);
+        n = 8;
+        l_real = 1.2;
+        Calibration_Filename = "MCP_008_4T_0001.root";
+        Measurement_Filename = "/RAW/MCP_010_4T.root";
+
+    }
+    else if (Year == "2025")
+    {
+        M = ConvertToVector(M7_2025);
+        M_final = ConvertToVector(M_final_2025);
+        M_measurement = ConvertToVector(M_measurement_2025);
+        n = 7;
+        l_real = 1.4;
+        Calibration_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";  
+        Measurement_Filename = "";
+    }
+    else
+    {
+        Error("InitYearConfiguration", "Year not found");
+    }
+}
 ///////////////// FIITING DEFORMED IMAGE /////////////////////////////
 double MyFullFittedFunction2D(double *x, double *par)
 {
@@ -682,6 +808,8 @@ double MyFullFittedFunction2D(double *x, double *par)
     double l2 = par[9] / 2;
     double beta_x[n][n];
     double beta_y[n][n];
+    double l2x;
+    double l2y;
     // double a[4][4] = { {par[2 * n*n + 10], par[2 * n*n + 11], par[2 * n*n + 12], par[2 * n*n + 13]},
     //                    {par[2 * n*n + 14], par[2 * n*n + 15], par[2 * n*n + 16], par[2 * n*n + 17]},
     //                    {par[2 * n*n + 18], par[2 * n*n + 19], par[2 * n*n + 20], par[2 * n*n + 21]},
@@ -702,10 +830,10 @@ double MyFullFittedFunction2D(double *x, double *par)
         for (int j = 0; j < n; ++j)
         {
 
-            if (!M8[i][j])
+            if (!M[i][j])
                 continue;
 
-            if (abs(sqrt(M8_center[i * n + j].first * M8_center[i * n + j].first + M8_center[i * n + j].second * M8_center[i * n + j].second) - r) > 2 * rho)
+            if (abs(sqrt(M_center[i * n + j].first * M_center[i * n + j].first + M_center[i * n + j].second * M_center[i * n + j].second) - r) > 2 * rho)
             {
                 continue;
             }
@@ -713,10 +841,20 @@ double MyFullFittedFunction2D(double *x, double *par)
             beta_x[i][j] = par[10 + i * n + j];
             beta_y[i][j] = par[10 + n * n + i * n + j];
 
-            double erf_x_pos = erf((x[0] - (beta_x[i][j] - l2)) / (sqrt(2) * sigma_x));
-            double erf_x_neg = erf((x[0] - (beta_x[i][j] + l2)) / (sqrt(2) * sigma_x));
-            double erf_y_pos = erf((x[1] - (beta_y[i][j] - l2)) / (sqrt(2) * sigma_y));
-            double erf_y_neg = erf((x[1] - (beta_y[i][j] + l2)) / (sqrt(2) * sigma_y));
+            if (par[10 + 2 * n * n + i * n + j] != 0)
+                l2x = par[10 + 2 * n * n + i * n + j] / 2;
+            else
+                l2x = l2;
+
+            if (par[10 + 3 * n * n + i * n + j] != 0)
+                l2y = par[10 + 3 * n * n + i * n + j] / 2;
+            else
+                l2y = l2;
+
+            double erf_x_pos = erf((x[0] - (beta_x[i][j] - l2x)) / (sqrt(2) * sigma_x));
+            double erf_x_neg = erf((x[0] - (beta_x[i][j] + l2x)) / (sqrt(2) * sigma_x));
+            double erf_y_pos = erf((x[1] - (beta_y[i][j] - l2y)) / (sqrt(2) * sigma_y));
+            double erf_y_neg = erf((x[1] - (beta_y[i][j] + l2y)) / (sqrt(2) * sigma_y));
 
             // result_sum += (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg) ;
             grid_sum += A * (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
@@ -781,6 +919,7 @@ double MyFullFittedFunction2D(double *x, double *par)
 
 void FullFunctionToMinimize2D()
 {
+    Info("Fitting grid with the guess");
     double chi2 = 0.0;
     int N = n * n;
     FittedFunction = new TF2("FittedFunction", MyFullFittedFunction2D, -0.4, 0.4, -0.4, 0.4, 2 * N + 10);
@@ -843,7 +982,7 @@ void FullFunctionToMinimize2D()
     FittedFunction->FixParameter(8, 0);
 
     // l
-    FittedFunction->SetParLimits(9, 0.05, 0.1);
+    FittedFunction->SetParLimits(9, 0.04, 0.1);
     FittedFunction->SetParameter(9, 0.08);
     // FittedFunction->FixParameter(9, 0.08);
 
@@ -853,7 +992,7 @@ void FullFunctionToMinimize2D()
         // FittedFunction->SetParLimits(i, 0., 500);
         // FittedFunction->SetParameter(i, 10);
 
-        if (!M8[i / n][i % n])
+        if (!M[i / n][i % n])
         {
             // FittedFunction->FixParameter(i, 0);
             // beta_x
@@ -863,17 +1002,21 @@ void FullFunctionToMinimize2D()
         }
         else
         {
+            double delta = 0.03;
             // FittedFunction->FixParameter(i, 0);
             // double x_center = i / n * rho - rho * (n-1)/2-0.01;
             // double y_center = i % n * rho - rho * (n-1)/2+0.017;
 
             // beta_x
-            FittedFunction->SetParLimits(10 + i, M8_center[i].first - 0.03, M8_center[i].first + 0.03);
-            FittedFunction->SetParameter(10 + i, M8_center[i].first);
+            FittedFunction->SetParLimits(10 + i, M_center[i].first -delta, M_center[i].first +delta);
+            FittedFunction->SetParameter(10 + i, M_center[i].first);
+            // FittedFunction->FixParameter(10 + i, M_center[i].first);
+
 
             // beta_y
-            FittedFunction->SetParLimits(N + 10 + i, M8_center[i].second - 0.03, M8_center[i].second + 0.03);
-            FittedFunction->SetParameter(N + 10 + i, M8_center[i].second);
+            FittedFunction->SetParLimits(N + 10 + i, M_center[i].second -delta, M_center[i].second +delta);
+            FittedFunction->SetParameter(N + 10 + i, M_center[i].second);
+            // FittedFunction->FixParameter(N + 10 + i, M_center[i].second);
         }
     }
 
@@ -912,7 +1055,7 @@ void FullFunctionToMinimize2D()
     H_precorrrected->GetXaxis()->SetRangeUser(-0.4, 0.4);
     H_precorrrected->GetYaxis()->SetRangeUser(-0.4, 0.4);
 
-    H_precorrrected->SetBinContent(182, 178, 0);
+    // H_precorrrected->SetBinContent(182, 178, 0);
     H_precorrrected->Fit(FittedFunction, "MULTITHREAD RN", "", -0.4, 0.4);
 
     cout << "chi2 = " << FittedFunction->GetChisquare() / FittedFunction->GetNDF() << endl;
@@ -924,7 +1067,7 @@ void FullFunctionToMinimize2D()
 
     //// writing center of grid cell in a txt file with cell number x an y
     ofstream file;
-    file.open("out_centers.txt");
+    file.open(("out_centers_"+year+".txt").c_str());
     for (int i = 0; i < n; ++i)
     {
         for (int j = 0; j < n; ++j)
@@ -959,10 +1102,12 @@ void FullFunctionToMinimize2D()
     {
         for (int j = 0; j < n; ++j)
         {
-            if (!M8[i][j])
+            if (!M[i][j])
                 continue;
-            double x_center = M8_center[i * n + j].first;
-            double y_center = M8_center[i * n + j].second;
+            double x_center = M_center[i * n + j].first;
+            double y_center = M_center[i * n + j].second;
+
+            // cout << "Cell " << i * n + j << " : " << x_center << " " << y_center << endl;
 
             TGraph *c_center = new TGraph(1);
             c_center->SetPoint(0, FittedFunction->GetParameter(10 + i * n + j), FittedFunction->GetParameter(N + 10 + i * n + j));
@@ -1005,30 +1150,99 @@ void FullFunctionToMinimize2D()
     FittedFunction->Write();
 }
 
-///////////////// Fitting Points /////////////////////////////////////
-void LoadCenters()
+////////// TRYING WITH CORNERS /////////////////////////////////
+
+// Compute signed distance to a line
+double signed_distance(double x, double y, double a, double b) {
+    return (a * x - y + b) / std::sqrt(a * a + 1);
+}
+double MyFullFittedFunction2D_CORNER(double *x, double *par)
 {
-    ifstream file("guess_center.txt");
-    string line;
-    while (getline(file, line))
+    double A = par[0];
+    double sigma_x = par[1];
+    double sigma_y = par[2];
+    double A_g = par[3];
+    double mu_gx = par[4];
+    double mu_gy = par[5];
+    double sigma_gx = par[6];
+    double sigma_gy = par[7];
+    double bkg = par[8];
+    double l2 = par[9] / 2;
+    double beta_x[n][n];
+    double beta_y[n][n];
+
+    double result_sum = 0.0;
+    double grid_sum = 0.0;
+
+    double r = sqrt(x[0] * x[0] + x[1] * x[1]);
+
+    // if (r > 0.5)
+    // {
+    //     return 0;
+    // }
+
+    for (int i = 0; i < n; ++i)
     {
-        istringstream iss(line);
-        int cell;
-        double x, y;
-        iss >> cell >> x >> y;
-        M8_center[cell] = make_pair(x, y);
+        for (int j = 0; j < n; ++j)
+        {
+
+            if (!M[i][j])
+                continue;
+
+            // if (abs(sqrt(M_center[i * n + j].first * M_center[i * n + j].first + M_center[i * n + j].second * M_center[i * n + j].second) - r) > 2 * rho)
+            // {
+            //     continue;
+            // }
+
+            double Ax = par[10 + i * n + j];
+            double Ay = par[10 + n * n + i * n + j];
+            double Bx = par[10 + 2 * n * n + i * n + j];
+            double By = par[10 + 3 * n * n + i * n + j];
+            double Cx = par[10 + 4 * n * n + i * n + j];
+            double Cy = par[10 + 5 * n * n + i * n + j];
+            double Dx = par[10 + 6 * n * n + i * n + j];
+            double Dy = par[10 + 7 * n * n + i * n + j];
+
+            double aAB = (Ay - By) / (Ax - Bx);
+            double aBC = (Bx - Cx) / (By - Cy);
+            double aCD = (Cy - Dy) / (Cx - Dx);
+            double aDA = (Dx - Ax) / (Dy - Ay);
+
+            double bAB = Ay - aAB * Ax;
+            double bBC = Bx - aBC * By;
+            double bCD = Cy - aCD * Cx;
+            double bDA = Dx - aDA * Dy;
+
+            double edgeAB = 0.5*(1+erf((x[1]-aAB*x[0]-bAB)/(sqrt(2)*sigma_y)));
+            double edgeBC = 0.5*(1-erf((x[0]-aBC*x[1]-bBC)/(sqrt(2)*sigma_x)));
+            double edgeCD = 0.5*(1-erf((x[1]-aCD*x[0]-bCD)/(sqrt(2)*sigma_y)));
+            double edgeDA = 0.5*(1+erf((x[0]-aDA*x[1]-bDA)/(sqrt(2)*sigma_x)));
+
+            grid_sum += A * edgeAB * edgeBC * edgeCD * edgeDA;
+        }
     }
-    file.close();
+
+    // RAW EXPRESSION  OF 2D GAUSSIAN
+    double gauss = 0;
+
+    double result = grid_sum;
+
+    if (result > MAXI)
+    {
+        return MAXI;
+    }
+
+    return result;
 }
 
 double Function(double *x, double *par)
 {
     double res = 0;
-    for (int i = 0; i <= DegX; i++)
+    for (int i = 0; i <= NparX; i++)
     {
-        for (int j = 0; j <= DegY; j++)
+        for (int j = 0; j <= NparY; j++)
         {
-            res += par[i * (DegX + 1) + j] * pow(x[0], i) * pow(x[1], j);
+            res += par[i * (NparX + 1) + j] * pow(x[0], i) * pow(x[1], j);
         }
     }
 
@@ -1036,6 +1250,487 @@ double Function(double *x, double *par)
 
     // return 1 * (par[1] * x[0] + par[2] + pow(x[0], 2) + par[3] * pow(x[0], 3) + par[6] * x[1] * x[1] * x[1] * x[0] + par[0] * pow(x[0], 4) + par[7] * pow(x[0], 5));
 }
+
+void FullFunctionToMinimize2D_CORNER()
+{
+    Info("Fitting grid with the guess");
+    double chi2 = 0.0;
+    int N = n * n;
+    FittedFunction = new TF2("FittedFunction", MyFullFittedFunction2D_CORNER, -0.4, 0.4, -0.4, 0.4, 8 * N + 10);
+    FittedFunction->SetNpx(500);
+    FittedFunction->SetNpy(500);
+
+    for (int i = 0; i < H_precorrrected->GetNbinsX(); i++)
+    {
+        for (int j = 0; j < H_precorrrected->GetNbinsY(); j++)
+        {
+            if (H_precorrrected->GetBinContent(i, j) > MAXI)
+            {
+                H_precorrrected->SetBinContent(i, j, MAXI);
+            }
+        }
+    }
+
+    // Amplitude
+    FittedFunction->SetParLimits(0, 0., 100);
+    FittedFunction->SetParameter(0, 10);
+
+    // sigma x
+    FittedFunction->SetParLimits(1, 0., 0.02);
+    FittedFunction->SetParameter(1, 0.005);
+    // FittedFunction->FixParameter(1, 0.0);
+
+    // sigma y
+    FittedFunction->SetParLimits(2, 0., 0.02);
+    FittedFunction->SetParameter(2, 0.005);
+    // FittedFunction->FixParameter(2, 0.0);
+
+    // amplitude gaus
+    FittedFunction->SetParLimits(3, 10, 5000);
+    FittedFunction->SetParameter(3, 100);
+    FittedFunction->FixParameter(3, 0);
+
+    // mu gaus x
+    FittedFunction->SetParLimits(4, -2, 2);
+    FittedFunction->SetParameter(4, -0.2);
+    FittedFunction->FixParameter(4, 0);
+
+    // mu gaus y
+    FittedFunction->SetParLimits(5, -2, 2);
+    FittedFunction->SetParameter(5, -0.2);
+    FittedFunction->FixParameter(5, 0);
+
+    // sigma gaus x
+    FittedFunction->SetParLimits(6, 0.3, 2);
+    FittedFunction->SetParameter(6, 0.8);
+    FittedFunction->FixParameter(6, 0);
+
+    // sigma gaus y
+    FittedFunction->SetParLimits(7, 0.2, 2);
+    FittedFunction->SetParameter(7, 0.6);
+    FittedFunction->FixParameter(7, 0);
+
+    // bkg
+    // FittedFunction->SetParLimits(8, 0., 20);
+    // FittedFunction->SetParameter(8, 2);
+    FittedFunction->FixParameter(8, 0);
+
+    // l
+    FittedFunction->SetParLimits(9, 0.04, 0.1);
+    // FittedFunction->SetParameter(9, 0.08);
+    FittedFunction->FixParameter(9, 0.08);
+
+    for (int i = 0; i < N; ++i)
+    {
+        // amplitude bkg in MCP
+        // FittedFunction->SetParLimits(i, 0., 500);
+        // FittedFunction->SetParameter(i, 10);
+
+        if (!M[i / n][i % n])
+        {
+            // FittedFunction->FixParameter(i, 0);
+            // a_x
+            FittedFunction->FixParameter(10 + i, 0.);
+            // a_y
+            FittedFunction->FixParameter(N + 10 + i, 0.);
+            // b_x
+            FittedFunction->FixParameter(2 * N + 10 + i, 0.);
+            // b_y
+            FittedFunction->FixParameter(3 * N + 10 + i, 0.);
+            // c_x
+            FittedFunction->FixParameter(4 * N + 10 + i, 0.);
+            // c_y
+            FittedFunction->FixParameter(5 * N + 10 + i, 0.);
+            // d_x
+            FittedFunction->FixParameter(6 * N + 10 + i, 0.);
+            // d_y
+            FittedFunction->FixParameter(7 * N + 10 + i, 0.);
+
+        }
+        else
+        {
+            double delta = 0.02;
+            // a_x
+            FittedFunction->SetParLimits(10 + i, M_corner[i][0].first -delta, M_corner[i][0].first +delta);
+            FittedFunction->SetParameter(10 + i, M_corner[i][0].first);
+            // FittedFunction->FixParameter(10 + i, M_corner[i][0].first);
+
+            // a_y
+            FittedFunction->SetParLimits(N + 10 + i, M_corner[i][0].second -delta, M_corner[i][0].second +delta);
+            FittedFunction->SetParameter(N + 10 + i, M_corner[i][0].second);
+            // FittedFunction->FixParameter(N + 10 + i, M_corner[i][0].second);
+
+            // b_x
+            FittedFunction->SetParLimits(2 * N + 10 + i, M_corner[i][1].first -delta, M_corner[i][1].first +delta);
+            FittedFunction->SetParameter(2 * N + 10 + i, M_corner[i][1].first);
+            // FittedFunction->FixParameter(2 * N + 10 + i, M_corner[i][1].first);
+
+            // b_y
+            FittedFunction->SetParLimits(3 * N + 10 + i, M_corner[i][1].second -delta, M_corner[i][1].second +delta);
+            FittedFunction->SetParameter(3 * N + 10 + i, M_corner[i][1].second);
+            // FittedFunction->FixParameter(3 * N + 10 + i, M_corner[i][1].second);
+
+            // c_x
+            FittedFunction->SetParLimits(4 * N + 10 + i, M_corner[i][2].first -delta, M_corner[i][2].first +delta);
+            FittedFunction->SetParameter(4 * N + 10 + i, M_corner[i][2].first);
+            // FittedFunction->FixParameter(4 * N + 10 + i, M_corner[i][2].first);
+
+            // c_y
+            FittedFunction->SetParLimits(5 * N + 10 + i, M_corner[i][2].second -delta, M_corner[i][2].second +delta);
+            FittedFunction->SetParameter(5 * N + 10 + i, M_corner[i][2].second);
+            // FittedFunction->FixParameter(5 * N + 10 + i, M_corner[i][2].second);
+
+            // d_x
+            FittedFunction->SetParLimits(6 * N + 10 + i, M_corner[i][3].first -delta, M_corner[i][3].first +delta);
+            FittedFunction->SetParameter(6 * N + 10 + i, M_corner[i][3].first);
+            // FittedFunction->FixParameter(6 * N + 10 + i, M_corner[i][3].first);
+
+            // d_y
+            FittedFunction->SetParLimits(7 * N + 10 + i, M_corner[i][3].second -delta, M_corner[i][3].second +delta);
+            FittedFunction->SetParameter(7 * N + 10 + i, M_corner[i][3].second);
+            // FittedFunction->FixParameter(7 * N + 10 + i, M_corner[i][3].second);
+        }
+    }
+
+    ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
+    ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0);
+    // H_precorrrected->Rebin2D(2, 2);
+    H_precorrrected->GetXaxis()->SetRangeUser(-0.4, 0.4);
+    H_precorrrected->GetYaxis()->SetRangeUser(-0.4, 0.4);
+
+    // H_precorrrected->SetBinContent(182, 178, 0);
+    H_precorrrected->Fit(FittedFunction, "MULTITHREAD RN", "", -0.4, 0.4);
+
+    cout << "chi2 = " << FittedFunction->GetChisquare() / FittedFunction->GetNDF() << endl;
+
+    TCanvas *c = new TCanvas("c", "c", 800, 800);
+    H_precorrrected->Draw("COLZ");
+    FittedFunction->Draw("SAME");
+    c->Write();
+
+    //// writing center of grid cell in a txt file with cell number x an y
+    ofstream file;
+    file.open(("out_corner_"+year+".txt").c_str());
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+            int I = i * n + j;
+            file << i * n + j << " " << FittedFunction->GetParameter(10 + I) << " " << FittedFunction->GetParameter(N + 10 + I) << " " << FittedFunction->GetParameter(10 + 2 * N + I) << " " << FittedFunction->GetParameter(N + 10 + 2 * N + I) << " " << FittedFunction->GetParameter(10 + 4 * N + I) << " " << FittedFunction->GetParameter(N + 10 + 4 * N + I) << " " << FittedFunction->GetParameter(10 + 6 * N + I) << " " << FittedFunction->GetParameter(N + 10 + 6 * N + I) << endl;
+        }
+    }
+    file.close();
+
+    // TH2D* hf = (TH2D*)FittedFunction->GetHistogram("hf");
+    // TCanvas *cprojx = new TCanvas("cprojx", "cprojx", 800, 800);
+    // TH1D* Hprojx = H_precorrrected->ProjectionX("Hprojx");
+    // Hprojx->Draw("HIST");
+    // TH1D* hfx = hf->ProjectionX("hfx");
+    // hfx->SetLineColor(kRed);
+    // hfx->Draw("SAME");
+    // cprojx->Write();
+
+    // TCanvas *cprojy = new TCanvas("cprojy", "cprojy", 800, 800);
+    // TH1D* Hprojy = H_precorrrected->ProjectionY("Hprojy");
+    // Hprojy->Draw("HIST");
+    // TH1D* hfy = hf->ProjectionY("hfy");
+    // hfy->SetLineColor(kRed);
+    // hfy->Draw("SAME");
+    // cprojy->Write();
+
+    TCanvas *c_corner = new TCanvas("c_corner", "c_corner", 800, 800);
+    H_precorrrected->Draw("COLZ");
+    for (int i = 0; i < N; ++i)
+    {
+        if (M[i / n][i % n])
+        {
+
+            TGraph *c_corner = new TGraph(4);
+            // a
+            c_corner->SetPoint(0, FittedFunction->GetParameter(10 + i), FittedFunction->GetParameter(N + 10 + i));
+            // b
+            c_corner->SetPoint(1, FittedFunction->GetParameter(10 + 2 * N + i), FittedFunction->GetParameter(N + 10 + 2 * N + i));
+            // c
+            c_corner->SetPoint(2, FittedFunction->GetParameter(10 + 4 * N + i), FittedFunction->GetParameter(N + 10 + 4 * N + i));
+            // d
+            c_corner->SetPoint(3, FittedFunction->GetParameter(10 + 6 * N + i), FittedFunction->GetParameter(N + 10 + 6 * N + i));
+
+
+            c_corner->SetMarkerStyle(20);
+            c_corner->SetMarkerSize(2);
+            c_corner->Draw("P SAME");
+        }
+    }
+    c_corner->Write();
+
+    FittedFunction->Write();
+}
+
+void FittingReconstruction_CORNER()
+{
+    int counter = 0;
+    int N = n * n;
+    TGraphErrors *G_coord_fitgrid = new TGraphErrors();
+    if (FittedFunction != nullptr)
+    {
+        for (int i = 0; i < n * n; ++i)
+        {
+            if (M[i / n][i % n])
+            {
+                G_coord_fitgrid->SetPoint(counter, FittedFunction->GetParameter(10 + i), FittedFunction->GetParameter(N + 10 + i));
+                G_coord_fitgrid->SetPointError(counter, FittedFunction->GetParError(10 + i), FittedFunction->GetParError(N + 10 + i));
+                counter++;
+
+                G_coord_fitgrid->SetPoint(counter, FittedFunction->GetParameter(2*N + 10 + i), FittedFunction->GetParameter(N + 10 + 2*N + i));
+                G_coord_fitgrid->SetPointError(counter, FittedFunction->GetParError(2*N + 10 + i), FittedFunction->GetParError(N + 10 + 2*N + i));
+                counter++;
+
+                G_coord_fitgrid->SetPoint(counter, FittedFunction->GetParameter(4*N + 10 + i), FittedFunction->GetParameter(N + 10 + 4*N + i));
+                G_coord_fitgrid->SetPointError(counter, FittedFunction->GetParError(4*N + 10 + i), FittedFunction->GetParError(N + 10 + 4*N + i));
+                counter++;
+
+                G_coord_fitgrid->SetPoint(counter, FittedFunction->GetParameter(6*N + 10 + i), FittedFunction->GetParameter(N + 10 + 6*N + i));
+                G_coord_fitgrid->SetPointError(counter, FittedFunction->GetParError(6*N + 10 + i), FittedFunction->GetParError(N + 10 + 6*N + i));
+                counter++;
+            }
+        }
+        TCanvas *c_coord_fitgrid = new TCanvas("c_coord_fitgrid", "c_coord_fitgrid", 800, 800);
+        G_coord_fitgrid->SetMarkerStyle(20);
+        G_coord_fitgrid->GetXaxis()->SetTitle("x [mm]");
+        G_coord_fitgrid->GetYaxis()->SetTitle("y [mm]");
+        G_coord_fitgrid->Draw("AP");
+        c_coord_fitgrid->cd();
+        for (int i = 0; i < G_coord_fitgrid->GetN(); ++i)
+        {
+            double x = G_coord_fitgrid->GetX()[i];
+            double y = G_coord_fitgrid->GetY()[i];
+
+            TText *t = new TText(x, y, Form("%d", i));
+            t->SetTextSize(0.02);
+            t->Draw("SAME");
+        }
+        c_coord_fitgrid->Write();
+    }
+    else
+    {
+        std::ifstream file(("out_corner_"+year+".txt").c_str());
+        std::string line;
+        int counter = 0;
+        while (std::getline(file, line))
+        {
+            std::istringstream iss(line);
+            double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
+            int i;
+            if (!(iss >> i >> Ax >> Ay >> Bx >> By >> Cx >> Cy >> Dx >> Dy))
+            {
+                break;
+            }
+            if (!M[i / n][i % n])
+            {
+                continue;
+            }
+            G_coord_fitgrid->SetPoint(counter, Ax, Ay);
+            G_coord_fitgrid->SetPoint(counter + 1, Bx, By);
+            G_coord_fitgrid->SetPoint(counter + 2, Cx, Cy);
+            G_coord_fitgrid->SetPoint(counter + 3, Dx, Dy);
+            // cout << N << " " << x << " " << y << endl;
+            counter+=4;
+        }
+        TCanvas *c_coord_fitgrid = new TCanvas("c_coord_fitgrid", "c_coord_fitgrid", 800, 800);
+        G_coord_fitgrid->SetMarkerStyle(20);
+        G_coord_fitgrid->GetXaxis()->SetTitle("x [mm]");
+        G_coord_fitgrid->GetYaxis()->SetTitle("y [mm]");
+        G_coord_fitgrid->Draw("AP");
+
+        c_coord_fitgrid->Write();
+    }
+
+    TGraph2D *G2D_X = new TGraph2D();
+    TGraph2D *G2D_Y = new TGraph2D();
+
+    counter = 0;
+    int rho = 2.;
+    for (int i = 0; i < n * n; i++)
+    {
+        if (M[i / n][i % n])
+        {
+            double X_real = i % n * rho - rho * (n-1) / 2 - l_real / 2;
+            double Y_real = i / n * rho - rho * (n-1) / 2 - l_real / 2;
+
+            double x, y;
+            G_coord_fitgrid->GetPoint(counter, x, y);
+            G2D_X->SetPoint(counter, x, y, X_real);
+            G2D_Y->SetPoint(counter, y, x, Y_real);
+
+            G_coord_fitgrid->GetPoint(counter + 1, x, y);
+            G2D_X->SetPoint(counter + 1, x, y, X_real + l_real);
+            G2D_Y->SetPoint(counter + 1, y, x, Y_real);
+
+            G_coord_fitgrid->GetPoint(counter + 2, x, y);
+            G2D_X->SetPoint(counter + 2, x, y, X_real + l_real);
+            G2D_Y->SetPoint(counter + 2, y, x, Y_real + l_real);
+
+            G_coord_fitgrid->GetPoint(counter + 3, x, y);
+            G2D_X->SetPoint(counter + 3, x, y, X_real);
+            G2D_Y->SetPoint(counter + 3, y, x, Y_real + l_real);
+
+            counter += 4;
+
+            cout << "Cell " << i << " : " << X_real << " " << Y_real << endl;
+        }
+    }
+    
+    // fitting X
+    TCanvas *c_fit_X = new TCanvas("c_fit_X", "c_fit_X", 800, 800);
+    G2D_X->SetMarkerStyle(20);
+    f_X = new TF2("f_X", Function, G2D_X->GetXmin(), G2D_X->GetXmax(), G2D_X->GetYmin(), G2D_X->GetYmax(), (NparX + 1) * (NparY + 1));
+    G2D_X->Fit("f_X", "MULTITHREAD");
+    f_X->Draw("SURF2");
+    G2D_X->Draw("AP SAME");
+    c_fit_X->Write();
+
+    // fitting Y
+    TCanvas *c_fit_Y = new TCanvas("c_fit_Y", "c_fit_Y", 800, 800);
+    G2D_Y->SetMarkerStyle(20);
+
+    f_Y = new TF2("f_Y", Function, G2D_Y->GetXmin(), G2D_Y->GetXmax(), G2D_Y->GetYmin(), G2D_Y->GetYmax(), (NparX + 1) * (NparY + 1));
+    G2D_Y->Fit("f_Y", "MULTITHREAD");
+    f_Y->Draw("SURF2");
+    G2D_Y->Draw("AP SAME");
+    c_fit_Y->Write();
+
+    // Plotting residus from fit X and Y
+    TCanvas *c_residus_XY = new TCanvas("c_residus_XY", "c_residus_XY", 800, 800);
+    TGraph *G_residus_XY = new TGraph();
+    TGraph *G_real_XY = new TGraph();
+    for (int i = 0; i < G2D_X->GetN(); ++i)
+    {
+        double x = G2D_X->GetZ()[i];
+        double y = G2D_Y->GetZ()[i];
+        double x_fit = f_X->Eval(G2D_X->GetX()[i], G2D_X->GetY()[i]);
+        double y_fit = f_Y->Eval(G2D_Y->GetX()[i], G2D_Y->GetY()[i]);
+
+        G_residus_XY->SetPoint(i, x_fit, y_fit);
+        G_real_XY->SetPoint(i, x, y);
+
+        c_residus_XY->cd();
+        TText *t = new TText(x, y, Form("%d", i));
+        t->SetTextSize(0.02);
+        t->Draw();
+
+    }
+
+    G_real_XY->SetMarkerStyle(20);
+    G_real_XY->Draw("AP");
+    G_residus_XY->SetMarkerStyle(20);
+    G_residus_XY->SetMarkerColor(kRed);
+    G_residus_XY->Draw("P SAME");
+    
+
+    for (int i = 0; i < G2D_X->GetN(); ++i)
+    {
+        double x = G2D_X->GetZ()[i];
+        double y = G2D_Y->GetZ()[i];
+
+        TText *t = new TText(x, y, Form("%d", i));
+        t->SetTextSize(0.02);
+        t->Draw("SAME");
+    }
+
+    c_residus_XY->Write();
+
+    // Reconstruction of the grid
+    TCanvas *c_reconstruction = new TCanvas("c_reconstruction", "c_reconstruction", 800, 800);
+    H_reconstruction = new TH2D("H_reconstruction", "H_reconstruction", 800, -8, 8, 800, -8, 8);
+
+    if (year == "2024")
+    {
+        for (int i = 0; i < H_precorrrected->GetEntries(); ++i)
+        {
+            double x, y;
+            H_precorrrected->GetRandom2(x, y);
+            double x_fit = f_X->Eval(x, y);
+            double y_fit = f_Y->Eval(y, x);
+            H_reconstruction->Fill(x_fit, y_fit);
+        }
+    }
+    else
+    {
+        TFile *f = new TFile(Calibration_Filename.c_str(), "READ");
+        TTree *tree = (TTree *)f->Get("treeMCP");
+        TTreeReader *Reader = new TTreeReader(tree);
+        TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X0");
+        TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y0");
+
+        while(Reader->Next())
+        {
+            double x = **X0;
+            double y = **Y0;
+            double x_fit = f_X->Eval(x, y);
+            double y_fit = f_Y->Eval(y, x);
+            H_reconstruction->Fill(x_fit, y_fit);
+        }
+        f->Close();
+        FINAL_file->cd();
+    }
+    H_reconstruction->Draw("COLZ");
+    c_reconstruction->Write();
+
+    writefit();
+}
+
+///////////////// Fitting Points /////////////////////////////////////
+void LoadCenters(string Year = "2024")
+{
+    if (Year == "2024")
+    {
+        ifstream file("guess_center_2024.txt");
+        string line;
+        while (getline(file, line))
+        {
+            istringstream iss(line);
+            int cell;
+            double x, y;
+            iss >> cell >> x >> y;
+            M_center[cell] = make_pair(x, y);
+        }
+        file.close();
+        Success("Centers loaded");   
+    }
+    else if (Year == "2025")
+    {
+        ifstream file("guess_center_2025.txt");
+        string line;
+        while (getline(file, line))
+        {
+            istringstream iss(line);
+            int cell;
+            double x, y;
+            iss >> cell >> x >> y;
+            M_center[cell] = make_pair(x, y);
+        }
+        file.close();
+        Success("Centers loaded"); 
+
+        ifstream file2("out_corner_2025.txt");  
+        string line2;
+        while (getline(file2, line2))
+        {
+            istringstream iss(line2);
+            int cell;
+            double ax, ay, bx, by, cx, cy, dx, dy;
+            iss >> cell >> ax >> ay >> bx >> by >> cx >> cy >> dx >> dy;
+            M_corner[cell] = {make_pair(ax, ay), make_pair(bx, by), make_pair(cx, cy), make_pair(dx, dy)};
+        }
+        Success("Corner loaded"); 
+    }
+    else
+    {
+        Error("LoadCenters", "Year not found");
+    }
+}
+
+
 
 void FittingReconstruction()
 {
@@ -1045,7 +1740,7 @@ void FittingReconstruction()
     {
         for (int i = 0; i < n * n; ++i)
         {
-            if (M8[i / n][i % n])
+            if (M[i / n][i % n])
             {
                 G_coord_fitgrid->SetPoint(counter, FittedFunction->GetParameter(10 + i), FittedFunction->GetParameter(n * n + 10 + i));
                 G_coord_fitgrid->SetPointError(counter, FittedFunction->GetParError(10 + i), FittedFunction->GetParError(n * n + 10 + i));
@@ -1061,24 +1756,24 @@ void FittingReconstruction()
     }
     else
     {
-        std::ifstream file("out_centers.txt");
+        std::ifstream file(("out_centers_"+year+".txt").c_str());
         std::string line;
         int counter = 0;
         while (std::getline(file, line))
         {
             std::istringstream iss(line);
             double x, y;
-            int N;
-            if (!(iss >> N >> x >> y))
+            int i;
+            if (!(iss >> i >> x >> y))
             {
                 break;
             }
-            if (!M8[N / n][N % n])
+            if (!M[i / n][i % n])
             {
                 continue;
             }
             G_coord_fitgrid->SetPoint(counter, x, y);
-            // cout << N << " " << x << " " << y << endl;
+            // cout << i << " " << x << " " << y << endl;
             counter++;
         }
         TCanvas *c_coord_fitgrid = new TCanvas("c_coord_fitgrid", "c_coord_fitgrid", 800, 800);
@@ -1096,10 +1791,10 @@ void FittingReconstruction()
     int rho = 2.;
     for (int i = 0; i < n * n; ++i)
     {
-        if (M8[i / n][i % n])
+        if (M[i / n][i % n])
         {
-            double X_real = i % 8 * rho - rho * (8 - 1) / 2;
-            double Y_real = i / 8 * rho - rho * (8 - 1) / 2;
+            double X_real = i / n * rho - rho * (n - 1) / 2;
+            double Y_real = i % n * rho - rho * (n - 1) / 2;
 
             double x, y;
             G_coord_fitgrid->GetPoint(counter, x, y);
@@ -1112,7 +1807,7 @@ void FittingReconstruction()
     // fitting X
     TCanvas *c_fit_X = new TCanvas("c_fit_X", "c_fit_X", 800, 800);
     G2D_X->SetMarkerStyle(20);
-    f_X = new TF2("f_X", Function, G2D_X->GetXmin(), G2D_X->GetXmax(), G2D_X->GetYmin(), G2D_X->GetYmax(), (DegX + 1) * (DegY + 1));
+    f_X = new TF2("f_X", Function, G2D_X->GetXmin(), G2D_X->GetXmax(), G2D_X->GetYmin(), G2D_X->GetYmax(), (NparX + 1) * (NparY + 1));
     G2D_X->Fit("f_X", "MULTITHREAD");
     f_X->Draw("SURF2");
     G2D_X->Draw("AP SAME");
@@ -1122,7 +1817,7 @@ void FittingReconstruction()
     TCanvas *c_fit_Y = new TCanvas("c_fit_Y", "c_fit_Y", 800, 800);
     G2D_Y->SetMarkerStyle(20);
 
-    f_Y = new TF2("f_Y", Function, G2D_Y->GetXmin(), G2D_Y->GetXmax(), G2D_Y->GetYmin(), G2D_Y->GetYmax(), (DegX + 1) * (DegY + 1));
+    f_Y = new TF2("f_Y", Function, G2D_Y->GetXmin(), G2D_Y->GetXmax(), G2D_Y->GetYmin(), G2D_Y->GetYmax(), (NparX + 1) * (NparY + 1));
     G2D_Y->Fit("f_Y", "MULTITHREAD");
     f_Y->Draw("SURF2");
     G2D_Y->Draw("AP SAME");
@@ -1152,15 +1847,38 @@ void FittingReconstruction()
 
     // Reconstruction of the grid
     TCanvas *c_reconstruction = new TCanvas("c_reconstruction", "c_reconstruction", 800, 800);
-    H_reconstruction = new TH2D("H_reconstruction", "H_reconstruction", 80, -4, 4, 80, -4, 4);
-    for (int i = 0; i < 1000000; ++i)
-    {
-        double x, y;
-        H_precorrrected->GetRandom2(x, y);
-        double x_fit = f_X->Eval(x, y);
-        double y_fit = f_Y->Eval(y, x);
-        H_reconstruction->Fill(x_fit, y_fit);
-    }
+    H_reconstruction = new TH2D("H_reconstruction", "H_reconstruction", 800, -8, 8, 800, -8, 8);
+
+    // if (year == "2024")
+    // {
+        for (int i = 0; i < H_precorrrected->GetEntries(); ++i)
+        {
+            double x, y;
+            H_precorrrected->GetRandom2(x, y);
+            double x_fit = f_X->Eval(x, y);
+            double y_fit = f_Y->Eval(y, x);
+            H_reconstruction->Fill(x_fit, y_fit);
+        }
+    // }
+    // else
+    // {
+    //     TFile *f = new TFile(Calibration_Filename.c_str(), "READ");
+    //     TTree *tree = (TTree *)f->Get("treeMCP");
+    //     TTreeReader *Reader = new TTreeReader(tree);
+    //     TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X0");
+    //     TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y0");
+
+    //     while(Reader->Next())
+    //     {
+    //         double x = **X0;
+    //         double y = **Y0;
+    //         double x_fit = f_X->Eval(x, y);
+    //         double y_fit = f_Y->Eval(y, x);
+    //         H_reconstruction->Fill(x_fit, y_fit);
+    //     }
+    //     f->Close();
+    //     FINAL_file->cd();
+    // }
     H_reconstruction->Draw("COLZ");
     c_reconstruction->Write();
 }
@@ -1284,7 +2002,7 @@ void FinalFunctionToMinimize2D()
     // l
     FinalFunction->SetParLimits(9, 1., 1.4);
     // FinalFunction->SetParameter(9, 1.2);
-    FinalFunction->FixParameter(9, 1.2);
+    FinalFunction->FixParameter(9, l_real);
 
     for (int i = 0; i < N; ++i)
     {
@@ -1360,7 +2078,7 @@ void FinalFunctionToMinimize2D()
     {
         for (int j = 0; j < n; ++j)
         {
-            if (!M8[i][j])
+            if (!M[i][j])
                 continue;
             double x_center = i * rho - rho * (n - 1) / 2;
             double y_center = j * rho - rho * (n - 1) / 2;

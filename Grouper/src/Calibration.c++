@@ -3,34 +3,40 @@
 int main(int argc, char *argv[])
 {
     InitDetectors("Config_Files/sample.pid");
+    VERBOSE = 0;
 
     ///////////////////////////////////  FILES //////////////////////////////////
-    MERGED_File["32Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
-    MERGED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
-    MERGED_File["33Ar"] = new TFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
+    Start("DATA Files");
+    MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+    MERGED_File["32Ar_thick"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
+    MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
 
-    SIMULATED_File["32Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/24-02/32Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["32Ar_thick"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/32Ar_100_5700_100_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    // SIMULATED_File["33Ar"] = new TFile((DIR_ROOT_DATA_SIMULATED + "/30-09/33Ar_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["18N"] = new TFile((DIR_ROOT_DATA_SIMULATED + "18N__CS0_CSP0_CV1_CVP1.root").c_str(), "READ");
+    Start("SIMULATED Files");
+    SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/32Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    SIMULATED_File["32Ar_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-26/32Ar_full_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+    // SIMULATED_File["18N_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     // SIMULATED_File["18N"] = new TFile("../../WISArD/SAMPLE.root", "READ");
 
     // CRADLE_File = new TFile((DIR_ROOT_DATA_SIMULATED + "/../../32Ar_CS0_CSP0_CV1_CVP1_1_00-1_analysed.root").c_str(), "READ");
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
-    CALIBRATED_File = new TFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated.root").c_str(), "RECREATE");
+    Start("OUTPUT Files");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
     // WriteTime(MERGED_File[], CALIBRATED_File);
 
     ///////////////////////////////////////////////////////////////////////////////
-    int first = 11;
-    int last = 86;
+    int first = 51;
+    int last = 56;
 
     FillingSimHitograms();
     InitAlphaPeaks();
     InitWindows();
     InitManualCalibration();
     InitElectronicResolution();
+    InitPileUp();
 
 
     // SET ALL EXPERIMENTAL TREE FOR EACH DETECTOR
@@ -62,7 +68,7 @@ int main(int argc, char *argv[])
             Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][i]);
             current_detector = i;
             Manual_Calibration();
-            ApplyCalibration(0);
+            ApplyCalibration(VERBOSE);
         }
     }
 
@@ -75,7 +81,7 @@ int main(int argc, char *argv[])
         {
             current_detector = i;
             Fitting_Calibration();
-            ApplyCalibration();
+            ApplyCalibration(VERBOSE);
         }
     }
 
@@ -93,6 +99,9 @@ int main(int argc, char *argv[])
             current_detector = i;
             CHI2Minimization();
             Resolution_applied = true;
+            // Fitting_Calibration();
+            // ApplyCalibration(VERBOSE);
+            // CHI2Minimization();
         }
     }
 

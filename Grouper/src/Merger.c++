@@ -178,6 +178,17 @@ int main(int argc, char *argv[])
             Silicon = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_Silicon");
             SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
 
+            // MAKING THE SEPARATION BETWEEN PRE AND POST GAIN CHANGE IN SIPMS
+            if (atoi(Run.c_str()) == 112)
+            {
+                MERGED_Tree_Silicon = {Signal(), Signal()};
+                MERGED_Tree_SiPMGroup = {{make_pair(Signal(), Signal())}};
+                MERGED_Tree->Fill();
+                MERGED_Tree_Silicon.clear();
+                MERGED_Tree_SiPMGroup.clear();
+            }
+            //////////////////////////////
+
             clock_t start = clock(), Current;
             int Entries = Reader->GetEntries();
             while (Reader->Next())

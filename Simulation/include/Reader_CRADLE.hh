@@ -8,14 +8,14 @@ int Verbosee = 0;
 TFile *ANALYSIS_File;
 
 TTreeReader *Reader;
-TTreeReaderValue<int> *Tree_PDG;
-TTreeReaderValue<int> *Tree_Event;
-TTreeReaderValue<double> *Tree_time;
-TTreeReaderValue<double> *Tree_Ex;
-TTreeReaderValue<double> *Tree_E0;
-TTreeReaderValue<double> *Tree_px;
-TTreeReaderValue<double> *Tree_py;
-TTreeReaderValue<double> *Tree_pz;
+TTreeReaderArray<int> *Tree_PDG;
+TTreeReaderArray<int> *Tree_Event;
+TTreeReaderArray<double> *Tree_time;
+TTreeReaderArray<double> *Tree_Ex;
+TTreeReaderArray<double> *Tree_E0;
+TTreeReaderArray<double> *Tree_px;
+TTreeReaderArray<double> *Tree_py;
+TTreeReaderArray<double> *Tree_pz;
 
 map<int, TH1D *> H_E0;
 map<int, TH1D *> H_Ex;
@@ -66,8 +66,6 @@ void VerifyPDG(int PDG)
 
         
     }
-
-    
 }
 
 void InitHistograms()

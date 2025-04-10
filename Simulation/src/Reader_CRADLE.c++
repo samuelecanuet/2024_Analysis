@@ -9,14 +9,13 @@ int main()
     TTree *tree = (TTree *)SIMULATED_File->Get("ParticleTree");
 
     Reader = new TTreeReader(tree);
-    Tree_Event = new TTreeReaderValue<int>(*Reader, "event");
-    Tree_PDG = new TTreeReaderValue<int>(*Reader, "code");
-    Tree_E0 = new TTreeReaderValue<double>(*Reader, "energy");
-    Tree_time = new TTreeReaderValue<double>(*Reader, "time");
-    Tree_Ex = new TTreeReaderValue<double>(*Reader, "excitation_energy");
-    Tree_px = new TTreeReaderValue<double>(*Reader, "px");
-    Tree_py = new TTreeReaderValue<double>(*Reader, "py");
-    Tree_pz = new TTreeReaderValue<double>(*Reader, "pz");
+    Tree_PDG = new TTreeReaderArray<int>(*Reader, "code");
+    Tree_E0 = new TTreeReaderArray<double>(*Reader, "energy");
+    Tree_time = new TTreeReaderArray<double>(*Reader, "time");
+    Tree_Ex = new TTreeReaderArray<double>(*Reader, "excitation_energy");
+    Tree_px = new TTreeReaderArray<double>(*Reader, "px");
+    Tree_py = new TTreeReaderArray<double>(*Reader, "py");
+    Tree_pz = new TTreeReaderArray<double>(*Reader, "pz");
 
 
     int Entries = tree->GetEntries();
@@ -26,35 +25,24 @@ int main()
 
     Info("Starting Loop");
     int Event_MAX = 1e6;
-    int Event = -1;
 
-    vector<double> pe = {0, 0, 0};
-    vector<double> e_nu = {0, 0, 0};
-    while (Event < Event_MAX)
+    while (Reader->Next() && Reader->GetCurrentEntry() < Event_MAX)
     {
-        ProgressBar(Event, Event_MAX, start, Current, "Reading Tree");
-        if (!Reader->Next())
-            break;
-        Event++;
+        ProgressBar(Reader->GetCurrentEntry(), Event_MAX, start, Current, "Reading Tree");
 
         // cout << "Event: " << **Tree_Event << endl;
-        while (Event == **Tree_Event)
+        for (int part_i = 0; part_i < Tree_PDG->GetSize(); part_i++)
         {
-            VerifyPDG(**Tree_PDG);
+            VerifyPDG(Tree_PDG->At(part_i));
+            int PDG = Tree_PDG->At(part_i);
             //cout << "Particle: " << **Tree_PDG << " Energy: " << **Tree_E0 << " Ex: " << **Tree_Ex << " Time: " << **Tree_time << " px: " << **Tree_px << " py: " << **Tree_py << " pz: " << **Tree_pz << endl;
-            H_E0[**Tree_PDG]->Fill(**Tree_E0);
-            H_Ex[**Tree_PDG]->Fill(**Tree_Ex);
-            H_Time[**Tree_PDG]->Fill(**Tree_time);
-            H_px[**Tree_PDG]->Fill(**Tree_px);
-            H_py[**Tree_PDG]->Fill(**Tree_py);
-            H_pz[**Tree_PDG]->Fill(**Tree_pz);
-
-
-            Reader->Next();
-            if (!Reader->Next())
-            break;
-
-        }
+            H_E0[PDG]->Fill(Tree_E0->At(part_i));
+            H_Ex[PDG]->Fill(Tree_Ex->At(part_i));
+            H_Time[PDG]->Fill(Tree_time->At(part_i));
+            H_px[PDG]->Fill(Tree_px->At(part_i));
+            H_py[PDG]->Fill(Tree_py->At(part_i));
+            H_pz[PDG]->Fill(Tree_pz->At(part_i));
+        }        
     }
 
     WriteHistograms();

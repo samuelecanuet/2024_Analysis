@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-
+    InitDetectors("Config_Files/sample.pid");
     string Run_string;
 
     if (argc < 2)
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     GROUPED_File->cd();
     WriteTime(ROOT_File, GROUPED_File);
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
-    InitDetectors("Config_Files/sample.pid");
+    
     InitHistograms_Grouped();
     InitCalibration();
 
