@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
     
     InitHistograms_Grouped();
-    InitCalibration();
+    // InitCalibration();
 
     clock_t start = clock(), Current;
     if (FULL) ///////// SAVING FIT PARAMETER IF FULL MODE ELSE LOADING THEM

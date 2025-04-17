@@ -510,7 +510,7 @@ void ReadAllRunsDate()
           int stop_time = static_cast<int>(stop_time_t);  
           double diff= stop_time-start_time;
 
-          H_Data[i] = new TH1D(Form("H_Data_run_%d", i), Form("H_Data_run_%d", i), diff*1000, 0, diff);
+          H_Data[i] = new TH1D(("H_Data_run_"+to_string(i)).c_str(), ("H_Data_run_"+to_string(i)).c_str(), diff*1000, 0, diff);
           H_Data[i]->GetXaxis()->SetTitle("Time [s]");
           H_Data[i]->GetYaxis()->SetTitle("Intensity");
           H_Data[i]->GetXaxis()->CenterTitle();

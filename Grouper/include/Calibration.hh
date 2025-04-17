@@ -362,8 +362,8 @@ void FillingSimHitograms()
     ScalerPeak["18N"] = 1;
 
     CalibrationPeaks["32Ar"] =  {5, 8, 9, 14, 23, 25, 28, 29, 30};
-    CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
-    CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
+    CalibrationPeaks["32Ar_thick"] = {};//{5, 8, 14};
+    CalibrationPeaks["33Ar"] = {};//{2, 12, 21, 26, 35, 37, 40};
 
     for (auto &pair : SIMULATED_File)
     {
@@ -435,6 +435,11 @@ TF1*InvertFunction(TF1 *f)
         double b = f->GetParameter(0);
 
         TF1 *f = new TF1("f", Form("(x - %f)/%f", b, a), 0, 10000);
+
+        // same WHTHOUT Form but takng values of a and b
+        
+
+
 
         return f;
     }
