@@ -291,10 +291,10 @@ void InitPeakWindow()
 
 void InitGT()
 {
-    ifstream file("Config_Files/Manual_Calibration.txt");
+    ifstream file(("Config_Files/" + to_string(YEAR) + "/Manual_Calibration_" + to_string(YEAR) + ".txt").c_str());
     if (!file.is_open())
     {
-        Error("Impossible to open Manual_Calibration.txt");
+        Error("Impossible to open Manual_Calibration_" + to_string(YEAR) + ".txt");
     }
 
     string line;
@@ -326,10 +326,10 @@ void InitGT()
 
 void InitManualCalibration()
 {
-    ifstream file("Config_Files/Manual_Calibration.txt");
+    ifstream file(("Config_Files/" + to_string(YEAR) + "/Manual_Calibration_" + to_string(YEAR) + ".txt").c_str());
     if (!file.is_open())
     {
-        Error("Impossible to open Manual_Calibration.txt");
+        Error("Impossible to open Manual_Calibration_" + to_string(YEAR) + ".txt");
     }
 
     string line;

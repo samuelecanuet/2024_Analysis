@@ -78,44 +78,60 @@ TGraph *G_N[SIGNAL_MAX];
 TGraph *G_Fake;
 
 vector<Signal> MERGED_Tree_Silicon;
-// vector<Signal> MERGED_Tree_SiPMHigh;
-// vector<Signal> MERGED_Tree_SiPMLow;
 vector<vector<pair<Signal, Signal>>> MERGED_Tree_SiPMGroup;
-
+Signal MERGED_Tree_HRS;
 
 TTreeReaderArray<Signal> *Silicon;
-// TTreeReaderArray<Signal> *SiPM_High;
-// TTreeReaderArray<Signal> *SiPM_Low;
 TTreeReaderValue<vector<vector<pair<Signal, Signal>>>> *SiPM_Groups;
+TTreeReaderValue<Signal> *HRS;
 double Channel;
 
 TH1D* H_Sum;
 
-void Init()
+void InitRuns()
 {
-  Map_RunFiles["32Ar"] = {
-                    //       "057", "058", "059",
-                  //       "061", "062", 
-                         "064", "065", "066", "067", "068", "069",
-                         "070", "071", "072", "074", "077",
-                        
-                        
-                        
-                        "112", "113", "114", "115", "116", "118"
-                        };
-                    //     "001", "002", "003", "004", "005", "006", "007", "008", "009", 
-                    // "010", "011", "012", "013", "014", "015", "016", "017", "018", "019",
-                    // "020", "021", "022", "023", "024", "025", "026", "027", "028", "029",
-                    // "030", "031", "032", "033", "034", "035", "036", "037", "038", "039",
-                    // "040", "041", "042", "043", "044", "045", "046",
-                    //  "047", "048", "049",
-                    // "050", "051", "052", "053", "054", "055", "056", "057", "058", "059",
-                    // "060", "061", "062", "063", "064", "065", "066", "067", "068", "069",
-    // };
+  ifstream file(("./Config_Files/" + to_string(YEAR) + "/Runs_" + to_string(YEAR) + ".txt").c_str());
+  if (!file.is_open())
+  {
+    Error("Could not open the file Runs_" + to_string(YEAR) + ".txt");
+  }
 
-  Map_RunFiles["32Ar_thick"] = {"075", "076"};
+  string line;
+  string nucleus;
+  while (getline(file, line))
+  {
+    if (line.empty())
+      continue;
 
-  Map_RunFiles["33Ar"] = {"078"};
+    if (line[0] == '#')
+      nucleus = line.substr(1);
+
+    else
+    {
+      stringstream ss(line);
+      string number;
+      while (ss >> number)
+      {
+        Map_RunFiles[nucleus].push_back(number);
+      }
+    }
+  }
+
+  file.close();
+
+  Info("Runs loaded");
+  for (const auto &pair : Map_RunFiles)
+  {
+    string nucleus = pair.first;
+    vector<string> runs = pair.second;
+    Info("Nucleus : " + nucleus, 1);
+    string runstring = "";
+    for (const auto &run : runs)
+    {
+      runstring += run + " ";
+    }
+    Info(runstring, 2);
+  }
 }
 
 void InitGraph()

@@ -88,7 +88,7 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
 
 int CRADLE_READER()
 {
-    string name = "/run/media/local1/Disque_Dur/2024_DATA/SIMULATED_DATA/04-01/test";
+    string name = "/home/local1/Documents/CRADLE/build/test";
     // name = "241Am_700nm_width";
     TFile *SIMULATED_File = new TFile((name + ".root").c_str(), "READ");
     ANALYSIS_File = new TFile((name + "_analysed.root").c_str(), "RECREATE");
@@ -110,7 +110,7 @@ int CRADLE_READER()
     int Event_MAX = 1e6;
 
     TH1D *H_E0[100];
-    H_E0[11] = new TH1D("H_E0_e-", "H_E0_e-", 10000, 0, 10000);
+    H_E0[11] = new TH1D("H_E0_e-", "H_E0_e-", 400000, 5700, 6100);
     H_E0[11]->GetXaxis()->SetTitle("Energy [keV]");
     H_E0[11]->GetYaxis()->SetTitle("Counts");
     H_E0[11]->GetXaxis()->CenterTitle();
@@ -123,11 +123,11 @@ int CRADLE_READER()
         // cout << "Event: " << **Tree_Event << endl;
         for (int part_i = 0; part_i < Tree_PDG->GetSize(); part_i++)
         {
-            if (Tree_PDG->At(part_i) == 11)
+            if (Tree_PDG->At(part_i) == 2212)
             {
                 int PDG = Tree_PDG->At(part_i);
                 // cout << "Particle: " << **Tree_PDG << " Energy: " << **Tree_E0 << " Ex: " << **Tree_Ex << " Time: " << **Tree_time << " px: " << **Tree_px << " py: " << **Tree_py << " pz: " << **Tree_pz << endl;
-                H_E0[PDG]->Fill(Tree_E0->At(part_i));
+                H_E0[11]->Fill(Tree_E0->At(part_i));
                 // H_Ex[PDG]->Fill(Tree_Ex->At(part_i));
                 // H_Time[PDG]->Fill(Tree_time->At(part_i));
                 // H_px[PDG]->Fill(Tree_px->At(part_i));
@@ -144,4 +144,6 @@ int CRADLE_READER()
 
     SIMULATED_File->Close();
     ANALYSIS_File->Close();
+
+    return 0;
 }

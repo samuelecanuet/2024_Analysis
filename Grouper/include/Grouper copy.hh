@@ -4,7 +4,7 @@
 #include "../../../lib/SignalDict/Signal.h"
 #include "Detectors.hh"
 
-//
+
 using namespace std;
 
 int VERBOSE = 0;
@@ -31,7 +31,6 @@ TTree *CLEANED_Tree;
 TTree *CLEANED_Tree_detector[SIGNAL_MAX];
 vector<Signal> CLEANED_Tree_Silicon;
 vector<vector<pair<Signal, Signal>>> CLEANED_Tree_SiPMGroup;
-Signal CLEANED_Tree_HRS;
 double Tree_Channel_detector;
 
 TTreeReaderArray<Signal> *Silicon;
@@ -1530,15 +1529,10 @@ inline int WriteHistograms_Grouped()
       G_RearStrip_Spread[i]->Draw("AP");
       SpreadAcceptance[i] = new TF1("spread_fit", "[0]/x");
       SpreadAcceptance[i]->SetParameter(0, 100);
-      int status = 0;
-      if (G_RearStrip_Spread[i]->GetN() > 5)
-      {
-        if (SpreadAcceptance[i] == nullptr)
-          status = G_RearStrip_Spread[i]->Fit(SpreadAcceptance[i], "QR");
+      int status = G_RearStrip_Spread[i]->Fit(SpreadAcceptance[i], "Q");
 
-        if (status != 0)
-          Warning("Fit failed for " + detectorName[i] + " during Rear/Strip spread correction.");
-      }
+      if (status != 0)
+        Warning("Fit failed for " + detectorName[i] + " during Rear/Strip spread correction.");
 
       double yfullrange = G_RearStrip_Spread[i]->GetYaxis()->GetXmax() - G_RearStrip_Spread[i]->GetYaxis()->GetXmin();
       TLatex *formula = new TLatex(60000, yfullrange * 0.85, "#bf{#color[2]{f(x) = #frac{a}{x}}}");
@@ -1830,13 +1824,10 @@ inline void WriteHistograms_Cutted()
       MeanAcceptance_Walk_Silicon[i]->SetParLimits(1, -1e7, -1e5);
       MeanAcceptance_Walk_Silicon[i]->SetParLimits(2, -150000, 10000);
 
-      int status = 1;
-      if (G_Rear_Mean_Walk_Silicon[i]->GetN() != 0)
-      {
-        status = G_Rear_Mean_Walk_Silicon[i]->Fit(MeanAcceptance_Walk_Silicon[i], "QW");
-        if (status != 0)
-          Warning("Fit failed for " + detectorName[i] + " during walk Silicon correction.");
-      }
+      int status = G_Rear_Mean_Walk_Silicon[i]->Fit(MeanAcceptance_Walk_Silicon[i], "Q");
+      if (status != 0)
+        Warning("Fit failed for " + detectorName[i] + " during walk Silicon correction.");
+
       // cout << "     " << MeanAcceptance_Walk_Silicon[i]->GetChisquare () << endl;
 
       ////1st
@@ -2028,14 +2019,10 @@ inline void WriteHistograms_SiliconWalk()
       MeanAcceptance_Walk_SiPM[i]->SetParLimits(1, 0, 20000);
       MeanAcceptance_Walk_SiPM[i]->SetParLimits(2, -mini, suppar2);
 
-      int status = 1;
-      if (graph_mean->GetN() != 0)
-      {
-        status = graph_mean->Fit(MeanAcceptance_Walk_SiPM[i], "WQR");
-        if (status != 0)
-          Warning("Fit failed for " + detectorName[i] + " during walk SiPM correction.");
-      }
-      //
+      int status = graph_mean->Fit(MeanAcceptance_Walk_SiPM[i], "WQR");
+      if (status != 0)
+        Warning("Fit failed for " + detectorName[i] + " during walk SiPM correction.");
+
       // genereal fit canvas
       if (IsDetectorBetaLow(i))
       {
@@ -2304,6 +2291,46 @@ inline void WriteHistograms_Cleaned()
   }
 }
 
+inline void WriteIASLosses()
+{
+
+  GROUPED_File->cd();
+  /// FOR SILICON STRIPS ///
+  TCanvas *C_Losses = new TCanvas("C_Losses", "C_Losses", 800, 400);
+  TH1D *H_Losses_all = new TH1D("H_Losses_all", "H_Losses_all", 6, 0, 3);
+  TH1D *H_Losses_IAS = new TH1D("H_Losses_IAS", "H_Losses_IAS", 6, 0, 3);
+
+  for (int i = 0; i < detectorNum; i++)
+  {
+    if (IsDetectorSiliStrip(i))
+    {
+      H_Losses_all->SetBinContent(0, H_Losses_all->GetBinContent(0) + H_Channel_RAW[i]->Integral());
+      H_Losses_all->SetBinContent(2, H_Losses_all->GetBinContent(2) + H_Channel_A[i]->Integral());
+      H_Losses_all->SetBinContent(5, H_Losses_all->GetBinContent(5) + H_Channel_Cleaned[i]->Integral());
+
+      H_Channel_RAW[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
+      H_Channel_A[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
+      H_Channel_Cleaned[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
+
+      H_Losses_IAS->SetBinContent(0, H_Losses_IAS->GetBinContent(0) + H_Channel_RAW[i]->Integral());
+      H_Losses_IAS->SetBinContent(2, H_Losses_IAS->GetBinContent(2) + H_Channel_A[i]->Integral());
+      H_Losses_IAS->SetBinContent(5, H_Losses_IAS->GetBinContent(5) + H_Channel_Cleaned[i]->Integral());
+
+      H_Channel_RAW[i]->GetXaxis()->SetRangeUser(-1111, -1111);
+      H_Channel_A[i]->GetXaxis()->SetRangeUser(-1111, -1111);
+      H_Channel_Cleaned[i]->GetXaxis()->SetRangeUser(-1111, -1111);
+    }
+  }
+  H_Losses_all->SetLineColor(kBlack);
+  // H_Losses_all->SetBinLabel(1, "RAW");
+  // H_Losses_all->SetBinLabel(3, "SELECTED");
+  // H_Losses_all->SetBinLabel(6, "CLEANED");
+  H_Losses_all->Draw("HIST");
+  H_Losses_IAS->SetLineColor(kRed);
+  H_Losses_IAS->Draw("SAME");
+  C_Losses->Write();
+}
+
 inline int WriteTree_Grouped()
 {
   GROUPED_File->cd();
@@ -2332,7 +2359,6 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
 
   for (int index = 0; index < signals.GetSize(); index++)
   {
-    if (FLAG2021) signals[index].Label = YearConverter(signals[index].Label);
     int current_label = signals[index].Label;
     if (IsDetectorSiliBack(current_label))
     {
@@ -2412,12 +2438,33 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
     }
   }
 
-  // SAVING ALL THE PAIRS
-  for (auto it : RearStrip_ASSOCIATED)
+  
+  ///////////////////////////////////////
+  ///////// CASES A B C D E F G /////////
+  ///////////////////////////////////////
+
+  // Case A : SINGLE Rear and Strip associated (most common case)
+  if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 1)
   {
+    // if (IAS)
+    // {
+      // RearStrip_ASSOCIATED[0].first.Channel = 1.0911*RearStrip_ASSOCIATED[0].first.Channel;
+      // cout << "CASE A" << endl;
+      H_Channel_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
+      H_Channel_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
+
+      H_RearStrip_Channel_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);  // REAR-STRIP for rear plot
+      H_RearStrip_Channel_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel); // REAR-STRIP for strip plot
+
+      H_Strip_Channel_DiffRear_A[RearStrip_ASSOCIATED[0].second.Label]->Fill((RearStrip_ASSOCIATED[0].first.Channel - RearStrip_ASSOCIATED[0].second.Channel) / RearStrip_ASSOCIATED[0].second.Channel);                                                // STRIP/REAR
+      H_Strip_Channel_DiffRearvsStrip_A[RearStrip_ASSOCIATED[0].second.Label]->Fill((RearStrip_ASSOCIATED[0].first.Channel - RearStrip_ASSOCIATED[0].second.Channel) / RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[0].second.Channel); // STRIP/REAR vs Strip channel
+
+      H_RearStrip_Time_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+      H_RearStrip_Time_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+    // }
     //////////////////////// TREE ////////////////////////
-    GROUPED_Tree_Silicon.push_back(it.first);
-    GROUPED_Tree_Silicon.push_back(it.second);
+    GROUPED_Tree_Silicon.push_back(RearStrip_ASSOCIATED[0].first);
+    GROUPED_Tree_Silicon.push_back(RearStrip_ASSOCIATED[0].second);
     for (int index_h = 0; index_h < SiPM_High_Position.size(); index_h++)
     {
       GROUPED_Tree_SiPMHigh.push_back(signals[SiPM_High_Position[index_h]]);
@@ -2433,26 +2480,10 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
     ///////////////////////////////////////////////////////
   }
 
-  ///////////////////////////////////////
-  ///////// CASES A B C D E F G /////////
-  ///////////////////////////////////////
-
-  // Case A : SINGLE Rear and Strip associated (most common case)
-  if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 1)
-  {
-      // cout << "CASE A" << endl;
-      H_Channel_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
-      H_Channel_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
-
-      H_RearStrip_Channel_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);  // REAR-STRIP for rear plot
-      H_RearStrip_Channel_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel); // REAR-STRIP for strip plot
-
-      H_Strip_Channel_DiffRear_A[RearStrip_ASSOCIATED[0].second.Label]->Fill((RearStrip_ASSOCIATED[0].first.Channel - RearStrip_ASSOCIATED[0].second.Channel) / RearStrip_ASSOCIATED[0].second.Channel);                                                // STRIP/REAR
-      H_Strip_Channel_DiffRearvsStrip_A[RearStrip_ASSOCIATED[0].second.Label]->Fill((RearStrip_ASSOCIATED[0].first.Channel - RearStrip_ASSOCIATED[0].second.Channel) / RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[0].second.Channel); // STRIP/REAR vs Strip channel
-
-      H_RearStrip_Time_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-      H_RearStrip_Time_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-  }
+  // if (!IAS)
+  // {
+  //   return;
+  // }
 
   // Case B : SAME Rear and DIFFERENT NEIGHBOURG Strip associated (intertrip)
   else if (RearStrip_ASSOCIATED.size() == 2 && IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
@@ -2737,7 +2768,6 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
 
   for (int index = 0; index < signals.GetSize(); index++)
   {
-    if (FLAG2021) signals[index].Label = YearConverter(signals[index].Label);
     int current_label = signals[index].Label;
     if (IsDetectorSiliBack(current_label))
     {
@@ -2763,13 +2793,6 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
       signals[index].Time = signals[index].Time + (-0.5 + gRandom->Rndm()) * 2;
       SiPM_Low.push_back(signals[index]);
     }
-    if (IsHRSProton(current_label))
-    {
-      CLEANED_Tree_HRS = signals[index];
-      CLEANED_Tree->Fill();
-      CLEANED_Tree_HRS = Signal();
-      return;
-    }    
   }
 
   if (verbose == 1) Info("Silicon Stuff", 1);
@@ -2786,64 +2809,24 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     }
   }
 
-  if (RearStrip_ASSOCIATED.size() < 1)
-    return;
-
-  vector<bool> RearStrip_ASSOCIATED_ACCEPTED = vector<bool>(RearStrip_ASSOCIATED.size(), true);
-  // ###### Cuts ####### //
-  for (int index_pair = 0; index_pair < RearStrip_ASSOCIATED.size(); index_pair++)
+  // !Case A : SINGLE Rear and Strip associated (most common case)
+  if (RearStrip_ASSOCIATED.size() != 1 || Rear_Position.size() != 1 || Strip_Position.size() != 1)
   {
-    /// RearStrip energy cut (3 sigmas)
-    double diff = (RearStrip_ASSOCIATED[index_pair].first.Channel - RearStrip_ASSOCIATED[index_pair].second.Channel) / RearStrip_ASSOCIATED[index_pair].second.Channel;
-    double spread = SpreadAcceptance[RearStrip_ASSOCIATED[index_pair].second.Label]->Eval(RearStrip_ASSOCIATED[index_pair].second.Channel);
-    double mean = MeanAcceptance[RearStrip_ASSOCIATED[index_pair].second.Label];
-    if (diff > mean + 3 * spread || diff < mean - 3 * spread) 
-    {
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
-    }
-
-    // PileUp rejection from faster flag
-    else if (RearStrip_ASSOCIATED[index_pair].first.Pileup == 1 || RearStrip_ASSOCIATED[index_pair].second.Pileup == 1)
-    {
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
-    }
-
-    // PileUp rejection between groups (500µs cut on strip)
-    else if (RearStrip_ASSOCIATED[0].second.Time - lastGroupTime[RearStrip_ASSOCIATED[0].second.Label] < 500e3)
-    {
-      lastGroupTime[RearStrip_ASSOCIATED[0].second.Label] = RearStrip_ASSOCIATED[0].second.Time;
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
-    }
-
-    // RearStrip time cut (100 ns)
-    else if (abs(RearStrip_ASSOCIATED[index_pair].first.Time - RearStrip_ASSOCIATED[index_pair].second.Time) > 100)
-    {
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
-    }
-
-  }
-  
-  // Only one pair in the group
-  int counter_Accepted = 0;
-  for (int index_pair = 0; index_pair < RearStrip_ASSOCIATED.size(); index_pair++)
-  {
-    if (RearStrip_ASSOCIATED_ACCEPTED[index_pair])
-    {
-      counter_Accepted++;
-    }
-  }
-
-  if (counter_Accepted > 1 || counter_Accepted == 0)
-  {
-    // cout << "Rejected " << endl;
     return;
   }
-
-  Silicon.push_back(RearStrip_ASSOCIATED[0].first);
-  Silicon.push_back(RearStrip_ASSOCIATED[0].second);
+  // if (Rear_Position.size() < 1 || Strip_Position.size() < 1)
+  // {
+  //   return;
+  // }
+  Silicon.push_back(signals[Rear_Position[0]]);
+  Silicon.push_back(signals[Strip_Position[0]]);
   ////////////////////####################////////////////////
 
-
+  if (Silicon[0].Pileup == 1 || Silicon[1].Pileup == 1)
+  {
+    return;
+  }
+  ////////////////////####################////////////////////
   /// Cutting data Rear/Strip ///
   //// Strip
   double Strip_Channel = (Silicon)[1].Channel;
@@ -2873,7 +2856,13 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
 
   int number = Strip_Label;
 
-  bool IAS = false;
+  if (Rear_Time - lastGroupTime[number] < 500e3)
+  {
+    lastGroupTime[number] = Rear_Time;
+    return;
+  }
+
+    bool IAS = false;
 
   if (Rear_Channel > Rear_IAS[GetDetector(Rear_Label)].first && Rear_Channel < Rear_IAS[GetDetector(Rear_Label)].second)
   {
@@ -2892,6 +2881,11 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
   }
 
   lastGroupTime[number] = Rear_Time;
+
+  if (diff > mean + 3 * spread || diff < mean - 3 * spread)
+  {
+    return;
+  }
 
   if (!FULL)
   {

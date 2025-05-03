@@ -30,12 +30,12 @@ double Detector_Resolution[SIGNAL_MAX];
 
 void InitElectronicResolution()
 {
-    ifstream file("../Grouper/Config_Files/res_electronic.txt");
+    ifstream file(("../Grouper/Config_Files/" + to_string(YEAR) + "/Electronic_Resolution_" + to_string(YEAR) + ".txt").c_str());
     if (!file.is_open())
     {
-        Error("Impossible to open res_electronic.txt");
+        Error("Impossible to open Electronic_Resolution_" + to_string(YEAR) + ".txt");
     }
-    Info("Reading res_electronic.txt");
+    Info("Reading Electronic_Resolution_" + to_string(YEAR) + ".txt");
 
     string line;
     int code;

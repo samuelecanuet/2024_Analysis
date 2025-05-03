@@ -226,7 +226,7 @@ void InitSiliconCalibration(string addpath = "")
 
     string CalibFileName;
 
-    CalibFileName = addpath + "./Config_Files/Calibration.txt";
+    CalibFileName = addpath + "/Config_Files/" + to_string(YEAR) + "/Calibration_" + to_string(YEAR) + ".txt";
 
     ifstream file(CalibFileName);
 

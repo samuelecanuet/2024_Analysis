@@ -2,34 +2,80 @@
 
 int main(int argc, char *argv[])
 {
+    FLAG2024 = true;
+    
     InitDetectors("Config_Files/sample.pid");
     VERBOSE = 0;
 
-    ///////////////////////////////////  FILES //////////////////////////////////
-    Start("DATA Files");
-    MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
-    MERGED_File["32Ar_thick"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
-    MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
+    //////////////////////////////  FILES PER YEAR /////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////  2021 //////////////////////////////////
+    if (YEAR == 2021)
+    {
+        Nuclei = {"32Ar", "33Ar", "32Ar_thick"};
+        Start("DATA Files");
+        MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+        MERGED_File["32Ar_thick"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
+        MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
+        Start("SIMULATED Files");
+        SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/04-01/32Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["32Ar_thick"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/03-26/32Ar_full_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
 
-    Start("SIMULATED Files");
-    SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/32Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["32Ar_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-26/32Ar_full_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    // SIMULATED_File["18N_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-    // SIMULATED_File["18N"] = new TFile("../../WISArD/SAMPLE.root", "READ");
+        CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23};
+        CalibrationPeaks["32Ar_thick"] = {5, 8, 9, 14, 23};
+        CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 40};
+    }
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////  2024 //////////////////////////////////
+    else if (YEAR == 2024)
+    {
+        Nuclei = {"32Ar", "33Ar", "32Ar_thick"};
+        Start("DATA Files");
+        MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+        MERGED_File["32Ar_thick"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
+        MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
+        Start("SIMULATED Files");
+        SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/32Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["32Ar_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-26/32Ar_full_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        // SIMULATED_File["18N_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
 
-    // CRADLE_File = new TFile((DIR_ROOT_DATA_SIMULATED + "/../../32Ar_CS0_CSP0_CV1_CVP1_1_00-1_analysed.root").c_str(), "READ");
+        CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
+        CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
+        CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
+    }
+    ////////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////  2025 //////////////////////////////////
+    else if (YEAR == 2025)
+    {
+        Nuclei = {"32Ar", "33Ar", "33Ar_thick"};
+        Start("DATA Files");
+        MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+        MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
+        MERGED_File["33Ar_thick"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_thick_merged.root").c_str(), "READ");
+        Start("SIMULATED Files");
+        SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/04-01/32Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["33Ar_thick"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+
+        CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
+        CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35};
+        CalibrationPeaks["33Ar_thick"] = {2, 12, 21, 26, 35};
+    }
+    ////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     Start("OUTPUT Files");
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated.root").c_str(), "RECREATE");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + ".root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
-    // WriteTime(MERGED_File[], CALIBRATED_File);
 
     ///////////////////////////////////////////////////////////////////////////////
     int first = 51;
-    int last = 56;
+    int last = 86;
 
     FillingSimHitograms();
     InitAlphaPeaks();
@@ -54,6 +100,10 @@ int main(int argc, char *argv[])
             if (IsDetectorSiliStrip(i))
             {
                 MERGED_Tree_Detectors[NUCLEUS][i] = (TTree *)MERGED_File[NUCLEUS]->Get(("MERGED_Tree_" + detectorName[i]).c_str());
+                if (MERGED_Tree_Detectors[NUCLEUS][i] == NULL)
+                {
+                    MERGED_Tree_Detectors[NUCLEUS][i] = (TTree *)MERGED_File[NUCLEUS]->Get(("CLEANED_Tree_" + detectorName[i]).c_str());
+                }
             }
         }
     }
@@ -67,7 +117,7 @@ int main(int argc, char *argv[])
         {
             Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][i]);
             current_detector = i;
-            Manual_Calibration();
+            Manual_Calibration(VERBOSE);
             ApplyCalibration(VERBOSE);
         }
     }
@@ -80,7 +130,7 @@ int main(int argc, char *argv[])
         if (IsDetectorSiliStrip(i))
         {
             current_detector = i;
-            Fitting_Calibration();
+            Fitting_Calibration(VERBOSE);
             ApplyCalibration(VERBOSE);
         }
     }

@@ -61,9 +61,6 @@ int main()
     InitDetectors("../Grouper/Config_Files/sample.pid");
     InitHistograms(0);
 
-    // InitCalib();
-    // InitElectronicResolution();
-
     Info("Starting Loop");
     while (Reader->Next())
     {

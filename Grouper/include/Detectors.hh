@@ -41,6 +41,7 @@
 #include "TMath.h"
 #include "TLine.h"
 #include "TStyle.h"
+#include "TArrow.h" 
 //// functions ////
 #include "TF1.h"
 #include "TF2.h"
@@ -89,24 +90,19 @@ string DIR_DATA_HDD;
 
 // 
 bool FLAG2021 = false;
-bool FLAG2024 = true;
+bool FLAG2024 = false;
 bool FLAG2025 = false;
+int YEAR = -1;
+int REFERENCE_RUN = -1;
 // 
 
 string detectorFileName; ///< Detectors definition file name
 size_t detectorNum = SIGNAL_MAX;      ///< Number of defined detectors channels
 string detectorName[SIGNAL_MAX];
-int detectorCoder[SIGNAL_MAX]; ///< Coder label of all signals
-int detectorInfo[SIGNAL_MAX];  ///< Detector information of all signals (type identifier)
-
-int detBeta[BETA_NUM][BETA_SIZE]; ///< Detector number of beta signals
-int detSili[SILI_NUM][SILI_SIZE]; ///< Detector number of silicon signals
-
-int coderDetector[FDATA_MAX]; ///< Detector number of all coders
 
 /// Group
-int mini = -300;
-int maxi = 350;
+int mini = -500;
+int maxi = 500;
 
 int n_Sili = 8;
 int n_Beta = 2;
@@ -239,12 +235,14 @@ int YearConverter(int det)
   if (det == 65) return 82;
   if (det == 66) return 86;
 
-  return 0;
+  return det;
 
 }
 
 int YearConverterInverter(int det)
 {
+    if (YEAR != 2021) return det;
+
     // SiPM LOW
     if (det == 111) return 1;
     if (det == 112) return 2;
@@ -331,13 +329,11 @@ int YearConverterInverter(int det)
 
 inline bool IsDetectorBetaLow(int det)
 {
-  if (FLAG2021) det = YearConverter(det);
   return (det >= 111 && det <= 119);
 }
 
 inline bool IsDetectorBetaHigh(int det)
 {
-  if (FLAG2021) det = YearConverter(det);
   return (det >= 101 && det <= 109);
 }
 
@@ -348,13 +344,11 @@ inline bool IsDetectorBeta(int det)
 
 inline int GetDetectorChannel(int det)
 {
-  if (FLAG2021) det = YearConverter(det);
   return (det % 10);
 }
 
 inline int GetDetector(int det)
 {
-  if (FLAG2021) det = YearConverter(det);
   return (det / 10);
 }
 
@@ -413,6 +407,15 @@ inline bool IsDetectorSiliInterStrip(int det1, int det2)
   return false;
 }
 
+inline bool IsHRSProton(int label)
+{
+  if (label == 99)
+  {
+    return true;
+  }
+  return false;
+}
+
 vector<int> Dir2Det(string dir, int strip)
 {
     vector<int> detectors;
@@ -434,9 +437,16 @@ vector<int> Dir2Det(string dir, int strip)
 }
 
 
-inline void InitDetectors(const string &fname, int year = 2024)
+inline void InitDetectors(const string &fname)
 {
-  FLAG2021 = (year == 2021);
+  if (FLAG2021) YEAR = 2021;
+  else if (FLAG2024) YEAR = 2024;
+  else if (FLAG2025) YEAR = 2025;
+  else
+  {
+    Error("Impossible to determine the year");
+  }
+  Info("---------  YEAR : " + to_string(YEAR) + " ---------");
   ifstream file(fname.c_str());
   if (!file.is_open())
   {
@@ -457,14 +467,13 @@ inline void InitDetectors(const string &fname, int year = 2024)
 
     int label = stoi(line.substr(0, firstDelimiterPos));
     string name = line.substr(lastDelimiterPos + 1);
-
-    if (FLAG2021) label = YearConverterInverter(label);
     
     detectorName[label] = name;
 
   }
 
   detectorName[100] = "SimSiPM";
+  detectorName[99] = "HRS";
 
 
   // INIT PATHS
@@ -480,9 +489,10 @@ inline void InitDetectors(const string &fname, int year = 2024)
     DIR_ROOT_DATA_CALIBRATED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/CALIBRATED/";
     DIR_ROOT_DATA_MCP = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/";
     DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/RATE/";
-    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2025_DATA/SIMULATED_DATA/";
+    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2025_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2025_DATA/DETECTOR_DATA/";
+    REFERENCE_RUN = 98;
   }
   else if (FLAG2024)
   {
@@ -499,22 +509,24 @@ inline void InitDetectors(const string &fname, int year = 2024)
     DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
+    REFERENCE_RUN = 114;
   }
   else if (FLAG2021)
   {
-    DIR_FAST_DATA = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/DATA/";
-    DIR_ROOT_DATA = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ROOT/";
-    DIR_ROOT_DATA_GROUPED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/GROUPED/";
-    DIR_ROOT_DATA_CLEANED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CLEANED/";
-    DIR_ROOT_DATA_MATCHED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MATCHED/";
-    DIR_ROOT_DATA_MERGED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/MERGED/";
-    DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/ANALYSED/";
-    DIR_ROOT_DATA_CALIBRATED = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED/";
-    DIR_ROOT_DATA_MCP = "/mnt/hgfs/shared-2/2024_DATA/MCP_DATA/";
-    DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/RATE/";
-    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
-    DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
-    DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
+    DIR_FAST_DATA = "/run/media/local1/Disque_Dur/2021_DATA/DETECTOR_DATA/DATA/";
+    DIR_ROOT_DATA = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/ROOT/";
+    DIR_ROOT_DATA_GROUPED = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/GROUPED/";
+    DIR_ROOT_DATA_CLEANED = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/CLEANED/";
+    DIR_ROOT_DATA_MATCHED = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/MATCHED/";
+    DIR_ROOT_DATA_MERGED = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/MERGED/";
+    DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/ANALYSED/";
+    DIR_ROOT_DATA_CALIBRATED = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/CALIBRATED/";
+    // DIR_ROOT_DATA_MCP = "/mnt/hgfs/shared-2/2021_DATA/MCP_DATA/";
+    DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2021_DATA/DETECTOR_DATA/RATE/";
+    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2021_DATA/SIMULATED_DATA/";
+    DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2021_DATA/ISOLDE_DATA/";
+    DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2021_DATA/DETECTOR_DATA/";
+    REFERENCE_RUN = 16;
   }
 
 

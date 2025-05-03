@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     // init detectors with year
     if (FLAG2021)
     {
-        InitDetectors("Config_Files/sample.pid", 2021);
+        InitDetectors("Config_Files/sample.pid");
     }
     else
     {

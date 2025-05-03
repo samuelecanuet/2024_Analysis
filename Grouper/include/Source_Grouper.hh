@@ -171,7 +171,7 @@ void InitCalibration()
 {
   string CalibFileName;
 
-  CalibFileName = "./Config_Files/Calibration.txt";
+  CalibFileName = "/Config_Files/" + to_string(YEAR) + "/Calibration_" + to_string(YEAR) + ".txt";
 
   ifstream file(CalibFileName);
 

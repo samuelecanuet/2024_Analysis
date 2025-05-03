@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     
     TFile *FINAL_file = MyTFile(DIR_ROOT_DATA_RATE + "Rate.root", "RECREATE");
     Info("Year: " + to_string(year));   
-    InitDetectors("Config_Files/sample.pid", year);
+    InitDetectors("Config_Files/sample.pid");
     InitHistograms();
     Init();
 

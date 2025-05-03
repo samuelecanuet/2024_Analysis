@@ -140,32 +140,6 @@ string SearchName(int PDG)
 
 double Detector_Resolution[SIGNAL_MAX];
 
-void InitElectronicResolution()
-{
-    ifstream file("../Grouper/Config_Files/res_electronic.txt");
-    if (!file.is_open())
-    {
-        Error("Impossible to open res_electronic.txt");
-    }
-    Info("Reading res_electronic.txt");
-
-    string line;
-    int code;
-    double resolution;
-    double err_resolution;
-    int counter = 0;
-    while (getline(file, line))
-    {
-        counter++;
-        stringstream ss(line);
-        ss >> code >> resolution >> err_resolution;
-
-        Detector_Resolution[code] = resolution / 1000.;
-    }
-
-    file.close();
-}
-
 TF1 *Calibration_Function[SIGNAL_MAX];
 void InitCalib()
 {

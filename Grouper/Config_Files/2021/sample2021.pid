@@ -1,0 +1,136 @@
+# qdc caras channel:BetaHi1
+1:QDC4:BetaHi1
+# qdc caras channel:BetaHi2
+2:QDC4:BetaHi2
+# qdc caras channel:BetaHi3
+3:QDC4:BetaHi3
+# qdc caras channel:BetaHi4
+4:QDC4:BetaHi4
+# qdc caras channel:BetaHi5
+5:QDC4:BetaHi5
+# qdc caras channel:BetaHi6
+6:QDC4:BetaHi6
+# qdc caras channel:BetaHi7
+7:QDC4:BetaHi7
+# qdc caras channel:BetaHi8
+8:QDC4:BetaHi8
+# adc caras channel:CRRC4_SPECTRO_75
+75:CRRC4_SPECTRO:CRRC4_SPECTRO_75
+# adc caras channel:CRRC4_SPECTRO_76
+76:CRRC4_SPECTRO:CRRC4_SPECTRO_76
+# qdc caras channel:BetaLo9
+9:QDC4:BetaLo9
+# qdc caras channel:BetaHi9
+10:QDC4:BetaHi9
+# qdc caras channel:BetaLo1
+11:QDC4:BetaLo1
+# qdc caras channel:BetaLo2
+12:QDC4:BetaLo2
+# qdc caras channel:BetaLo3
+13:QDC4:BetaLo3
+# qdc caras channel:BetaLo4
+14:QDC4:BetaLo4
+# qdc caras channel:BetaLo5
+15:QDC4:BetaLo5
+# qdc caras channel:BetaLo6
+16:QDC4:BetaLo6
+# qdc caras channel:BetaLo7
+17:QDC4:BetaLo7
+# qdc caras channel:BetaLo8
+18:QDC4:BetaLo8
+# adc mosahr channel CRRC4:Si1_1
+19:CRRC4_SPECTRO:Si1_1
+# adc mosahr channel CRRC4:Si1_2
+20:CRRC4_SPECTRO:Si1_2
+# adc mosahr channel CRRC4:Si1_3
+21:CRRC4_SPECTRO:Si1_3
+# adc mosahr channel CRRC4:Si3_R
+36:CRRC4_SPECTRO:Si3_R
+# adc mosahr channel CRRC4:Si1_5
+23:CRRC4_SPECTRO:Si1_5
+# adc mosahr channel CRRC4:Si1_R
+24:CRRC4_SPECTRO:Si1_R
+# adc mosahr channel CRRC4:Si2_1
+25:CRRC4_SPECTRO:Si2_1
+# adc mosahr channel CRRC4:Si2_2
+26:CRRC4_SPECTRO:Si2_2
+# adc mosahr channel CRRC4:Si2_3
+27:CRRC4_SPECTRO:Si2_3
+# adc mosahr channel CRRC4:Si2_4
+28:CRRC4_SPECTRO:Si2_4
+# adc mosahr channel CRRC4:Si2_5
+29:CRRC4_SPECTRO:Si2_5
+# adc mosahr channel CRRC4:Si2_R
+30:CRRC4_SPECTRO:Si2_R
+# adc mosahr channel CRRC4:Si3_1
+31:CRRC4_SPECTRO:Si3_1
+# adc mosahr channel CRRC4:Si3_2
+32:CRRC4_SPECTRO:Si3_2
+# adc mosahr channel CRRC4:Si3_3
+33:CRRC4_SPECTRO:Si3_3
+# adc mosahr channel CRRC4:Si3_4
+34:CRRC4_SPECTRO:Si3_4
+# adc mosahr channel CRRC4:Si3_5
+35:CRRC4_SPECTRO:Si3_5
+# adc mosahr channel CRRC4:Si1_4
+22:CRRC4_SPECTRO:Si1_4
+# adc mosahr channel CRRC4:Si4_1
+37:CRRC4_SPECTRO:Si4_1
+# adc mosahr channel CRRC4:Si4_2
+38:CRRC4_SPECTRO:Si4_2
+# adc mosahr channel CRRC4:Si4_3
+39:CRRC4_SPECTRO:Si4_3
+# adc mosahr channel CRRC4:Si4_4
+40:CRRC4_SPECTRO:Si4_4
+# adc mosahr channel CRRC4:Si4_5
+41:CRRC4_SPECTRO:Si4_5
+# adc mosahr channel CRRC4:Si4_R
+42:CRRC4_SPECTRO:Si4_R
+# adc mosahr channel CRRC4:Si5_1
+43:CRRC4_SPECTRO:Si5_1
+# adc mosahr channel CRRC4:Si5_2
+44:CRRC4_SPECTRO:Si5_2
+# adc mosahr channel CRRC4:Si5_3
+45:CRRC4_SPECTRO:Si5_3
+# adc mosahr channel CRRC4:Si5_4
+46:CRRC4_SPECTRO:Si5_4
+# adc mosahr channel CRRC4:Si5_5
+47:CRRC4_SPECTRO:Si5_5
+# adc mosahr channel CRRC4:Si5_R
+48:CRRC4_SPECTRO:Si5_R
+# adc mosahr channel CRRC4:Si6_1
+49:CRRC4_SPECTRO:Si6_1
+# adc mosahr channel CRRC4:Si6_2
+50:CRRC4_SPECTRO:Si6_2
+# adc mosahr channel CRRC4:Si6_3
+51:CRRC4_SPECTRO:Si6_3
+# adc mosahr channel CRRC4:Si6_4
+52:CRRC4_SPECTRO:Si6_4
+# adc mosahr channel CRRC4:Si6_5
+53:CRRC4_SPECTRO:Si6_5
+# adc mosahr channel CRRC4:Si6_R
+54:CRRC4_SPECTRO:Si6_R
+# adc mosahr channel CRRC4:Si7_1
+55:CRRC4_SPECTRO:Si7_1
+# adc mosahr channel CRRC4:Si7_2
+56:CRRC4_SPECTRO:Si7_2
+# adc mosahr channel CRRC4:Si7_3
+57:CRRC4_SPECTRO:Si7_3
+# adc mosahr channel CRRC4:Si7_4
+58:CRRC4_SPECTRO:Si7_4
+# adc mosahr channel CRRC4:Si7_5
+59:CRRC4_SPECTRO:Si7_5
+# adc mosahr channel CRRC4:Si7_R
+60:CRRC4_SPECTRO:Si7_R
+# adc mosahr channel CRRC4:Si8_1
+61:CRRC4_SPECTRO:Si8_1
+# adc mosahr channel CRRC4:Si8_2
+62:CRRC4_SPECTRO:Si8_2
+# adc mosahr channel CRRC4:Si8_3
+63:CRRC4_SPECTRO:Si8_3
+# adc mosahr channel CRRC4:Si8_4
+64:CRRC4_SPECTRO:Si8_4
+# adc mosahr channel CRRC4:Si8_5
+65:CRRC4_SPECTRO:Si8_5
+# adc mosahr channel CRRC4:Si8_R
+66:CRRC4_SPECTRO:Si8_R

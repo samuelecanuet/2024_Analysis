@@ -59,9 +59,6 @@ int main()
     InitDetectors("../Grouper/Config_Files/sample.pid");
     InitHistograms(0);
 
-    // InitCalib();
-    // InitElectronicResolution();
-
     bool FLAGPRINTINGEVENT = false;
    
 

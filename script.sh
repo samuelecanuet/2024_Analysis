@@ -1,7 +1,24 @@
-for run in "057" "058" "059" "061" "062" "064" "065" "066" "067" "068" "069" "070" "071" "072" "074" "077" "112" "113" "114" "115" "116" "118"
+#!/bin/bash
+
+YEAR="2021"
+
+run_list=$(awk '
+/#32Ar/ {f=1}
+/#33Ar/ {f=2}
+/^#/ && !/#32Ar|#33Ar/ {f=0}
+f==1 || f==2 {
+    if ($0 !~ /^#/) print
+}' Grouper/Config_Files/${YEAR}/Runs_${YEAR}.txt | tr ' ' '\n')
+
+runs=($run_list)
+
+for run in "${runs[@]}"
 do
     cd Grouper
-    Grouper $run
+    Grouper $run 
     cd -
 done
 
+cd Grouper
+Merger
+Calibration

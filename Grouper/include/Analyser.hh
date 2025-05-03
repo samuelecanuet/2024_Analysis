@@ -214,10 +214,10 @@ void InitCalib()
                 Calibration[i] = new TF1(("Calibration_" + detectorName[i]).c_str(), "x*[0]", 0, 10000);
                 
                 // open txt file 
-                ifstream file("Config_Files/2021/2021_Calibration.txt");
+                ifstream file("Config_Files/2021/Calibration_2021.txt");
                 if (!file.is_open())
                 {
-                    Error("Impossible to open 2021_Calibration.txt");
+                    Error("Impossible to open Calibration_2021.txt");
                 }
 
                 string line;

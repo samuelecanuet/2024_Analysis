@@ -3176,5 +3176,22 @@ const map<string, int> NametoCode_map = {
 	{ "281Cp" , 1001122810  }
 };
 
+string CodeToName_map(int code)
+{
+
+	auto it = std::find_if(NametoCode_map.begin(), NametoCode_map.end(),
+		[code](const std::pair<std::string, int>& pair) { return pair.second == code; });
+
+	if (it != NametoCode_map.end())
+	{
+		return it->first;
+	}
+	else
+	{
+		return "Unknown";
+	}
+	
+}
+
 #endif
 
