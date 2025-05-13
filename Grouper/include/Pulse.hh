@@ -71,7 +71,7 @@ void Init()
   MAP_Delta_Time["18N"] = {0.82};
 
   MAP_Run_Number["33Ar"] = {78};
-  MAP_Run_Number["32Ar"] = {64};
+  MAP_Run_Number["32Ar"] = {65};
   MAP_Run_Number["18N"] = {114};
 
   MAP_Start["33Ar"] = 0.;
@@ -427,7 +427,7 @@ void WriteHistograms()
 
 void InitCalib()
 {
-  TFile *CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated.root").c_str(), "READ");
+  TFile *CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR)+ ".root").c_str(), "READ");
   for (int i = 0; i < SIGNAL_MAX; i++)
   {
     if (IsDetectorSiliStrip(i))
@@ -824,6 +824,60 @@ bool IsCoincidence(vector<vector<pair<Signal, Signal>>> SiPM_Groups)
   return false;
 }
 
+double langaufun(double *x, double *par) {
+ 
+   //Fit parameters:
+   //par[0]=Width (scale) parameter of Landau density
+   //par[1]=Most Probable (MP, location) parameter of Landau density
+   //par[2]=Total area (integral -inf to inf, normalization constant)
+   //par[3]=Width (sigma) of convoluted Gaussian function
+   //
+   //In the Landau distribution (represented by the CERNLIB approximation),
+   //the maximum is located at x=-0.22278298 with the location parameter=0.
+   //This shift is corrected within this function, so that the actual
+   //maximum is identical to the MP parameter.
+ 
+      // Numeric constants
+      double invsq2pi = 0.3989422804014;   // (2 pi)^(-1/2)
+      double mpshift  = -0.22278298;       // Landau maximum location
+ 
+      // Control constants
+      double np = 100.0;      // number of convolution steps
+      double sc =   5.0;      // convolution extends to +-sc Gaussian sigmas
+ 
+      // Variables
+      double xx;
+      double mpc;
+      double fland;
+      double sum = 0.0;
+      double xlow,xupp;
+      double step;
+      double i;
+ 
+ 
+      // MP shift correction
+      mpc = par[1] - mpshift * par[0];
+ 
+      // Range of convolution integral
+      xlow = x[0] - sc * par[3];
+      xupp = x[0] + sc * par[3];
+ 
+      step = (xupp-xlow) / np;
+ 
+      // Convolution integral of Landau and Gaussian by sum
+      for(i=1.0; i<=np/2; i++) {
+         xx = xlow + (i-.5) * step;
+         fland = TMath::Landau(xx,mpc,par[0]) / par[0];
+         sum += fland * TMath::Gaus(x[0],xx,par[3]);
+ 
+         xx = xupp - (i-.5) * step;
+         fland = TMath::Landau(xx,mpc,par[0]) / par[0];
+         sum += fland * TMath::Gaus(x[0],xx,par[3]);
+      }
+ 
+      return (par[2] * step * sum * invsq2pi / par[3]);
+}
+
 void WriteHistogram(string NUCLEUS)
 {
   Info("Writing histograms for " + NUCLEUS);
@@ -882,6 +936,11 @@ void WriteHistogram(string NUCLEUS)
   hResidualsA->Divide(H_Decay[NUCLEUS][1]);
   hResidualsA->Draw();
   cA_Decay->Write();
+
+  TF1 *flangau = new TF1("flangau", langaufun, 0, 1.5, 4);
+  
+
+
 
   // //// B
   // TCanvas *cB = new TCanvas(("cB_" + NUCLEUS).c_str(), ("cB_" + NUCLEUS).c_str(), 800, 600);

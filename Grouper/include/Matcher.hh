@@ -14,21 +14,15 @@ string REFERENCE_filename;
 TFile *REFERENCE_File;
 TFile *MATCHED_File;
 
-vector<string> Runs = { "057", "058", "059",
-                        "061", "062", "064", "065", "066", "067", "068", "069",
-                        "070", "071", "072", "074", "077",
-                        
-                        
-                        
-                        "112", "113", "114", "115", "116", "118"};
+map<string, vector<string>> Map_RunFiles;   
+
 int Run;
-int REFERENCE_Run = 77;
+vector<string> Runs;
+map<int, int> REFERENCE_Run;
 
 TTree *GROUPED_Tree_Detectors[SIGNAL_MAX];
 TTreeReader *Reader;
 TTreeReaderArray<Signal> *Silicon;
-pair<double, double> peaks_window_F[SIGNAL_MAX];
-pair<double, double> peaks_window_GT1[SIGNAL_MAX];
 double Channel;
 
 //HISTOGRAMS
@@ -78,6 +72,56 @@ void InitHistograms(string Run_string)
             H_Run_corr[Run][i]->GetYaxis()->CenterTitle();
         }
     }
+}
+
+void InitRuns()
+{
+  ifstream file(("./Config_Files/" + to_string(YEAR) + "/Runs_" + to_string(YEAR) + ".txt").c_str());
+  if (!file.is_open())
+  {
+    Error("Could not open the file Runs_" + to_string(YEAR) + ".txt");
+  }
+
+  string line;
+  string nucleus;
+  while (getline(file, line))
+  {
+    if (line.empty())
+      continue;
+
+    if (line[0] == '#')
+      nucleus = line.substr(1);
+
+    else
+    {
+      stringstream ss(line);
+      string number;
+      while (ss >> number)
+      {
+        Map_RunFiles[nucleus].push_back(number);
+      }
+    }
+  }
+
+  file.close();
+
+  Info("Runs loaded");
+  for (const auto &pair : Map_RunFiles)
+  {
+    string nucleus = pair.first;
+    vector<string> runs = pair.second;
+    Info("Nucleus : " + nucleus, 1);
+    string runstring = "";
+    for (const auto &run : runs)
+    {
+      runstring += run + " ";
+    }
+    Info(runstring, 2);
+  }
+
+    REFERENCE_Run[2021] = 36;
+    REFERENCE_Run[2024] = 77;
+    REFERENCE_Run[2025] = 69;
 }
 
 double FunctionToMinimize(const double *par)
@@ -139,7 +183,7 @@ void CHI2Minimization(int i)
     
     const double par[2] = {0, 1.0};
     // cout << par[0] << " " << par[1] << endl;
-    // FunctionToMinimize(par);
+    FunctionToMinimize(par);
 
     C_Det[i]->cd();
 
@@ -147,8 +191,11 @@ void CHI2Minimization(int i)
     {   
         H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
         H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
-        G_Mean_Run[peak][i]->SetPoint(counter_graph[i], Run, H_Run[Run][i]->GetMean());
-        G_Mean_Run[peak][i]->SetPointError(counter_graph[i], 0, H_Run[Run][i]->GetMeanError());
+
+        if (H_Run[Run][i]->GetMean() == 0)
+            continue;
+        G_Mean_Run[peak][i]->AddPoint(Run, H_Run[Run][i]->GetMean());
+        G_Mean_Run[peak][i]->SetPointError(G_Mean_Run[peak][i]->GetN()-1, 0, H_Run[Run][i]->GetMeanError());
     }
 
     H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
@@ -165,35 +212,34 @@ void CHI2Minimization(int i)
 
     TGraphErrors *G = new TGraphErrors();
     fpol1[Run][i] = new TF1(("poll1"+to_string(Run)+to_string(i)).c_str(), "[0] + [1]*x", 0, 100000);
-    // H_Run[Run][i]->GetXaxis()->SetRangeUser(peaks_window_GT1[i].first, peaks_window_GT1[i].second);
-    // H_Run_Ref[i]->GetXaxis()->SetRangeUser(peaks_window_GT1[i].first, peaks_window_GT1[i].second);
-    // G->SetPoint(0, H_Run[Run][i]->GetMean(), H_Run_Ref[i]->GetMean());
-    // G->SetPointError(0, H_Run[Run][i]->GetMeanError(), H_Run_Ref[i]->GetMeanError());
-    // H_Run[Run][i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
-    // H_Run_Ref[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
-    // G->SetPoint(1, H_Run[Run][i]->GetMean(), H_Run_Ref[i]->GetMean());
-    // G->SetPointError(1, H_Run[Run][i]->GetMeanError(), H_Run_Ref[i]->GetMeanError());
-    // G->Fit(fpol1[Run][i], "Q");
 
     // correction
-    int counter = 0;
     for (int peak : Peaks)
     {
+        
         if (WindowsMap[peak][i].first == -1 || !WindowsMap[peak][i].first)
             continue;
-        // cout << "Peak : " << peak << " " << i << endl;
+
         H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
         H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
+
         if (H_Run[Run][i]->GetMean() < 1000 || H_Run_Ref[i]->GetMean() < 1000)
             continue;
-        G->SetPoint(counter, H_Run[Run][i]->GetMean(), H_Run_Ref[i]->GetMean());
-        G->SetPointError(counter, H_Run[Run][i]->GetMeanError(), H_Run_Ref[i]->GetMeanError());
-        counter ++;
+
+        // Info("Peak : " + to_string(peak), 2);
+        G->AddPoint(H_Run[Run][i]->GetMean(), H_Run_Ref[i]->GetMean());
+        G->SetPointError(G->GetN()-1, H_Run[Run][i]->GetMeanError(), H_Run_Ref[i]->GetMeanError());
     }
     fpol1[Run][i]->SetParLimits(0, -1000, 1000);
     fpol1[Run][i]->SetParameter(0, 0);
     fpol1[Run][i]->SetParLimits(1, 0.98, 1.02);
     fpol1[Run][i]->SetParameter(1, 1);
+    if (G->GetN() <= 1)
+    {
+        Warning("No points to fit for Run " + to_string(Run) + " Detector " + detectorName[i]);
+        return;
+    }
+
     TFitResultPtr s = G->Fit(fpol1[Run][i], "QSE");
     if (s->Status() != 0)
     {
@@ -231,8 +277,9 @@ void CHI2Minimization(int i)
     {   
         H_Run_corr[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
         H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
-        G_Mean_Run_corr[peak][i]->SetPoint(counter_graph[i], Run, H_Run_corr[Run][i]->GetMean());
-        G_Mean_Run_corr[peak][i]->SetPointError(counter_graph[i], 0, H_Run_corr[Run][i]->GetMeanError());
+
+        G_Mean_Run_corr[peak][i]->AddPoint(Run, H_Run_corr[Run][i]->GetMean());
+        G_Mean_Run_corr[peak][i]->SetPointError(G_Mean_Run_corr[peak][i]->GetN()-1, 0, H_Run_corr[Run][i]->GetMeanError());
     }
 
     H_Run_corr[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
@@ -240,88 +287,6 @@ void CHI2Minimization(int i)
     // H_Run_corr[Run][i]->Scale(H_Run_Ref[i]->Integral() / H_Run_corr[Run][i]->Integral());
     H_Run_corr[Run][i]->SetLineColor(Run);
     H_Run_corr[Run][i]->Draw("HIST SAME");
-
-    counter_graph[i]++;
-}
-
-void InitPeakWindow()
-{
-  string CalibFileName;
-
-  CalibFileName = "./Config_Files/Win_32Ar_Catcher1_14.txt";
-
-  ifstream fileF(CalibFileName);
-
-  for (auto &value : peaks_window_F)
-  {
-      value = make_pair(0, 0);
-  }
-
-  if (fileF.is_open())
-  {
-      Info("Window file found");
-
-      string line;
-      while (getline(fileF, line))
-      {
-          istringstream iss(line);
-          int min;
-          int max;
-          int min1 = 0;
-          int max1 = 0;
-          string DetName;
-          iss >> DetName >> min >> max >> min1 >> max1;
-
-          for (size_t i = 0; i < detectorNum; ++i)
-          {
-              if (DetName == detectorName[i])
-              {
-                  peaks_window_F[i] = make_pair(min, max);
-                  break;
-              }
-          }
-      }
-  }
-
-  else
-  {
-      Error("No Window file found");
-  }
-}
-
-void InitGT()
-{
-    ifstream file(("Config_Files/" + to_string(YEAR) + "/Manual_Calibration_" + to_string(YEAR) + ".txt").c_str());
-    if (!file.is_open())
-    {
-        Error("Impossible to open Manual_Calibration_" + to_string(YEAR) + ".txt");
-    }
-
-    string line;
-    double channel6 = -1, channel14 = -1, channel29 = -1;
-    double energy6 = -1, energy14 = -1, energy29 = -1;
-    int counter = 0;
-    string detname;
-    while (getline(file, line))
-    {
-        counter++;
-        channel6 = -1, channel14 = -1, channel29 = -1;
-        energy6 = -1, energy14 = -1, energy29 = -1;
-
-        stringstream ss(line);
-        ss >> detname >> channel6 >> channel14 >> channel29 >> energy6 >> energy14 >> energy29;
-        for (int i = 0; i < detectorNum; i++)
-        {
-            if (IsDetectorSiliStrip(i))
-            {
-                if (detname == detectorName[i])
-                {
-                    peaks_window_GT1[i] = make_pair(channel6*1000 - 500, channel6*1000 + 500);
-                    break;
-                }
-            }
-        }
-    }
 }
 
 void InitManualCalibration()
@@ -344,25 +309,54 @@ void InitManualCalibration()
         energy6 = -1, energy14 = -1, energy29 = -1;
 
         stringstream ss(line);
-        ss >> detname >> channel6 >> channel14 >> channel29 >> energy6 >> energy14 >> energy29;
-        for (int i = 0; i < detectorNum; i++)
+
+        if (YEAR == 2024)
         {
-            if (IsDetectorSiliStrip(i))
+            ss >> detname >> channel6 >> channel14 >> channel29 >> energy6 >> energy14 >> energy29;
+            for (int i = 0; i < detectorNum; i++)
             {
-                if (detname == detectorName[i])
+                if (IsDetectorSiliStrip(i))
                 {
-                    ManualCalib[6][i] = make_pair(channel6*1000, energy6);
-                    ManualCalib[14][i] = make_pair(channel14*1000, energy14);
-                    ManualCalib[29][i] = make_pair(channel29*1000, energy29);
+                    if (detname == detectorName[i])
+                    {
+                        ManualCalib[6][i] = make_pair(channel6 * 1000, energy6);
+                        ManualCalib[14][i] = make_pair(channel14 * 1000, energy14);
+                        ManualCalib[29][i] = make_pair(channel29 * 1000, energy29);
 
-                    linearfit[i] = new TF1("linearfit", "[0] + [1]*x", 0, 10000);
-                    G_ManualCalib[i] = new TGraph();
-                    G_ManualCalib[i]->SetPoint(0, ManualCalib[6][i].second, ManualCalib[6][i].first);
-                    G_ManualCalib[i]->SetPoint(1, ManualCalib[14][i].second, ManualCalib[14][i].first);
-                    G_ManualCalib[i]->SetPoint(2, ManualCalib[29][i].second, ManualCalib[29][i].first);
-                    G_ManualCalib[i]->Fit(linearfit[i], "Q");
+                        linearfit[i] = new TF1("linearfit", "[0] + [1]*x", 0, 10000);
+                        G_ManualCalib[i] = new TGraph();
+                        G_ManualCalib[i]->SetPoint(0, ManualCalib[6][i].second, ManualCalib[6][i].first);
+                        G_ManualCalib[i]->SetPoint(1, ManualCalib[14][i].second, ManualCalib[14][i].first);
+                        G_ManualCalib[i]->SetPoint(2, ManualCalib[29][i].second, ManualCalib[29][i].first);
+                        G_ManualCalib[i]->Fit(linearfit[i], "Q");
 
-                    break;
+                        break;
+                    }
+                }
+            }
+        }
+        else if (YEAR == 2025 || YEAR == 2021)
+        {
+            ss >> detname >> channel6 >> channel14 >> energy6 >> energy14;
+            for (int i = 0; i < detectorNum; i++)
+            {
+                if (IsDetectorSiliStrip(i))
+                {
+                    if (detname == detectorName[i])
+                    {
+                        ManualCalib[6][i] = make_pair(channel6 * 1000, energy6);
+                        ManualCalib[14][i] = make_pair(channel14 * 1000, energy14);
+
+                        linearfit[i] = new TF1("linearfit", "[0] + [1]*x", 0, 100000);
+                        G_ManualCalib[i] = new TGraph();
+                        G_ManualCalib[i]->SetPoint(0, ManualCalib[6][i].second, ManualCalib[6][i].first);
+                        G_ManualCalib[i]->SetPoint(1, ManualCalib[14][i].second, ManualCalib[14][i].first);
+                        G_ManualCalib[i]->Fit(linearfit[i], "Q");
+
+                        
+
+                        break;
+                    }
                 }
             }
         }

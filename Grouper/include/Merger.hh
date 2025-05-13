@@ -222,7 +222,7 @@ void LoadMatchingFunction(int Run)
 {
   for (int i = 0; i <= SIGNAL_MAX; i++)
   {
-    if (IsDetectorSili(i))
+    if (IsDetectorSiliStrip(i))
     {
       Matching_function[i] = (TF1*)MATCHED_File->Get(("poll1" + to_string(Run) + to_string(i)).c_str()); 
 
@@ -233,99 +233,5 @@ void LoadMatchingFunction(int Run)
     }
   }
 }
-
-void ComputeFakeCoincidences()
-{
-  for (int mul = 1; mul <= BETA_SIZE; mul++)
-  {
-
-    H_SiPM_LeftLeft[mul] = (TH1D*)H_SiPM_Full[mul]->Clone(("H_SiPM_LeftLeft_" + to_string(mul)).c_str());
-    for (int bin = 0; bin < H_SiPM_LeftLeft[mul]->GetNbinsX(); bin++)
-    {
-      if (H_SiPM_LeftLeft[mul]->GetBinCenter(bin) > -240 || H_SiPM_LeftLeft[mul]->GetBinCenter(bin) < -300)
-      {
-        H_SiPM_LeftLeft[mul]->SetBinContent(bin, 0);
-      }
-    }
-
-    double integral_left_left = H_SiPM_LeftLeft[mul]->Integral();
-    double mean_height_left_left = integral_left_left/30;
-
-    H_SiPM_Center[mul] = (TH1D*)H_SiPM_Full[mul]->Clone(("H_SiPM_Center_" + to_string(mul)).c_str());
-    for (int bin = 0; bin < H_SiPM_Center[mul]->GetNbinsX(); bin++)
-    {
-      if (H_SiPM_Center[mul]->GetBinCenter(bin) > 230 || H_SiPM_Center[mul]->GetBinCenter(bin) < -240)
-      {
-        H_SiPM_Center[mul]->SetBinContent(bin, 0);
-      }
-    }
-
-    TH1D* H_Fortuitous = (TH1D*)H_SiPM_Full[mul]->Clone("_Fortuitous_");
-    H_Fortuitous->Reset();
-    for (int bin = 0; bin < H_SiPM_Center[mul]->GetNbinsX(); bin++)
-    {
-      if (H_SiPM_Center[mul]->GetBinCenter(bin) > -240 && H_SiPM_Center[mul]->GetBinCenter(bin) < 130)
-      {
-        H_Fortuitous->SetBinContent(bin, mean_height_left_left);
-      }
-      if (H_SiPM_Center[mul]->GetBinCenter(bin) > 130 || H_SiPM_Center[mul]->GetBinCenter(bin) < -240)
-      {
-        H_Fortuitous->SetBinContent(bin, H_SiPM_Full[mul]->GetBinContent(bin));
-      }
-    }
-
-    TH1D* H_Real = (TH1D*)H_SiPM_Center[mul]->Clone("_Real_");
-    for (int bin = 0; bin < H_SiPM_Center[mul]->GetNbinsX(); bin++)
-    {
-      H_Real->SetBinContent(bin, H_SiPM_Center[mul]->GetBinContent(bin) - mean_height_left_left );
-    }
-
-
-  
-    double integral_center = H_SiPM_Center[mul]->Integral();
-
-
-    TCanvas *C_FakeCoincidence = new TCanvas(("C_Fake_" + to_string(mul)).c_str(), ("C_Fake_" + to_string(mul)).c_str(), 800, 400);
-    H_SiPM_Full[mul]->SetFillColor(kBlack);
-    H_SiPM_Full[mul]->SetFillStyle(3244);
-    H_SiPM_Full[mul]->Draw("HIST");
-    H_Fortuitous->SetFillStyle(3244);
-    H_Fortuitous->SetFillColor(kRed);
-    H_Fortuitous->Draw("SAME");
-
-    TLatex *text_low = new TLatex();
-    text_low->SetNDC();
-    text_low->SetTextSize(0.03);
-    H_SiPM_Full[mul]->GetXaxis()->SetRangeUser(-240, 130);
-    double pourcentage = mean_height_left_left/2*370 * 100 / H_SiPM_Full[mul]->Integral();
-    H_SiPM_Full[mul]->GetXaxis()->SetRangeUser(-1111, -1111);
-    cout << "Real : " << H_Real->Integral() << "    Fake : " << mean_height_left_left/2*370 << endl;
-    text_low->DrawLatex(0.15, 0.8, ("Fake coincidences: " + to_string(pourcentage) + " %").c_str());
-    text_low->Draw("SAME");
-    C_FakeCoincidence->Write(); 
-
-    TCanvas *C_Windows = new TCanvas(("C_Windows_" + to_string(mul)).c_str(), ("C_Windows_" + to_string(mul)).c_str(), 800, 400);
-    H_SiPM_Center[mul]->Draw("HIST");
-    H_SiPM_Left[mul]->SetLineColor(kRed);
-    H_SiPM_Left[mul]->Draw("SAME");
-    H_SiPM_Right[mul]->SetLineColor(kRed);
-    H_SiPM_Right[mul]->Draw("SAME");
-    C_Windows->Write();
-
-    G_Fake->AddPoint(mul, pourcentage);
-  }
-
-  TCanvas *C_Fake = new TCanvas("C_Fake", "C_Fake", 800, 400);
-  G_Fake->GetXaxis()->SetTitle("Multiplicity");
-  G_Fake->GetYaxis()->SetTitle("Fake coincidences (%)");
-  G_Fake->SetMarkerStyle(20);
-  G_Fake->SetMarkerSize(1);
-  G_Fake->Draw("AP");
-  C_Fake->Write();
-}
-
-
-
-
 
 #endif

@@ -36,12 +36,25 @@ void Error(const char *message) {
     exit(0);
 }
 
-void Warning(const string& message) {
-    cout << YELLOW << left << setw(GENERAL_INDENT) << " <WARNING>" << message << RESET << endl;
+void Warning(const string& message, int indent=0) {
+    cout << YELLOW << left << setw(GENERAL_INDENT) << " <WARNING>";
+    if (indent > 0)
+    {
+        for (int i = 0; i < indent; i++) cout << " ";
+        cout << "├─";
+    }
+    cout << message << RESET << endl;
+
 }
 
-void Warning(const char *message) {
-    cout << YELLOW << left << setw(GENERAL_INDENT) << " <WARNING>" << message << RESET << endl;
+void Warning(const char *message, int indent = 0) {
+    cout << YELLOW << left << setw(GENERAL_INDENT) << " <WARNING>";
+    if (indent > 0)
+    {
+        for (int i = 0; i < indent; i++) cout << " ";
+        cout << "├─";
+    }
+    cout << message << RESET << endl;
 }
 
 void Info(const string& message, int indent=0) {

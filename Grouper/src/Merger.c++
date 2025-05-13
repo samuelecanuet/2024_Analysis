@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2025 = true;
+    FLAG2021 = true;
     InitDetectors("Config_Files/sample.pid");
     InitRuns();
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            // LoadMatchingFunction(atoi(Run.c_str()));
+            LoadMatchingFunction(atoi(Run.c_str()));
             TTreeReader *Reader = new TTreeReader(Tree);
             Silicon = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_Silicon");
             SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
@@ -101,8 +101,7 @@ int main(int argc, char *argv[])
                 MERGED_Tree_Silicon.push_back((*Silicon)[0]);
 
                 // run matching correction
-                // (*Silicon)[1].Channel = Matching_function[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
-                // H_RearStrip[(*Silicon)[0].Label]->Fill((*Silicon)[0].Channel, (*Silicon)[1].Channel);
+                (*Silicon)[1].Channel = Matching_function[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
 
                 MERGED_Tree_Silicon.push_back((*Silicon)[1]);
                 Channel = (*Silicon)[1].Channel;

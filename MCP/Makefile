@@ -9,16 +9,16 @@ GSL_LIBS        = $(shell gsl-config --libs)
 
 CC        = g++
 CFLAGS    = ${FASTERAC_CFLAGS} ${ROOT_CFLAGS} ${GSL_CFLAGS} -Iinclude
-LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GSL_LIBS} -lboost_filesystem -lboost_system
+LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GSL_LIBS} -lboost_filesystem -lboost_system ../Grouper/include/Detectors.hh ../Grouper/include/Messenger.hh ../Grouper/include/Utilities.hh
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Calibration
+EXE       = Calibration Grouper
 
 all : $(EXE)
 
 $(EXE): $(OBJS)
-	${CC} -std=c++17 obj/$@.o -o $@ ${CFLAGS} ${LIBS}
+	${CC} -std=c++17 obj/$@.o -o $@ ../Grouper/../../lib/SignalDict/SignalDict.so ../Grouper/Dic/AutoDict_vector_vector_std__pair_Signal__Signal____cxx.so ${CFLAGS} ${LIBS}
 
 obj/%.o: src/%.c++ include/%.hh
 	@mkdir -p obj

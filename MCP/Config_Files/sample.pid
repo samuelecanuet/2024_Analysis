@@ -1,0 +1,32 @@
+# qdc caras channel:NOT_USED_Hi1
+31:QDC4:NOT_USED_Hi1
+# qdc caras channel:NOT_USED_Hi2
+32:QDC4:NOT_USED_Hi2
+# qdc caras channel:NOT_USED_Hi3
+33:QDC4:NOT_USED_Hi3
+# qdc caras channel:NOT_USED_Hi4
+34:QDC4:NOT_USED_Hi4
+# adc mosahr channel CRRC4:NOT_USED_CRRC4_1
+35:CRRC4_SPECTRO:NOT_USED_CRRC4_1
+# adc mosahr channel CRRC4:NOT_USED_CRRC4_2
+36:CRRC4_SPECTRO:NOT_USED_CRRC4_2
+# adc mosahr channel CRRC4:NOT_USED_CRRC4_3
+37:CRRC4_SPECTRO:NOT_USED_CRRC4_3
+# adc mosahr channel CRRC4:NOT_USED_CRRC4_4
+38:CRRC4_SPECTRO:NOT_USED_CRRC4_4
+# adc mosahr channel CRRC4:RA1
+1:CRRC4_SPECTRO:RA1
+# adc mosahr channel CRRC4:RA2
+2:CRRC4_SPECTRO:RA2
+# adc mosahr channel CRRC4:RA3
+3:CRRC4_SPECTRO:RA3
+# adc mosahr channel CRRC4:RA4
+4:CRRC4_SPECTRO:RA4
+# qdc caras channel:NOT_USED_Hi9
+27:QDC4:NOT_USED_Hi9
+# qdc caras channel:NOT_USED_Lo1
+28:QDC4:NOT_USED_Lo1
+# qdc caras channel:NOT_USED_Lo2
+29:QDC4:NOT_USED_Lo2
+# qdc caras channel:MCP
+5:QDC4:MCP

@@ -9,7 +9,7 @@ import argparse
 import ctypes
 import seaborn as sns
 from matplotlib.backend_bases import MouseButton
-
+list_corner=[]
 custom_params = {
         "xtick.direction" : "out",
         "ytick.direction" : "out",
@@ -33,7 +33,7 @@ custom_params = {
 #sns.set_theme(style = "ticks", rc=custom_params)
 
 class MovePoint(object):
-    def __init__(self, ax, graf, rec=None):
+    def __init__(self, ax, graf, rec=None, index=None):
         self.ratio = 15
         self.ax = ax
         self.figcanvas = self.ax.figure.canvas
@@ -50,8 +50,9 @@ class MovePoint(object):
         self.label = graf.get_label()
 
         self.find = True
-        graf.set_center([1/25*self.initx, 1/25*self.inity])
-
+        # print(list_corner[index][1])
+        # graf.set_center([1/25*self.initx, 1/25*self.inity])
+        self.graf.set_center([list_corner[index][0], list_corner[index][1]])
 
         graf.set_radius(graf.get_radius()/self.ratio)
 
@@ -319,6 +320,22 @@ def update_min(val):
     HIST_z[0].set_clim(vmin = val)
     if len(axs[0,1].get_images()) > 0: axs[0,1].get_images()[0].set_clim(vmin = val)
 
+
+def loadpointcorner():
+    l=[]
+    with open("../guess_corner_"+args.year+"_test.txt", "r") as file:
+        reader = csv.reader(file, delimiter=' ')
+        for i, row in enumerate(reader):
+            liste = row[1:9]
+            liste = [float(i) for i in liste]
+            l.append([liste[0], liste[1]])
+            l.append([liste[2], liste[3]])
+            l.append([liste[4], liste[5]])
+            l.append([liste[6], liste[7]])
+
+    return l
+
+
 if __name__ == '__main__': 
 
     ### ARGUMENTS 
@@ -411,34 +428,38 @@ if __name__ == '__main__':
 
         liste = []
         liste1=[]
+        list_corner = loadpointcorner()
+        print(list_corner)
         for x in range(0,n):
             for y in range(0,n):
                 allpoint=0
                 x_corr = x*pitch-pitch*(n-1)/2 - size/2
                 y_corr = y*pitch-pitch*(n-1)/2 - size/2
 
+                # print(list_corner[len(liste)][0], list_corner[len(liste)][1])
+
                 c1 = Circle((x_corr, y_corr), radius, fc=color_point, label=2*x+8*4*y, zorder=2)
                 list_point[2*x+8*4*y][0] = [x_corr, y_corr]
                 liste.append(axs[0,0].add_patch(c1))
-                liste1.append(MovePoint(axs[0,0], liste[-1] ))
+                liste1.append(MovePoint(axs[0,0], liste[-1], index =len(liste1)))
                 
                 allpoint+=1
                 c2 = Circle((x_corr+size, y_corr), radius, fc=color_point, label=2*x+8*4*y+1, zorder=2)
                 list_point[2*x+8*4*y+1][0] = [round(x_corr+size, 5), round(y_corr, 5)]
                 liste.append(axs[0,0].add_patch(c2))
-                liste1.append(MovePoint(axs[0,0], liste[-1]))
+                liste1.append(MovePoint(axs[0,0], liste[-1], index =len(liste1)))
                 allpoint+=1
                 
                 c3 = Circle((x_corr+size, y_corr+size), radius, fc=color_point, label=2*x+8*4*y+2*8, zorder=2)
                 list_point[2*x+8*4*y+2*8][0] = [round(x_corr+size, 5), y_corr+size]
                 liste.append(axs[0,0].add_patch(c3))
-                liste1.append(MovePoint(axs[0,0], liste[-1] ))
+                liste1.append(MovePoint(axs[0,0], liste[-1], index =len(liste1) ))
                 allpoint+=1
 
                 c4 = Circle((x_corr, y_corr+size), radius, fc=color_point, label=2*x+8*4*y+2*8+1, zorder=2)
                 list_point[2*x+8*4*y+2*8+1][0] = [x_corr, round(y_corr+size, 5)]
                 liste.append(axs[0,0].add_patch(c4))
-                liste1.append(MovePoint(axs[0,0], liste[-1] ))
+                liste1.append(MovePoint(axs[0,0], liste[-1], index =len(liste1) ))
                 allpoint+=1
                 
                 if allpoint == 4:

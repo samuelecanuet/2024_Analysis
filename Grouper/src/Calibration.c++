@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2024 = true;
+    FLAG2025 = true;
     
     InitDetectors("Config_Files/sample.pid");
     VERBOSE = 0;
@@ -23,9 +23,13 @@ int main(int argc, char *argv[])
         SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
         SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
 
-        CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23};
-        CalibrationPeaks["32Ar_thick"] = {5, 8, 9, 14, 23};
-        CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 40};
+        // CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23};
+        // CalibrationPeaks["32Ar_thick"] = {5, 8, 9, 14, 23};
+        // CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 40};
+
+        CalibrationPeaks["32Ar"] = {14};
+        CalibrationPeaks["32Ar_thick"] = {14};
+        CalibrationPeaks["33Ar"] = {21};
     }
     ////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////  2024 //////////////////////////////////
@@ -46,6 +50,10 @@ int main(int argc, char *argv[])
         CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
         CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
         CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
+
+        // CalibrationPeaks["32Ar"] = {14};
+        // CalibrationPeaks["32Ar_thick"] = {14};
+        // CalibrationPeaks["33Ar"] = {21};
     }
     ////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////  2025 //////////////////////////////////
@@ -65,6 +73,10 @@ int main(int argc, char *argv[])
         CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
         CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35};
         CalibrationPeaks["33Ar_thick"] = {2, 12, 21, 26, 35};
+
+        // CalibrationPeaks["32Ar"] = {14};
+        // CalibrationPeaks["33Ar"] = {21};
+        // CalibrationPeaks["33Ar_thick"] = {21};
     }
     ////////////////////////////////////////////////////////////////////////////
 
@@ -74,7 +86,7 @@ int main(int argc, char *argv[])
     CALIBRATED_File->cd();
 
     ///////////////////////////////////////////////////////////////////////////////
-    int first = 51;
+    int first = 11;
     int last = 86;
 
     FillingSimHitograms();
@@ -84,15 +96,15 @@ int main(int argc, char *argv[])
     InitElectronicResolution();
     InitPileUp();
 
-
+    Info("Loading Experimental Trees");
     // SET ALL EXPERIMENTAL TREE FOR EACH DETECTOR
     for (string Nucleus : Nuclei)
     {
         NUCLEUS = Nucleus;
-        Info("Current Nucleus : " + NUCLEUS);
+        Info(NUCLEUS, 1);
 
         InitEnergyErrors();
-        InitHistograms();
+        InitHistograms(first, last);
 
         // taking exp tree for each detector
         for (int i = 0; i < SIGNAL_MAX; i++)
@@ -156,102 +168,9 @@ int main(int argc, char *argv[])
     }
 
 
-    PlottingWindows();
+    PlottingWindows(first, last);
+    PlottingSummed(first, last);
 
-    // for (string Nucleus : Nuclei)
-    // {
-    //     TTreeReader *Reader = new TTreeReader((TTree *)MERGED_File[Nucleus]->Get("MERGED_Tree"));
-    //     TTreeReaderArray<Signal> *Silicon_Detector = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_Silicon");
-    //     TTreeReaderArray<Signal> *SIPM_High = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_SiPMHigh");
-
-    //     clock_t start = clock(), Current ;
-    //     int entries = Reader->GetEntries();
-    //     while (Reader->Next())
-    //     {
-    //         int silicon_code = (*Silicon_Detector)[1].Label;
-    //         double silicon_channel = (*Silicon_Detector)[1].Channel;
-    //         if (IsDetectorSiliStrip(silicon_code) && silicon_code >= first && silicon_code < last)
-    //         {
-    //             if (ManualCalibFitted[silicon_code][0] == 0)
-    //                 continue;
-                
-    //             ProgressBar(entries, Reader->GetCurrentEntry(), start, Current);
-    //             double silicon_channel_calibrated = Calibration_Function[silicon_code]->Eval(silicon_channel / 1000);
-
-                
-    //             if ((*SIPM_High).GetSize() >= 6)
-    //             {
-    //                 H_Coincidence[Nucleus][silicon_code]->Fill(silicon_channel_calibrated);
-    //             }
-    //             else
-    //             {
-    //                 H_AntiCoincidence[Nucleus][silicon_code]->Fill(silicon_channel_calibrated);
-    //             }
-    //             H_single[Nucleus][silicon_code]->Fill(silicon_channel_calibrated);
-    //         }
-    //     }
-
-    //     CALIBRATED_File->cd();
-    //     for (int i = 0; i < SIGNAL_MAX; i++)
-    //     {
-    //         if (IsDetectorSiliStrip(i) && i >= first && i < last)
-    //         {
-    //             dir_detector[i]->cd();
-    //             TCanvas *c1 = new TCanvas((Nucleus + "_" + detectorName[i] + "_Coincidence").c_str(), (Nucleus + "_" + detectorName[i] + "_Coincidence").c_str(), 800, 600);
-    //             c1->cd();
-    //             H_single[Nucleus][i]->SetLineColor(kBlack);
-    //             H_single[Nucleus][i]->Draw("HIST");
-    //             H_Coincidence[Nucleus][i]->SetLineColor(kRed);
-    //             H_Coincidence[Nucleus][i]->Draw("SAME");
-    //             H_AntiCoincidence[Nucleus][i]->SetLineColor(kBlue);
-    //             H_AntiCoincidence[Nucleus][i]->Draw("SAME");
-    //             TLegend *legend = new TLegend(0.1, 0.7, 0.48, 0.9);
-    //             legend->AddEntry(H_single[Nucleus][i], "Single proton", "l");
-    //             legend->AddEntry(H_Coincidence[Nucleus][i], "#beta-p Coincidence", "l");
-    //             legend->AddEntry(H_AntiCoincidence[Nucleus][i], "#beta-p Anti-Coincidence", "l");
-    //             legend->Draw("SAME");
-    //             c1->Write();
-    //         }
-    //     }
-    // }
-
-    CALIBRATED_File->cd();
-    Info("Summing Histograms");
-
-    for (string Nucleus : Nuclei)
-    {
-        for (int i = first; i < last; i++)
-        {
-            if (IsDetectorSiliStrip(i) && GetDetectorChannel(i) == 1)
-            {
-                current_detector = i;
-                H_Exp_All[Nucleus]->Add(H_Exp[Nucleus][i], 1.);
-                H_Sim_All[Nucleus]->Add(H_Sim_Conv[Nucleus][i], 1.);
-            }
-        }
-
-        TCanvas *c1 = new TCanvas((Nucleus + "_SUM").c_str(), (Nucleus + "_SUM").c_str(), 800, 600);
-        c1->cd();
-        H_Exp_All[Nucleus]->Draw("HIST");
-        H_Sim_All[Nucleus]->SetLineColor(kRed);
-        H_Sim_All[Nucleus]->Draw("HIST SAME");
-        c1->Write();
-
-    }
-
-    for (int i = first; i < last; i++)
-    {
-        if (IsDetectorSiliStrip(i))
-        {
-            Calibration_Function[i]->SetName(("Calibration_" + detectorName[i]).c_str());
-            Calibration_Function[i]->Write();
-        }
-    }
     
-
-    CALIBRATED_File->Close();
-    MERGED_File["32Ar"]->Close();
-    MERGED_File["32Ar_thick"]->Close();
-    MERGED_File["33Ar"]->Close();
     return 0;
 }

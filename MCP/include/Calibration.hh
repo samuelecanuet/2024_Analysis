@@ -183,10 +183,10 @@ bool M_final_2025[7][7] = {
 
 vector<vector<bool>> M_final;
 
-double x_measurement_min = -2.;
-double x_measurement_max = 2.;
-double y_measurement_min = -2.;
-double y_measurement_max = 2.;
+double x_measurement_min = -4.;
+double x_measurement_max = 4.;
+double y_measurement_min = -4.;
+double y_measurement_max = 4.;
 
 bool M_measurement_2024[8][8] = {
     {false, false, false, false, false, false, false, false},
@@ -785,8 +785,12 @@ void InitYearConfiguration(string Year = "2024")
         M_measurement = ConvertToVector(M_measurement_2025);
         n = 7;
         l_real = 1.4;
-        Calibration_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";  
-        Measurement_Filename = "";
+        Calibration_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/run_001_StableBeamScan_grouped.root";  
+        // Measurement_Filename = "run_041_MCP_32Ar_Beam_4T_grouped.root";
+        Measurement_Filename = "run_079_MCP_32Ar_Heinz14kV_grouped.root";
+
+        // Calibration_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";  
+        // Measurement_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";  
     }
     else
     {
@@ -940,6 +944,7 @@ void FullFunctionToMinimize2D()
     // Amplitude
     FittedFunction->SetParLimits(0, 0., 100);
     FittedFunction->SetParameter(0, 10);
+    // FittedFunction->FixParameter(0, 30);
 
     // sigma x
     FittedFunction->SetParLimits(1, 0., 0.02);
@@ -1189,11 +1194,6 @@ double MyFullFittedFunction2D_CORNER(double *x, double *par)
             if (!M[i][j])
                 continue;
 
-            // if (abs(sqrt(M_center[i * n + j].first * M_center[i * n + j].first + M_center[i * n + j].second * M_center[i * n + j].second) - r) > 2 * rho)
-            // {
-            //     continue;
-            // }
-
             double Ax = par[10 + i * n + j];
             double Ay = par[10 + n * n + i * n + j];
             double Bx = par[10 + 2 * n * n + i * n + j];
@@ -1202,6 +1202,11 @@ double MyFullFittedFunction2D_CORNER(double *x, double *par)
             double Cy = par[10 + 5 * n * n + i * n + j];
             double Dx = par[10 + 6 * n * n + i * n + j];
             double Dy = par[10 + 7 * n * n + i * n + j];
+
+            // if (abs(sqrt(Ax*Ax + Ay*Ay) - r) > 2 * rho)
+            // {
+            //     continue;
+            // }
 
             double aAB = (Ay - By) / (Ax - Bx);
             double aBC = (Bx - Cx) / (By - Cy);
@@ -1221,9 +1226,6 @@ double MyFullFittedFunction2D_CORNER(double *x, double *par)
             grid_sum += A * edgeAB * edgeBC * edgeCD * edgeDA;
         }
     }
-
-    // RAW EXPRESSION  OF 2D GAUSSIAN
-    double gauss = 0;
 
     double result = grid_sum;
 
@@ -1318,7 +1320,7 @@ void FullFunctionToMinimize2D_CORNER()
     // l
     FittedFunction->SetParLimits(9, 0.04, 0.1);
     // FittedFunction->SetParameter(9, 0.08);
-    FittedFunction->FixParameter(9, 0.08);
+    // FittedFunction->FixParameter(9, 0.08);
 
     for (int i = 0; i < N; ++i)
     {
@@ -1394,7 +1396,7 @@ void FullFunctionToMinimize2D_CORNER()
 
     ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
     ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0);
-    // H_precorrrected->Rebin2D(2, 2);
+    H_precorrrected->Rebin2D(2, 2);
     H_precorrrected->GetXaxis()->SetRangeUser(-0.4, 0.4);
     H_precorrrected->GetYaxis()->SetRangeUser(-0.4, 0.4);
 
@@ -1525,6 +1527,7 @@ void FittingReconstruction_CORNER()
             {
                 break;
             }
+            i = i - 1;
             if (!M[i / n][i % n])
             {
                 continue;
@@ -1576,7 +1579,7 @@ void FittingReconstruction_CORNER()
 
             counter += 4;
 
-            cout << "Cell " << i << " : " << X_real << " " << Y_real << endl;
+            // cout << "Cell " << i << " : " << X_real << " " << Y_real << endl;
         }
     }
     
@@ -1656,14 +1659,17 @@ void FittingReconstruction_CORNER()
     }
     else
     {
-        TFile *f = new TFile(Calibration_Filename.c_str(), "READ");
+        TFile *f = MyTFile((Calibration_Filename).c_str(), "READ");
         TTree *tree = (TTree *)f->Get("treeMCP");
         TTreeReader *Reader = new TTreeReader(tree);
-        TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X0");
-        TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y0");
+        TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X");
+        TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y");
 
+        int Entries = tree->GetEntries();
+        clock_t start = clock(), Current;
         while(Reader->Next())
         {
+            // ProgressBar()
             double x = **X0;
             double y = **Y0;
             double x_fit = f_X->Eval(x, y);
@@ -1712,7 +1718,12 @@ void LoadCenters(string Year = "2024")
         file.close();
         Success("Centers loaded"); 
 
-        ifstream file2("out_corner_2025.txt");  
+        ifstream file2("guess_corner_2025.txt");  
+        if (!file2.is_open())
+        {
+            Error("LoadCenters", "File guess_corner_2025.txt not found");
+            return;
+        }
         string line2;
         while (getline(file2, line2))
         {
@@ -1720,8 +1731,34 @@ void LoadCenters(string Year = "2024")
             int cell;
             double ax, ay, bx, by, cx, cy, dx, dy;
             iss >> cell >> ax >> ay >> bx >> by >> cx >> cy >> dx >> dy;
+            cell = cell - 1;
             M_corner[cell] = {make_pair(ax, ay), make_pair(bx, by), make_pair(cx, cy), make_pair(dx, dy)};
+
+            // cout << cell << " " << ax << " " << ay << " " << bx << " " << by << " " << cx << " " << cy << " " << dx << " " << dy << endl;
         }
+        
+
+
+        FINAL_file->cd();
+        TCanvas *c_PointVerification = new TCanvas("c_PointVerification", "c_PointVerification", 800, 800);
+        H_precorrrected->Draw("COLZ");
+        TGraph *G_coord_fitgrid = new TGraph();
+        for (int i = 0; i < n * n; ++i)
+        {
+            if (M[i / n][i % n])
+            {
+                G_coord_fitgrid->AddPoint(M_corner[i][0].first, M_corner[i][0].second);
+                G_coord_fitgrid->AddPoint(M_corner[i][1].first, M_corner[i][1].second);
+                G_coord_fitgrid->AddPoint(M_corner[i][2].first, M_corner[i][2].second);
+                G_coord_fitgrid->AddPoint(M_corner[i][3].first, M_corner[i][3].second);
+            }
+        }
+        G_coord_fitgrid->SetMarkerStyle(20);
+        G_coord_fitgrid->SetMarkerSize(2);
+        G_coord_fitgrid->SetMarkerColor(kRed);
+        G_coord_fitgrid->Draw("P SAME");
+        c_PointVerification->Write();
+
         Success("Corner loaded"); 
     }
     else
@@ -2204,6 +2241,83 @@ double MeasurementFittedFunction2D(double *x, double *par)
     return result;
 }
 
+double f_CORNER(double *x, double *par)
+{
+    double A = par[0];
+    double sigma_x = par[1];
+    double sigma_y = par[2];
+    double A_g = par[3];
+    double mu_gx = par[4];
+    double mu_gy = par[5];
+    double sigma_gx = par[6];
+    double sigma_gy = par[7];
+    double bkg = par[8];
+    double l2 = par[9]/2;
+    // double beta_x[n][n];
+    // double beta_y[n][n];
+    // double A[n][n];
+
+    double result_sum = 0.0;
+    double grid_sum = 0.0;
+
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+
+            if (!M_measurement[i][j])
+                continue;
+
+            // A[i][j] = par[2 * n * n + 10 + i * n + j];
+            // beta_x[i][j] = par[10 + i * n + j];
+            // beta_y[i][j] = par[10 + n * n + i * n + j];
+
+            // double erf_x_pos = 0.5*(1+erf((x[0] - (beta_x[i][j] - l2)) / (sqrt(2) * sigma_x)));
+            // double erf_x_neg = 0.5*(1+erf((x[0] - (beta_x[i][j] + l2)) / (sqrt(2) * sigma_x)));
+            // double erf_x = (x[0] >= (beta_x[i][j] - l2) && x[0] <= (beta_x[i][j] + l2)) ? 1.0 : 0.0;
+
+            // double erf_y_pos = 0.5*(1+erf((x[1] - (beta_y[i][j] - l2)) / (sqrt(2) * sigma_y)));
+            // double erf_y_neg = 0.5*(1+erf((x[1] - (beta_y[i][j] + l2)) / (sqrt(2) * sigma_y)));
+            // double erf_y = (x[1] >= (beta_y[i][j] - l2) && x[1] <= (beta_y[i][j] + l2)) ? 1.0 : 0.0;
+
+            // result_sum += (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
+            // grid_sum += (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
+
+            double Ax = par[10 + i * n + j];
+            double Ay = par[10 + n * n + i * n + j];
+            double Bx = par[10 + 2 * n * n + i * n + j];
+            // double By = par[10 + 3 * n * n + i * n + j];
+            // double Cx = par[10 + 4 * n * n + i * n + j];
+            // double Cy = par[10 + 5 * n * n + i * n + j];
+            // double Dx = par[10 + 6 * n * n + i * n + j];
+            double Dy = par[10 + 7 * n * n + i * n + j];
+
+            double erf_x = (x[0] >= (Ax) && x[0] <= (Bx)) ? 1.0 : 0.0;
+            double erf_y = (x[1] >= (Ay) && x[1] <= (Dy)) ? 1.0 : 0.0;
+
+            result_sum += erf_x * erf_y;
+            grid_sum += erf_x * erf_y;
+        }
+    }
+
+    // RAW EXPRESSION  OF 2D GAUSSIAN
+    // double theta = A * TMath::Pi() / 180.;
+    // double Xr = (x[0]-mu_gx)*cos(theta) + (x[1]-mu_gy)*sin(theta);
+    // double Yr = -(x[0]-mu_gx)*sin(theta) + (x[1]-mu_gy)*cos(theta);
+
+    // double rho = 0.0;
+    // double gaussr = A_g / (2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
+    // double gaussr_corr = bkg + A_g * exp(-0.5 * 1/(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
+
+    double par_gauss[5] = {A_g, mu_gx, sigma_gx, mu_gy, sigma_gy};
+    double gauss = MyGaussian(x, par_gauss);
+    // double gauss = A_g / (2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
+    
+    result_sum *= gauss;
+
+    return result_sum + bkg*grid_sum;
+}
+
 double f(double *x, double *par)
 {
     double A = par[0];
@@ -2270,6 +2384,47 @@ double f(double *x, double *par)
     return result_sum + bkg*grid_sum;
 }
 
+double MeasurementFittedFunction2D_Convoluted_CORNER(double *x, double *par)
+{
+    double A = par[0];
+    double sigma_x = par[1];
+    double sigma_y = par[2];
+    double A_g = par[3];
+    double mu_gx = par[4];
+    double mu_gy = par[5];
+    double sigma_gx = par[6];
+    double sigma_gy = par[7];
+    double bkg = par[8];
+    double l2 = par[9]/2;
+    double beta_x[n][n];
+    double beta_y[n][n];
+    // double A[n][n];
+    // double a[6] = {par[3*n*n+10], par[3*n*n+11], par[3*n*n+21], par[3*n*n+13], par[3*n*n+14], par[3*n*n+15]};
+
+    // double result = f(x, par);
+    /// CONVOLUTING result by a 2D GAUSSIAN
+    double result_conv = 0.0;
+    double par_g[5] = {1, 0, sigma_x, 0, sigma_y};
+
+    // double loop for convolution gaussian 2d on value 
+    int Step = 100;
+    double fStep = (x_measurement_max - x_measurement_min) / Step;  
+    for (int i = 0 ; i < Step; i++)
+    {
+        double tx = x_measurement_min + i * fStep;
+        for (int j = 0 ; j < Step; j++)
+        {
+            double ty = x_measurement_min + j * fStep;
+            double xx[2] = {tx, ty};
+            double xxx[2] = {x[0]-tx, x[1]-ty};
+            // result_conv += Gaussian->Eval(x[0]-tx, x[1]-ty) * f(xx, par) * fStep * fStep;
+            result_conv += MyGaussian(xxx, par_g) * f_CORNER(xx, par) * fStep * fStep;
+        }
+    }
+
+    return result_conv;
+}
+
 
 double MeasurementFittedFunction2D_Convoluted(double *x, double *par)
 {
@@ -2286,7 +2441,7 @@ double MeasurementFittedFunction2D_Convoluted(double *x, double *par)
     double beta_x[n][n];
     double beta_y[n][n];
     // double A[n][n];
-    double a[6] = {par[3*n*n+10], par[3*n*n+11], par[3*n*n+21], par[3*n*n+13], par[3*n*n+14], par[3*n*n+15]};
+    // double a[6] = {par[3*n*n+10], par[3*n*n+11], par[3*n*n+21], par[3*n*n+13], par[3*n*n+14], par[3*n*n+15]};
 
     // double result = f(x, par);
     /// CONVOLUTING result by a 2D GAUSSIAN
@@ -2312,7 +2467,191 @@ double MeasurementFittedFunction2D_Convoluted(double *x, double *par)
     return result_conv;
 }
 
-double MeasurementFunctionToMinimize2D(double *par)
+double MeasurementFunctionToMinimize2D_CORNER()
+{
+
+    ////////// SOLUTION OF FIT //////////////
+    // ### ERROR AT THE END THE FILE ### // 
+    double sigma_x = 1.70116e-01;
+    double sigma_y = 1.28192e-01;
+    double Amplitude_gauss = 2.62887e+02;
+    double mu_gx = -7.91786e-02;
+    double mu_gy = 6.31885e-02;
+    double sigma_gx = 6.59898e-01;
+    double sigma_gy = 7.73420e-01;
+    double bkg = 3.40290e+00;
+    /////////////////////////////////////////   
+
+    double chi2 = 0.0;
+    int N = n * n;
+
+    // ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(2); // 2 for verbose
+    ROOT::Math::MinimizerOptions::SetDefaultErrorDef(9.30*9.30);
+    MeasurementFunction = new TF2("MeasurementFunction", MeasurementFittedFunction2D_Convoluted_CORNER, x_measurement_min, x_measurement_max, x_measurement_min, x_measurement_max, 8 * N + 10);
+    MeasurementFunction->SetNpx(75);
+    MeasurementFunction->SetNpy(75);
+
+    // Amplitude
+    // MeasurementFunction->SetParLimits(0, 0, 180);
+    // MeasurementFunction->SetParameter(0, 50);
+    MeasurementFunction->FixParameter(0, 0);
+
+    // sigma x
+    MeasurementFunction->SetParLimits(1, 0.1, 0.4);
+    MeasurementFunction->SetParameter(1, 0.17);
+    // MeasurementFunction->FixParameter(1, sigma_x);
+
+    // sigma y
+    MeasurementFunction->SetParLimits(2, 0.1, 0.4);
+    MeasurementFunction->SetParameter(2, 0.12);
+    // MeasurementFunction->FixParameter(2, sigma_y);
+
+    // amplitude gaus
+    MeasurementFunction->SetParLimits(3, 0, 1000);
+    MeasurementFunction->SetParameter(3, 50);
+    // MeasurementFunction->FixParameter(3, Amplitude_gauss);
+
+    // mu gaus x
+    MeasurementFunction->SetParLimits(4, -1, 1);
+    MeasurementFunction->SetParameter(4, 0);
+    // MeasurementFunction->FixParameter(4, mu_gx);
+
+    // mu gaus y
+    MeasurementFunction->SetParLimits(5, -1, 1);
+    MeasurementFunction->SetParameter(5, 0);
+    // MeasurementFunction->FixParameter(5, mu_gy);
+
+    // sigma gaus x
+    MeasurementFunction->SetParLimits(6, 0.1, 1.5);
+    MeasurementFunction->SetParameter(6, 0.6);
+    // MeasurementFunction->FixParameter(6, sigma_gx);
+
+    // sigma gaus y
+    MeasurementFunction->SetParLimits(7, 0.1, 1.5);
+    MeasurementFunction->SetParameter(7, 0.6);
+    // MeasurementFunction->FixParameter(7, sigma_gy);
+
+    // bkg
+    MeasurementFunction->SetParLimits(8, 0, 100);
+    MeasurementFunction->SetParameter(8, 4);
+    // MeasurementFunction->FixParameter(8, bkg);
+
+    // l
+    // MeasurementFunction->SetParLimits(9, 0.8, 1.4);
+    MeasurementFunction->FixParameter(9, l_real);
+
+    for (int i = 0; i < N; ++i)
+    {
+
+        if (!M_measurement[i / n][i % n])
+        {
+            // a_x
+            MeasurementFunction->FixParameter(10 + i, 0.);
+            // a_y
+            MeasurementFunction->FixParameter(N + 10 + i, 0.);
+            // b_x
+            MeasurementFunction->FixParameter(2 * N + 10 + i, 0.);
+            // b_y
+            MeasurementFunction->FixParameter(3 * N + 10 + i, 0.);
+            // c_x
+            MeasurementFunction->FixParameter(4 * N + 10 + i, 0.);
+            // c_y
+            MeasurementFunction->FixParameter(5 * N + 10 + i, 0.);
+            // d_x
+            MeasurementFunction->FixParameter(6 * N + 10 + i, 0.);
+            // d_y
+            MeasurementFunction->FixParameter(7 * N + 10 + i, 0.);
+        }
+        else
+        {
+            // MeasurementFunction->FixParameter(i, 0);
+            double x_center = i / n * rho_real - rho_real * (n - 1) / 2;
+            double y_center = i % n * rho_real - rho_real * (n - 1) / 2;
+
+            // a_x
+            MeasurementFunction->FixParameter(10 + i, x_center - l_real / 2);
+
+            // a_y
+            MeasurementFunction->FixParameter(N + 10 + i, y_center - l_real / 2);
+
+            // b_x
+            MeasurementFunction->FixParameter(2 * N + 10 + i, x_center + l_real / 2);
+
+            // b_y
+            MeasurementFunction->FixParameter(3 * N + 10 + i, y_center - l_real / 2);
+
+            // c_x
+            MeasurementFunction->FixParameter(4 * N + 10 + i, x_center + l_real / 2);
+
+            // c_y
+            MeasurementFunction->FixParameter(5 * N + 10 + i, y_center + l_real / 2);
+
+            // d_x
+            MeasurementFunction->FixParameter(6 * N + 10 + i, x_center - l_real / 2);
+
+            // d_y
+            MeasurementFunction->FixParameter(7 * N + 10 + i, y_center + l_real / 2);
+            
+        }
+    }    
+
+    
+    H_measurement_reconstructed->Rebin2D(2, 2);
+
+    H_measurement_reconstructed->GetXaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
+    H_measurement_reconstructed->GetYaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
+
+    // H_measurement_reconstructed->SetBinContent(57, 51, 0);
+    H_measurement_reconstructed->Fit(MeasurementFunction, "MULTITHREAD RNM");
+    
+    chi2 = H_measurement_reconstructed->Chisquare(MeasurementFunction) / MeasurementFunction->GetNDF();
+    cout << "chi2 = " << chi2 << endl;
+
+    
+
+    if (WRITTING)
+    {
+        FINAL_file->cd();
+
+        MeasurementFunction->Write();
+
+        TCanvas *c1 = new TCanvas("MeassurementFitted_2D_View", "MeassurementFitted_2D_View", 800, 800);
+        H_measurement_reconstructed->Draw("COLZ");
+        MeasurementFunction->Draw("SAME");
+        c1->Write();
+
+        TCanvas *c = new TCanvas("MeassurementFitted_3D_View", "MeassurementFitted_3D_View", 800, 800);
+        c->Divide(2, 1);
+        c->cd(1);
+        H_measurement_reconstructed->GetXaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
+        H_measurement_reconstructed->GetYaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
+        MeasurementFunction->Draw("SURF");
+        c->cd(2);
+        // MeasurementFunction->SetNpx(75);
+        // MeasurementFunction->SetNpy(75);
+        H_measurement_reconstructed->Draw("LEGO2");
+        c->Write();
+
+        /////// SAVING PARAMETER ////////
+        SIGMA_BEAM_X = make_pair(MeasurementFunction->GetParameter(6), MeasurementFunction->GetParError(6));
+        SIGMA_BEAM_Y = make_pair(MeasurementFunction->GetParameter(7), MeasurementFunction->GetParError(7));
+        MEAN_BEAM_X = make_pair(MeasurementFunction->GetParameter(4), MeasurementFunction->GetParError(4));
+        MEAN_BEAM_Y = make_pair(MeasurementFunction->GetParameter(5), MeasurementFunction->GetParError(5));
+        AMPLITUDE_BEAM = make_pair(MeasurementFunction->GetParameter(3), MeasurementFunction->GetParError(3));
+        /////////////////////////////////
+
+        TF2 *fMyGaussian = new TF2("Beam_Profile", MyGaussian, -2, 2, -2, 2, 5);
+        fMyGaussian->SetParameter(0, MeasurementFunction->GetParameter(3));
+        fMyGaussian->SetParameter(1, MeasurementFunction->GetParameter(4));
+        fMyGaussian->SetParameter(2, MeasurementFunction->GetParameter(6));
+        fMyGaussian->SetParameter(3, MeasurementFunction->GetParameter(5));
+        fMyGaussian->SetParameter(4, MeasurementFunction->GetParameter(7));
+        fMyGaussian->Write();
+    }
+    return chi2;
+}
+
+double MeasurementFunctionToMinimize2D()
 {
     // double sigma_x = par[0];
     // double sigma_y = par[1];
@@ -2392,7 +2731,7 @@ double MeasurementFunctionToMinimize2D(double *par)
 
     // l
     // MeasurementFunction->SetParLimits(9, 0.8, 1.4);
-    MeasurementFunction->FixParameter(9, 1.2);
+    MeasurementFunction->FixParameter(9, l_real);
 
     for (int i = 0; i < N; ++i)
     {
@@ -2478,19 +2817,46 @@ double MeasurementFunctionToMinimize2D(double *par)
 
 void Measurement2D()
 {
-    // recreate data in histogram
-    H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 100, x_measurement_min, x_measurement_max, 100, x_measurement_min, x_measurement_max);
-    for (int i = 0; i < 60202; ++i)
+    FINAL_file->cd();
+    if (YEAR == 2024)
     {
-        double x, y;
-        H_measurement->GetRandom2(x, y);
-        double x_fit = f_X->Eval(x, y)-0.27;
-        double y_fit = f_Y->Eval(y, x)+0.30;
-        H_measurement_reconstructed->Fill(x_fit, y_fit);
+        // recreate data in histogram
+        H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 1000, x_measurement_min, x_measurement_max, 1000, x_measurement_min, x_measurement_max);
+        for (int i = 0; i < H_measurement->GetEntries(); ++i)
+        {
+            double x, y;
+            H_measurement->GetRandom2(x, y);
+            double x_fit = f_X->Eval(x, y) - 0.27;
+            double y_fit = f_Y->Eval(y, x) + 0.30;
+            H_measurement_reconstructed->Fill(x_fit, y_fit);
+        }
+
+        // H_measurement_reconstructed->SetBinContent(57, 51, 0);
     }
+    else
+    {
+        // recreate data in histogram from Tree
+        H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 300, x_measurement_min, x_measurement_max, 300, x_measurement_min, x_measurement_max);
+        TFile *file_measurement = MyTFile((DIR_ROOT_DATA_MCP+Measurement_Filename).c_str(), "READ");
 
-    H_measurement_reconstructed->SetBinContent(57, 51, 0);
+        TTree *tree = (TTree*)file_measurement->Get("treeMCP");
+        TTreeReader *Reader = new TTreeReader(tree);
+        TTreeReaderValue<double> *X_Tree = new TTreeReaderValue<double>(*Reader, "X");
+        TTreeReaderValue<double> *Y_Tree = new TTreeReaderValue<double>(*Reader, "Y");
 
+        while (Reader->Next())
+        {
+            double x = **X_Tree;
+            double y = **Y_Tree;
+
+            double x_fit = f_X->Eval(x, y);
+            double y_fit = f_Y->Eval(y, x);
+
+            H_measurement_reconstructed->Fill(x_fit, y_fit);
+        }
+        file_measurement->Close();
+    }
+    FINAL_file->cd();
 
     TCanvas *c_measurement_reconstructed = new TCanvas("Measurement_2D_View", "Measurement_2D_View", 800, 800);
     H_measurement_reconstructed->Draw("COLZ");
@@ -2503,7 +2869,6 @@ void Measurement2D()
     fSaved->Close();
 
     FINAL_file->cd();
-    
 }
 
 /// 1D diag

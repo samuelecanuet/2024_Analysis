@@ -3,13 +3,12 @@
 int main()
 {
     /////////// INITIALISATION //////////
+    FLAG2024 = true;
     InitDetectors("Config_Files/sample.pid");
     ReadAllRunsDate();
 
     // ReadISOLDE();
     // WriteISOLDE();
-
-    
 
     fTime = new TFile((DIR_ROOT_DATA_GROUPED + "../Pulses.root").c_str(), "RECREATE");
     Init();
@@ -26,7 +25,7 @@ int main()
         {
             Info("Run " + to_string(Run));
 
-            LoadISOLDE(64);
+            LoadISOLDE(Run);
 
             string GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, "0"+to_string(Run));
             GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");

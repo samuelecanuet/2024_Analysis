@@ -25,18 +25,19 @@ int main(int argc, char *argv[])
         }
     }
 
+    FLAG2021 = true;    
     InitDetectors("Config_Files/sample.pid");
-    InitPeakWindow();
+    InitRuns();
     InitManualCalibration();
     InitWindows();
-    InitGT();
 
     ///////////////////////////////////  REFERENCE  //////////////////////////////
-    REFERENCE_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, "0"+to_string(REFERENCE_Run));
-    REFERENCE_File = new TFile((DIR_ROOT_DATA_GROUPED + REFERENCE_filename).c_str(), "READ");
-    MATCHED_File = new TFile((DIR_ROOT_DATA_MATCHED + "matched.root").c_str(), "RECREATE");
+    REFERENCE_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, "0"+to_string(REFERENCE_Run[YEAR]));
+    REFERENCE_File = MyTFile((DIR_ROOT_DATA_GROUPED + REFERENCE_filename).c_str(), "READ");
+    MATCHED_File = MyTFile((DIR_ROOT_DATA_MATCHED + "matched.root").c_str(), "RECREATE");
 
     ///////////////////////////////////  INIT HIST  //////////////////////////////
+    Info("Init Histograms");
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
         if (IsDetectorSiliStrip(i))
@@ -71,9 +72,9 @@ int main(int argc, char *argv[])
     ///////////////////////////////////////////////////////////////////////////////
 
     int counter_R[SIGNAL_MAX] = {0};
-    for (string Run_string : Runs)
+    for (auto Run_string : Map_RunFiles["32Ar"])
     {
-        if (atoi(Run_string.c_str()) == REFERENCE_Run)
+        if (atoi(Run_string.c_str()) == REFERENCE_Run[YEAR])
             continue;
         Info("Current Run : " + Run_string);
         InitHistograms(Run_string);
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
         ///////////////////////////////////  INPUT ///////////////////////////////////
         GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, Run_string);
         GROUPED_basefilename = GROUPED_filename.substr(0, GROUPED_filename.find(".root"));
-        GROUPED_File = new TFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");
+        GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");
 
         ///////////////////////////////////  OUTPUT ///////////////////////////////////
         MATCHED_File->cd();
@@ -110,7 +111,7 @@ int main(int argc, char *argv[])
         {
             if (IsDetectorSiliStrip(i))
             {
-                // Info(detectorName[i]);
+                // Info(detectorName[i], 1);
                 Reader = new TTreeReader(GROUPED_Tree_Detectors[i]);
                 CHI2Minimization(i);
 
@@ -187,7 +188,7 @@ int main(int argc, char *argv[])
                 pt->Draw("SAME");
 
                 TGraph *G_Ref = new TGraph();
-                G_Ref->SetPoint(0, REFERENCE_Run, H_Run_Ref[i]->GetMean());
+                G_Ref->SetPoint(0, REFERENCE_Run[YEAR], H_Run_Ref[i]->GetMean());
                 G_Ref->SetMarkerStyle(20);
                 G_Ref->SetMarkerColor(kRed);
                 G_Ref->SetLineColor(kRed);
@@ -202,8 +203,8 @@ int main(int argc, char *argv[])
             H_Run_AFTER[i]->Draw("HIST SAME");
 
             TPaveText *pt = new TPaveText(0.7, 0.7, 0.9, 0.9, "NDC");
-            H_Run_BEFORE[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
-            H_Run_AFTER[i]->GetXaxis()->SetRangeUser(peaks_window_F[i].first, peaks_window_F[i].second);
+            H_Run_BEFORE[i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
+            H_Run_AFTER[i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
             pt->AddText(("STD Before : " + to_string(H_Run_BEFORE[i]->GetRMS())).c_str());
             pt->AddText(("STD After : " + to_string(H_Run_AFTER[i]->GetRMS())).c_str());
             pt->Draw("SAME");

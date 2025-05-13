@@ -83,6 +83,7 @@
         "Root2Root.C": "cpp",
         "Plotting_function.C": "cpp",
         ".Plotting_points.C": "cpp",
-        "CRADLE_READER.C": "cpp"
+        "CRADLE_READER.C": "cpp",
+        "codecvt": "cpp"
     }
 }
