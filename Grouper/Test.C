@@ -10,7 +10,7 @@ void Test()
 
     double a12 = 1.;
     double a31 = 1.;
-    double a23 = 1/(a31*a12);
+    double a23 =1./(a31*a12);
 
     double b23 = - (a31*b12+b31 ) / (a31*a12) ;
 

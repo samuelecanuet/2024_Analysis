@@ -23,6 +23,7 @@
 #include "TTreeReader.h"
 #include "TTreeReaderArray.h"
 #include "TTreeReaderValue.h"
+#include "TNtuple.h"
 //// data containers ////
 #include "TH1D.h"
 #include "TH2D.h"
@@ -30,6 +31,7 @@
 #include "TProfile.h"
 #include "TProfile2D.h"	
 #include "TGraph.h"	
+#include "TGraph2D.h"
 #include "TGraphErrors.h"
 #include "TMultiGraph.h"
 //// plotting ////
@@ -42,9 +44,13 @@
 #include "TLine.h"
 #include "TStyle.h"
 #include "TArrow.h" 
+#include "TMarker3DBox.h"
+#include "TPolyLine3D.h"
+#include "TView.h"
 //// functions ////
 #include "TF1.h"
 #include "TF2.h"
+#include "TF3.h"
 #include "TFitResult.h"
 //// others ////
 #include "TRandom.h"
@@ -52,6 +58,8 @@
 #include "Math/Minimizer.h"
 #include "Math/Functor.h"
 #include "Math/Factory.h"
+#include <TVectorD.h>
+#include <TMatrixDSym.h>
 
 #include "Messenger.hh"
 #include "Utilities.hh"
@@ -528,6 +536,11 @@ inline void InitDetectors(const string &fname)
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2021_DATA/DETECTOR_DATA/";
     REFERENCE_RUN = 16;
   }
+
+  // IAS["32Ar"] = 14;
+  // IAS["32Ar_thick"] = 14;
+  // IAS["33Ar"] = 21;
+  // IAS["33Ar_thick"] = 21;
 
 
 }

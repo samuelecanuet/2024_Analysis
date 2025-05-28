@@ -3,15 +3,11 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2021 = true;
+    FLAG2024 = true;
     InitDetectors("Config_Files/sample.pid");
     InitRuns();
 
     MATCHED_File = MyTFile((DIR_ROOT_DATA_MATCHED + "matched.root").c_str(), "READ");
-
-    //////////////////// MATCHING REAR STRIP ////////////////////
-    // TFile *File_Fit = MyTFile((DIR_ROOT_DATA_MATCHED + "RearStrip_Fit.root").c_str(), "RECREATE");
-    // File_Fit->cd();
 
     ////////////////////////////////////////////////////////////
     // using correction of run gaindrifting and correction from strip to strip and merge all the runs in a single file for each nucleus

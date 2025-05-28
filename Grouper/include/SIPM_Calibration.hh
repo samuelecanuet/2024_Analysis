@@ -193,7 +193,7 @@ TF1 *InvertingLinear(TF1 *f)
     TF1 *f_inv = new TF1("f_inv", "[0]*x + [1]", 0, 10000e3);
     double a = f->GetParameter(0);
     double b = f->GetParameter(1);
-    f_inv->SetParameter(0, 1 / a);
+    f_inv->SetParameter(0,1. / a);
     f_inv->SetParameter(1, -b / a);
     return f_inv;
 }
@@ -1011,7 +1011,7 @@ double Chi2TreeHist_conv(const double *par)
 
             // delete Threshold_f;
 
-            //////////////// CHI2 ////////////////
+            //////////////// CHI2. ////////////////
             // Scaling High
             H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].first->GetXaxis()->SetRangeUser(2, 1200);
             H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetXaxis()->SetRangeUser(2, 1200);

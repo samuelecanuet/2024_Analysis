@@ -292,7 +292,7 @@ pair<double, double> LogFunction(double *x)
     double Vc = x[C];
     double Vd = x[D];
 
-    double norm = 1 / log((Va * Vb * Vc * Vd) / pow(Va + Vb + Vc + Vd, 4));
+    double norm =1. / log((Va * Vb * Vc * Vd) / pow(Va + Vb + Vc + Vd, 4));
     double X = -log(Vb * Vc / (Va * Vd)) * norm;
     double Y = -log(Vb * Va / (Vc * Vd)) * norm;
 
@@ -907,7 +907,7 @@ double MyFullFittedFunction2D(double *x, double *par)
     //     }
 
     //     // double theta = atan(x[1] / x[0]);
-    //     // double sigma_r = 1 / sqrt(2) * sqrt(pow(cos(theta) * sigma_x, 2) + pow(sin(theta) * sigma_y, 2));
+    //     // double sigma_r =1. / sqrt(2) * sqrt(pow(cos(theta) * sigma_x, 2) + pow(sin(theta) * sigma_y, 2));
     //     // double edge = 0.5 * erfc(((r - R) / (sqrt(2) * sigma_r)));
 
     //     // result *= edge;
@@ -2226,10 +2226,10 @@ double MeasurementFittedFunction2D(double *x, double *par)
     double Yr = -(x[0]-mu_gx)*sin(theta) + (x[1]-mu_gy)*cos(theta);
 
     // double rho = 0.0;
-    double gaussr = A_g * 1/(sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
-    // double gaussr_corr = bkg + A_g * exp(-0.5 * 1/(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
+    double gaussr = A_g *1./(sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
+    // double gaussr_corr = bkg + A_g * exp(-0.5 *1./(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
 
-    double gauss = A_g * 1/(sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
+    double gauss = A_g *1./(sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
 
     // RAW EXPRESSION  OF 2D GAUSSIAN (R)
     // double GaussianParameters[9] = {A_g, mu_gx, mu_gy, a[0], a[1], a[2], a[3], a[4], a[5]};
@@ -2307,7 +2307,7 @@ double f_CORNER(double *x, double *par)
 
     // double rho = 0.0;
     // double gaussr = A_g / (2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
-    // double gaussr_corr = bkg + A_g * exp(-0.5 * 1/(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
+    // double gaussr_corr = bkg + A_g * exp(-0.5 *1./(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
 
     double par_gauss[5] = {A_g, mu_gx, sigma_gx, mu_gy, sigma_gy};
     double gauss = MyGaussian(x, par_gauss);
@@ -2373,7 +2373,7 @@ double f(double *x, double *par)
 
     // double rho = 0.0;
     // double gaussr = A_g / (2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)));
-    // double gaussr_corr = bkg + A_g * exp(-0.5 * 1/(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
+    // double gaussr_corr = bkg + A_g * exp(-0.5 *1./(1-rho*rho) * ((Xr) * (Xr) / (sigma_gx * sigma_gx) + (Yr) * (Yr) / (sigma_gy * sigma_gy)) + 2 * rho * Xr * Yr / (sigma_gx * sigma_gy));
 
     double par_gauss[5] = {A_g, mu_gx, sigma_gx, mu_gy, sigma_gy};
     double gauss = MyGaussian(x, par_gauss);

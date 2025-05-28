@@ -131,10 +131,10 @@ int main(int argc, char *argv[])
         }
 
         G_Scaler_Silicons->SetPoint(counter_run, (Time_Run / 2 + Time_Run_Reference - Time_Year_Reference) / 3600, TOTAL_Silicon_Scaler);
-        G_Scaler_Silicons->SetPointError(counter_run, Time_Run / 2 / 3600, sqrt(TOTAL_Silicon_Scaler));
+        G_Scaler_Silicons->SetPointError(counter_run, Time_Run /2. / 3600, sqrt(TOTAL_Silicon_Scaler));
 
         G_MeanRate_Silicons->SetPoint(counter_run, (Time_Run / 2 + Time_Run_Reference - Time_Year_Reference) / 3600, TOTAL_Silicon_Scaler/Time_Run);
-        G_MeanRate_Silicons->SetPointError(counter_run, Time_Run / 2 / 3600, sqrt(TOTAL_Silicon_Scaler)/Time_Run);
+        G_MeanRate_Silicons->SetPointError(counter_run, Time_Run /2. / 3600, sqrt(TOTAL_Silicon_Scaler)/Time_Run);
 
         // adding all the G_rate[det] to the total
         for (int det = 0; det < SIGNAL_MAX; det++)
@@ -178,10 +178,10 @@ int main(int argc, char *argv[])
         }
 
         G_Scaler_SiPMs->SetPoint(counter_run, (Time_Run / 2 + Time_Run_Reference - Time_Year_Reference) / 3600, TOTAL_SiPM_Scaler);
-        G_Scaler_SiPMs->SetPointError(counter_run, Time_Run / 2 / 3600, sqrt(TOTAL_SiPM_Scaler));
+        G_Scaler_SiPMs->SetPointError(counter_run, Time_Run /2. / 3600, sqrt(TOTAL_SiPM_Scaler));
 
         G_MeanRate_SiPMs->SetPoint(counter_run, (Time_Run / 2 + Time_Run_Reference - Time_Year_Reference) / 3600, TOTAL_SiPM_Scaler/Time_Run);
-        G_MeanRate_SiPMs->SetPointError(counter_run, Time_Run / 2 / 3600, sqrt(TOTAL_SiPM_Scaler)/Time_Run);
+        G_MeanRate_SiPMs->SetPointError(counter_run, Time_Run /2. / 3600, sqrt(TOTAL_SiPM_Scaler)/Time_Run);
 
         // adding all the G_rate[det] to the total
         for (int det = 0; det < SIGNAL_MAX; det++)
@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
                     p0 = g->GetY()[point];
                 }
                 G_MeanProportion->SetPoint(counter_run, (Time_Run / 2 + Time_Run_Reference - Time_Year_Reference) / 3600, p0);
-                G_MeanProportion->SetPointError(counter_run, Time_Run / 2 / 3600, 0);
+                G_MeanProportion->SetPointError(counter_run, Time_Run /2. / 3600, 0);
             }
         }
 

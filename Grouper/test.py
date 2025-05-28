@@ -1,9 +1,9 @@
 import numpy as np
 
 # Given values
-a12 = 1/5
+a12 =1./5
 a23 = 15
-a31 = 1/3
+a31 =1./3
 
 sigma_proj_12 = 11.6e4
 sigma_proj_23 = 80.8e4

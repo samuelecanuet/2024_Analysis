@@ -776,4 +776,4 @@ int main()
 //     cout << " +/- " << sqrt(pow(84.4 * I1 / pow(I3, 2) * dI3, 2) + pow(84.8 / I3 * dI1, 2)) << endl;
 
 //     cout << 84.8 / I3 * I2;
-//     cout << " +/- " << sqrt(pow(84.4 * I2 / pow(I3, 2) * dI3, 2) + pow(84.8 / I3 * dI2, 2)) << endl;
+//     cout << " +/- " << sqrt(pow(84.4 * I2. / pow(I3, 2) * dI3, 2) + pow(84.8 / I3 * dI2, 2)) << endl;

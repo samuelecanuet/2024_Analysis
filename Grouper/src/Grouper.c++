@@ -3,12 +3,12 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2021 = true;
+    FLAG2024 = true;
     
     InitDetectors("Config_Files/sample.pid");
     
     string Run_string;
-//
+
     if (argc < 2)
     {
         Error("No Run Number Given");

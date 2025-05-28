@@ -392,10 +392,7 @@ void SaveFitParameters()
 
 void LoadFitParameters()
 {
-  string add = "_2024";
-  if (FLAG2021) add = "_2021";
-  if (FLAG2025) add = "_2025";
-  TFile *file = MyTFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters"+add+".root").c_str(), "READ");
+  TFile *file = MyTFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters_"+ to_string(YEAR) +".root").c_str(), "READ");
   for (int i = 0; i < detectorNum; i++)
   {
     if (IsDetectorBeta(i))
@@ -2112,6 +2109,13 @@ inline void WriteHistograms_Cleaned()
       H_RearMatched_Channel_Cleaned[i]->Write();
       H_RearMatchedMean_Channel_Cleaned[i]->Write();
 
+      dir_Cleaned->cd();
+      TCanvas *C_Strip_Cleaned = new TCanvas(("C_Strip_Cleaned_" + detectorName[i]).c_str(), ("C_Strip_Cleaned_" + detectorName[i]).c_str(), 800, 400);
+      H_Channel_RAW[i]->Draw("HIST");
+      H_Channel_Cleaned[i]->SetLineColor(kRed);
+      H_Channel_Cleaned[i]->Draw("SAME");
+      C_Strip_Cleaned->Write();
+
       dir_Strip_Time_Detector[i]->cd();
       H_RearSiPM_ChannelTime_dt[i]->Write();
 
@@ -2295,13 +2299,6 @@ inline void WriteHistograms_Cleaned()
   C_Strip_Cutting_Fits->Write();
   C_Rear_Walk_Silicon_Fits->Write();
   C_SiPM_Walk_SiPM_Fits->Write();
-
-  dirCoincidences->cd();
-  for (int mul = 1; mul <= BETA_SIZE; mul++)
-  {
-    H_RearSiPM_Time_New_Nearest[mul]->Write();
-    H_RearSiPM_Time_New_Mean[mul]->Write();
-  }
 }
 
 inline int WriteTree_Grouped()
@@ -2437,150 +2434,154 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
   ///////// CASES A B C D E F G /////////
   ///////////////////////////////////////
 
-  // Case A : SINGLE Rear and Strip associated (most common case)
-  if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 1)
+  for (auto it : RearStrip_ASSOCIATED)
   {
+    // Case A : SINGLE Rear and Strip associated (most common case)
+    // if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 1)
+    // {
       // cout << "CASE A" << endl;
-      H_Channel_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
-      H_Channel_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
+      H_Channel_A[it.first.Label]->Fill(it.first.Channel);   // REAR
+      H_Channel_A[it.second.Label]->Fill(it.second.Channel); // STRIP
 
-      H_RearStrip_Channel_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);  // REAR-STRIP for rear plot
-      H_RearStrip_Channel_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel); // REAR-STRIP for strip plot
+      H_RearStrip_Channel_A[it.first.Label]->Fill(it.first.Channel, it.second.Channel);  // REAR-STRIP for rear plot
+      H_RearStrip_Channel_A[it.second.Label]->Fill(it.first.Channel, it.second.Channel); // REAR-STRIP for strip plot
 
-      H_Strip_Channel_DiffRear_A[RearStrip_ASSOCIATED[0].second.Label]->Fill((RearStrip_ASSOCIATED[0].first.Channel - RearStrip_ASSOCIATED[0].second.Channel) / RearStrip_ASSOCIATED[0].second.Channel);                                                // STRIP/REAR
-      H_Strip_Channel_DiffRearvsStrip_A[RearStrip_ASSOCIATED[0].second.Label]->Fill((RearStrip_ASSOCIATED[0].first.Channel - RearStrip_ASSOCIATED[0].second.Channel) / RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[0].second.Channel); // STRIP/REAR vs Strip channel
+      H_Strip_Channel_DiffRear_A[it.second.Label]->Fill((it.first.Channel - it.second.Channel) / it.second.Channel);                                                // STRIP/REAR
+      H_Strip_Channel_DiffRearvsStrip_A[it.second.Label]->Fill((it.first.Channel - it.second.Channel) / it.second.Channel, it.second.Channel); // STRIP/REAR vs Strip channel
 
-      H_RearStrip_Time_A[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-      H_RearStrip_Time_A[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+      H_RearStrip_Time_A[it.first.Label]->Fill(it.first.Time - it.second.Time);
+      H_RearStrip_Time_A[it.second.Label]->Fill(it.first.Time - it.second.Time);
+    // }
   }
 
-  // Case B : SAME Rear and DIFFERENT NEIGHBOURG Strip associated (intertrip)
-  else if (RearStrip_ASSOCIATED.size() == 2 && IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
-  {
-    // cout << "CASE B" << endl;
-    H_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
-    H_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
-    H_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel); // STRIP
-
-    H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                           // REAR-STRIP for strip
-    H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                           // REAR-STRIP for strip
-    H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                          // REAR-STRIP for rear
-    H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                          // REAR-STRIP for rear
-    H_Rear2Strip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[0].second.Channel + RearStrip_ASSOCIATED[1].second.Channel); // REAR-STRIP+STRIP
-    H_2Strip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                            // STRIP-STRIP
-    H_2Strip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                            // STRIP-STRIP
-
-    H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-    H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
-    H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-    H_RearStrip_Time_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
-  }
-
-  // Case C : DIFFERENT Rear and DIFFERENT Strip associated (NOT intertrip)
-
-  else if (RearStrip_ASSOCIATED.size() == 2 && !IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
-  {
-    // cout << "CASE C" << endl;
-    H_Channel_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
-    H_Channel_C[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel);   // REAR
-    H_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
-    H_Channel_C[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel); // STRIP
-
-    H_RearStrip_Channel_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);  // REAR-STRIP for strip
-    H_RearStrip_Channel_C[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);  // REAR-STRIP for strip
-    H_RearStrip_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel); // REAR-STRIP for rear
-    H_RearStrip_Channel_C[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel); // REAR-STRIP for rear
-    H_2Strip_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[1].second.Channel);   // STRIP-STRIP
-
-    H_RearStrip_Time_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-    H_RearStrip_Time_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
-    H_2Strip_Time_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].first.Time);
-
-    H_2Strip_Label_C->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
-  }
-
-  // Case D : SINGLE Rear and Strip + other strip
-
-  else if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 2 && GetDetector(signals[Strip_Position[0]].Label) != GetDetector(signals[Strip_Position[1]].Label))
-  {
-    // cout << "CASE D" << endl;
-    int index_other_strip = -1;
-    if (signals[Strip_Position[0]].Label != RearStrip_ASSOCIATED[0].second.Label)
+    // Case B : SAME Rear and DIFFERENT NEIGHBOURG Strip associated (intertrip)
+   if (RearStrip_ASSOCIATED.size() == 2 && IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
     {
-      index_other_strip = Strip_Position[0];
+      // cout << "CASE B" << endl;
+      H_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
+      H_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
+      H_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel); // STRIP
+
+      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                           // REAR-STRIP for strip
+      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                           // REAR-STRIP for strip
+      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                          // REAR-STRIP for rear
+      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                          // REAR-STRIP for rear
+      H_Rear2Strip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[0].second.Channel + RearStrip_ASSOCIATED[1].second.Channel); // REAR-STRIP+STRIP
+      H_2Strip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                            // STRIP-STRIP
+      H_2Strip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                            // STRIP-STRIP
+
+      H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+      H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
+      H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+      H_RearStrip_Time_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
     }
-    else
+
+    // Case C : DIFFERENT Rear and DIFFERENT Strip associated (NOT intertrip)
+
+    else if (RearStrip_ASSOCIATED.size() == 2 && !IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
     {
-      index_other_strip = Strip_Position[1];
+      // cout << "CASE C" << endl;
+      H_Channel_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
+      H_Channel_C[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel);   // REAR
+      H_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
+      H_Channel_C[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel); // STRIP
+
+      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);  // REAR-STRIP for strip
+      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);  // REAR-STRIP for strip
+      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel); // REAR-STRIP for rear
+      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel); // REAR-STRIP for rear
+      H_2Strip_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[1].second.Channel);   // STRIP-STRIP
+
+      H_RearStrip_Time_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+      H_RearStrip_Time_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
+      H_2Strip_Time_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].first.Time);
+
+      H_2Strip_Label_C->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
     }
-    if (index_other_strip != -1)
+
+    // Case D : SINGLE Rear and Strip + other strip
+
+    else if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 2 && GetDetector(signals[Strip_Position[0]].Label) != GetDetector(signals[Strip_Position[1]].Label))
     {
-      if (RearStrip_ASSOCIATED[0].second.Channel > 20000 && RearStrip_ASSOCIATED[0].second.Channel < 36000)
+      // cout << "CASE D" << endl;
+      int index_other_strip = -1;
+      if (signals[Strip_Position[0]].Label != RearStrip_ASSOCIATED[0].second.Label)
       {
-        THIRD_ALPHA_PEAK_FLAG = signals[index_other_strip];
-        H_Channel_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
-        H_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
-        H_2Strip_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
-        H_2Strip_Time_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
-        H_2Strip_Time_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
-        H_2Strip_Label_D->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
+        index_other_strip = Strip_Position[0];
       }
       else
       {
-        H_Channel_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
-        H_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
-        H_2Strip_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
-        H_2Strip_Time_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
-        H_2Strip_Time_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
-        H_2Strip_Label_E->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
+        index_other_strip = Strip_Position[1];
+      }
+      if (index_other_strip != -1)
+      {
+        if (RearStrip_ASSOCIATED[0].second.Channel > 20000 && RearStrip_ASSOCIATED[0].second.Channel < 36000)
+        {
+          THIRD_ALPHA_PEAK_FLAG = signals[index_other_strip];
+          H_Channel_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
+          H_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
+          H_2Strip_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
+          H_2Strip_Time_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
+          H_2Strip_Time_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
+          H_2Strip_Label_D->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
+        }
+        else
+        {
+          H_Channel_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
+          H_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
+          H_2Strip_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
+          H_2Strip_Time_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
+          H_2Strip_Time_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
+          H_2Strip_Label_E->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
+        }
       }
     }
-  }
 
-  // Case F : SINGLE Rear
-  else if (RearStrip_ASSOCIATED.size() == 0 && Rear_Position.size() == 1 && Strip_Position.size() == 0)
-  {
-    H_Channel_F[signals[Rear_Position[0]].Label]->Fill(signals[Rear_Position[0]].Channel); // REAR
-  }
+    // Case F : SINGLE Rear
+    else if (RearStrip_ASSOCIATED.size() == 0 && Rear_Position.size() == 1 && Strip_Position.size() == 0)
+    {
+      H_Channel_F[signals[Rear_Position[0]].Label]->Fill(signals[Rear_Position[0]].Channel); // REAR
+    }
 
-  // Case G : Not associated REAR and STRIP
+    // Case G : Not associated REAR and STRIP
 
-  else if (RearStrip_ASSOCIATED.size() == 0 && Rear_Position.size() >= 1 && Strip_Position.size() >= 1)
-  {
-    // cout << "CASE G" << endl;
-    for (int index_rear : Rear_Position)
+    else if (RearStrip_ASSOCIATED.size() == 0 && Rear_Position.size() >= 1 && Strip_Position.size() >= 1)
+    {
+      // cout << "CASE G" << endl;
+      for (int index_rear : Rear_Position)
+      {
+        for (int index_strip : Strip_Position)
+        {
+          H_Channel_G[signals[index_rear].Label]->Fill(signals[index_rear].Channel);              // REAR
+          H_Channel_G[signals[index_strip].Label]->Fill(signals[index_strip].Channel);            // STRIP
+          H_RearStrip_Channel_G->Fill(signals[index_rear].Channel, signals[index_strip].Channel); // REAR-STRIP
+          H_RearStrip_Label_G->Fill(signals[index_strip].Label, signals[index_rear].Label);       // REAR-STRIP
+          H_RearStrip_Time_G->Fill(signals[index_rear].Time - signals[index_strip].Time);
+        }
+      }
+    }
+
+    else
     {
       for (int index_strip : Strip_Position)
       {
-        H_Channel_G[signals[index_rear].Label]->Fill(signals[index_rear].Channel);              // REAR
-        H_Channel_G[signals[index_strip].Label]->Fill(signals[index_strip].Channel);            // STRIP
-        H_RearStrip_Channel_G->Fill(signals[index_rear].Channel, signals[index_strip].Channel); // REAR-STRIP
-        H_RearStrip_Label_G->Fill(signals[index_strip].Label, signals[index_rear].Label);       // REAR-STRIP
-        H_RearStrip_Time_G->Fill(signals[index_rear].Time - signals[index_strip].Time);
+        H_Channel_H[signals[index_strip].Label]->Fill(signals[index_strip].Channel); // STRIP
+      }
+      for (int index_rear : Rear_Position)
+      {
+        H_Channel_H[signals[index_rear].Label]->Fill(signals[index_rear].Channel); // REAR
       }
     }
-  }
 
-  else
-  {
-    for (int index_strip : Strip_Position)
+    // checking if strip are well defined in faster
+    if (RearStrip_ASSOCIATED.size() == 2 && GetDetector(RearStrip_ASSOCIATED[0].second.Label) == GetDetector(RearStrip_ASSOCIATED[1].second.Label))
     {
-      H_Channel_H[signals[index_strip].Label]->Fill(signals[index_strip].Channel); // STRIP
+      if (RearStrip_ASSOCIATED[0].second.Label < RearStrip_ASSOCIATED[1].second.Label)
+        H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
+      else
+        H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[1].second.Label, RearStrip_ASSOCIATED[0].second.Label);
     }
-    for (int index_rear : Rear_Position)
-    {
-      H_Channel_H[signals[index_rear].Label]->Fill(signals[index_rear].Channel); // REAR
-    }
-  }
-
-  // checking if strip are well defined in faster
-  if (RearStrip_ASSOCIATED.size() == 2 && GetDetector(RearStrip_ASSOCIATED[0].second.Label) == GetDetector(RearStrip_ASSOCIATED[1].second.Label))
-  {
-    if (RearStrip_ASSOCIATED[0].second.Label < RearStrip_ASSOCIATED[1].second.Label)
-      H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
-    else
-      H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[1].second.Label, RearStrip_ASSOCIATED[0].second.Label);
-  }
+  
 }
 
 void CuttingGroups()

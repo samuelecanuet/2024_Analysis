@@ -1,17 +1,43 @@
 #include "Reader2.hh"
+#include <chrono>
+#include <thread>
 default_random_engine generator;
-int main()
+int main(int argc, char *argv[])
 {
+    FLAG2024 = true;
     InitDetectors("../Grouper/Config_Files/sample.pid");
     // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/24-02/207Bi_thin";
     // string name = "/run/media/local1/Disque_Dur/2024_DATA/SIMULATED_DATA/03-17/207Bi_100um_CS0_CSP0_CV1_CVP1"; 
     // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/Time_test_2";
-    string name = DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_thick_CS0_CSP0_CV1_CVP1";
+    // string name = DIR_DATA_HDD + "../SIMULATED_DATA/05-18/32Arx0.0_y4.0_z3.0_CS0_CSP0_CV1_CVP1";
+
+    // y and z from argv
+    string y = argv[1];
+    string z = argv[2];
+    string theta = argv[3];
+
+    // string path = DIR_DATA_HDD + "../SIMULATED_DATA/05-18/";
+    string path = "/run/media/local1/DATANEX/Samuel-G4/new/";
+    string name = "32Ar_x0.0_y" + y + "_z" + z + "_theta" + theta + "_CS0_CSP0_CV1_CVP1";
 
     
     // name = "241Am_700nm_width";
-    TFile *SIMULATED_File = MyTFile((name + ".root").c_str(), "READ");
-    ANALYSIS_File = MyTFile((name + "_analysed.root").c_str(), "RECREATE");
+    TFile *SIMULATED_File = MyTFile((path+name + ".root").c_str(), "READ");
+    if (SIMULATED_File == nullptr)
+    {
+        Error("Impossible to open " + path + name + ".root");
+    }
+
+    // if _analaysed already exists exit(O)
+    ANALYSIS_File = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/05-24/" + name + "_analysed.root").c_str(), "READ", "Q");
+    if (ANALYSIS_File != nullptr)
+    {
+        Error("File already analysed");
+    }
+
+
+    ANALYSIS_File = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/05-24/" +name + "_analysed.root").c_str(), "RECREATE");
+    std::this_thread::sleep_for(std::chrono::seconds(160));
     TTree *tree = (TTree *)SIMULATED_File->Get("Tree");
 
     Reader = new TTreeReader(tree);
@@ -52,14 +78,20 @@ int main()
     PlasticIASTree->Branch("Energy", &sili_e);
     PlasticIASTree->Branch("SiPM", &SiPM_e);
 
+    OutTree_Total = new TTree("Tree", "Tree");
+    OutTree_Total->Branch("Silicon_Energy", &sili_e);
+    OutTree_Total->Branch("Silicon_Code", &sili_code);
+    OutTree_Total->Branch("SiPM_Energy", &SiPM_e);
+
     int Entries = tree->GetEntries();
     clock_t start = clock(), Current;
 
     Verbosee = 0;
 
     Init();
-    InitDetectors("../Grouper/Config_Files/sample.pid");
     InitHistograms(0);
+
+    InitHistograms(2212);
 
     Info("Starting Loop");
     while (Reader->Next())
@@ -75,8 +107,8 @@ int main()
             {
                 PDG = (PDG / 10) * 10;
             }
-            if (H_E0.find(PDG) == H_E0.end())
-                InitHistograms(PDG);
+            // if (H_E0.find(PDG) == H_E0.end())
+            //     InitHistograms(PDG);
 
             //// INITIAL ////
             if (Verbosee == 1) Info("Initial state", 2);
@@ -105,22 +137,22 @@ int main()
 
             //// PLASTIC SCINTILLATOR ////
             if (Verbosee == 1) Info("Plastic Scintillator", 2);
-            if (Tree_PlasticScintillator_Energy_Deposit->At(part_i) != 0)
-            {
-                H_PlasticScintillator_Energy_Deposit[PDG]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-                H_PlasticScintillator_Hit_Position_x[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x());
-                H_PlasticScintillator_Hit_Position_y[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).y());
-                H_PlasticScintillator_Hit_Position_z[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).z());
-                H_PlasticScintillator_Hit_Position_xy[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
-                H_PlasticScintillator_Hit_Angle[PDG]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
-                // H_PlasticScintillator_Hit_Time[PDG]->Fill(Tree_PlasticScintillator_Hit_Time->At(part_i));
-                time_e_IAS = Tree_PlasticScintillator_Hit_Time->At(part_i);
-                Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
-                Plastic_Full_energy_vec.push_back(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-                H_PlasticScintillator_Energy_Deposit[0]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-                // SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
+            // if (Tree_PlasticScintillator_Energy_Deposit->At(part_i) != 0)
+            // {
+            //     H_PlasticScintillator_Energy_Deposit[PDG]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+            //     H_PlasticScintillator_Hit_Position_x[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x());
+            //     H_PlasticScintillator_Hit_Position_y[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).y());
+            //     H_PlasticScintillator_Hit_Position_z[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).z());
+            //     H_PlasticScintillator_Hit_Position_xy[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
+            //     H_PlasticScintillator_Hit_Angle[PDG]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
+            //     // H_PlasticScintillator_Hit_Time[PDG]->Fill(Tree_PlasticScintillator_Hit_Time->At(part_i));
+            //     time_e_IAS = Tree_PlasticScintillator_Hit_Time->At(part_i);
+            //     Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
+            //     Plastic_Full_energy_vec.push_back(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+            //     H_PlasticScintillator_Energy_Deposit[0]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+            //     // SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
                 
-            }
+            // }
         
             //// LOOP ON HITTED SILICON DETECTORS ////
             if (Verbosee == 1) Info("Silicon Detector", 2);
@@ -197,30 +229,30 @@ int main()
         }
 
         // counting if x strips triggered
-        int counter_strip_trigger = 0;
-        for (int i = 0; i < SIGNAL_MAX; i++)
-        {
-            if (IsDetectorSiliStrip(i))
-            {
-                if (Full_energy[i] > 400)
-                {
-                    counter_strip_trigger++;
-                }
-            }
-        }
+        // int counter_strip_trigger = 0;
+        // for (int i = 0; i < SIGNAL_MAX; i++)
+        // {
+        //     if (IsDetectorSiliStrip(i))
+        //     {
+        //         if (Full_energy[i] > 400)
+        //         {
+        //             counter_strip_trigger++;
+        //         }
+        //     }
+        // }
 
     
         // filling energy deposit by all particle 
 
         // calculating "rear" energy
         
-        for (int i = 0; i < SIGNAL_MAX; i++)
-        {
-            if (IsDetectorSiliStrip(i))
-            {
-                RearEnergy[GetDetector(i)] += Full_energy[i];
-            }
-        }
+        // for (int i = 0; i < SIGNAL_MAX; i++)
+        // {
+        //     if (IsDetectorSiliStrip(i))
+        //     {
+        //         RearEnergy[GetDetector(i)] += Full_energy[i];
+        //     }
+        // }
 
         if (Verbosee == 1) Info("Silicon detectors filling", 2);
         for (int i = 0; i < SIGNAL_MAX; i++)
@@ -233,7 +265,7 @@ int main()
                     H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[0][i]->Fill(Full_energy_without_interstrip[i]);   
                     H_Silicon_Detector_Energy_Deposit_Det_Rear[0][i]->Fill(RearEnergy[GetDetector(i)], Full_energy[i]);
                     e = Full_energy[i];
-                    if (counter_strip_trigger == 1)
+                    // if (counter_strip_trigger == 1)
                         OutTree[i]->Fill();
                     
 

@@ -3,321 +3,38 @@
 int main(int argc, char **argv)
 {
     
-    string filename = "32Ar";
-    int peak = 14;
-    string filename_for_nucleus;
-    string addyear = "";
+    NUCLEUS = "32Ar";
+    IAS = 14;
+    FLAG2025 = true;
+    VERBOSE = 0;
 
-    if (argc == 1)
-    {
-        Warning("No Run Number Given doing 32Ar in 2024");
-    }
-    else if (argc >= 2) // 2024 default with run number given
-    {
-        FLAG2021 = false;
-        // Run number
-        Run = atoi(argv[1]);
-        if (Run < 10)
-            Run_string = "00" + to_string(Run);
-        else if (Run < 100)
-            Run_string = "0" + to_string(Run);
-        else
-            Run_string = to_string(Run);
 
-        if (argc == 3)
-        {
-            if (string(argv[2]) == "2021")
-            {
-                FLAG2021 = true;
-                addyear = "/2021/";
-            }
-            else
-            {
-                FLAG2021 = false;
-            }
-        }
-
-        
-        filename_for_nucleus = SearchFiles(DIR_ROOT_DATA_GROUPED+addyear, Run_string, "Q");
-
-        if (filename_for_nucleus.find("32Ar"))
-        {
-            filename = "32Ar";
-        }
-        else if (filename_for_nucleus.find("33Ar"))
-        {
-            filename = "33Ar";
-            peak = 21;
-        }
-        else
-        {
-            Error("Impossible to extract nucleus name in : " + filename_for_nucleus);
-        }
-    }
-
-    // init detectors with year
-    if (FLAG2021)
-    {
-        InitDetectors("Config_Files/sample.pid");
-    }
-    else
-    {
-        InitDetectors("Config_Files/sample.pid");
-    }
-
+    InitDetectors("Config_Files/sample.pid");
+    
+    
     ///////// READING FILE //////////
     TTreeReader *Reader;
     TTreeReaderArray<Signal> *Silicon;
     TTreeReaderValue<vector<vector<pair<Signal, Signal>>>> *SiPM_Groups;
-    if (Run == 0)
-    {
-        MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + filename + "_merged.root").c_str(), "READ");
-        Reader = new TTreeReader((TTree *)MERGED_File->Get("MERGED_Tree"));
-        Silicon = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_Silicon");
-        SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "MERGED_Tree_SiPMGroup");
-    }
-    else
-    {
-        MERGED_File = MyTFile((DIR_ROOT_DATA_GROUPED + addyear + filename_for_nucleus).c_str(), "READ");
-        Reader = new TTreeReader((TTree *)MERGED_File->Get("CLEANED_Tree"));
-        Silicon = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_Silicon");
-        SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "CLEANED_Tree_SiPMGroup");
-    }
 
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated.root").c_str(), "READ");
-    InitCalib();
-
+    MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + NUCLEUS + "_merged.root").c_str(), "READ");
+   
+    
     ///////// NEW FILE //////////
-    string f = MERGED_File->GetName();
-    string ff = f.substr(0, f.rfind('_'));
-    ANALYSED_File = MyTFile((DIR_ROOT_DATA_ANALYSED + addyear + ff.substr(ff.rfind("/") + 1) + "_analysed.root").c_str(), "RECREATE");
+    ANALYSED_File = MyTFile((DIR_ROOT_DATA_ANALYSED + NUCLEUS + "_analysed.root").c_str(), "RECREATE");
     TTree *ANALYSED_Tree = new TTree("ANALYSED_Tree", "ANALYSED_Tree");
 
     double TH[10] = {0, 300, 300, 300, 400, 200, 400, 400, 400, 300};
 
+    InitCalib();
     InitWindows();
     InitHistograms();
-    Info("Start Fake Coincidence Correction");
-    clock_t start = clock(), Current;
-    int Entries = Reader->GetEntries();
-    int limit = Entries;
-    while (Reader->Next() && Reader->GetCurrentEntry() < limit)
-    {
-        ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
-        int Strip_Label = (*Silicon)[1].Label;
-        double energy = Calibration[Strip_Label]->Eval((*Silicon)[1].Channel / 1000);
+    
 
-        // cout << "Energy: " << energy << "    " << Strip_Label << endl;
-        double NEAREST = 1e9;
+    ReaderData();
+    RandomCorrection();
 
-        if (WindowsMap[filename][peak][Strip_Label].first > energy || energy > WindowsMap[filename][peak][Strip_Label].second) // only for ias
-        {
-            continue;
-        }
-        H_Single[Strip_Label]->Fill(energy);
-        int NEAREST_GROUP_INDEX = -1;
-        vector<double> nearest_group_time;
-        vector<double> mean_group_time = vector<double>(10, 0);
-        if ((**SiPM_Groups).size() > 0)
-        {
-            // cout << "Size: " << (**SiPM_Groups).size() << endl;
-            // Lopping on subgroups
-            for (int i_group = 0; i_group < (**SiPM_Groups).size(); i_group++)
-            {
-                nearest_group_time.push_back(1e9);
-                int counter_mean_group_time = 0;
-                // if ((**SiPM_Groups)[i_group].size() > 9)
-                // {
-                //     for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_group].size(); i_pair++)
-                //     {
-                //         cout << (**SiPM_Groups)[i_group][i_pair].first << endl;
-                //     }
-                // }
-                // Looping on pair of the subgroup
-                for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_group].size(); i_pair++)
-                {
-
-                    // Taking valid element of pair with High priority
-                    if ((**SiPM_Groups)[i_group][i_pair].first.isValid && !isnan((**SiPM_Groups)[i_group][i_pair].first.Time))
-                    {
-                        if (abs(nearest_group_time[i_group]) > abs((**SiPM_Groups)[i_group][i_pair].first.Time))
-                        {
-                            nearest_group_time[i_group] = (**SiPM_Groups)[i_group][i_pair].first.Time;
-                        }
-
-                        mean_group_time[i_group] += (**SiPM_Groups)[i_group][i_pair].first.Time;
-                        counter_mean_group_time++;
-                    }
-                    else if ((**SiPM_Groups)[i_group][i_pair].second.isValid && !isnan((**SiPM_Groups)[i_group][i_pair].second.Time))
-                    {
-                        if (abs(nearest_group_time[i_group]) > abs((**SiPM_Groups)[i_group][i_pair].second.Time))
-                        {
-                            nearest_group_time[i_group] = (**SiPM_Groups)[i_group][i_pair].second.Time;
-                        }
-                        mean_group_time[i_group] += (**SiPM_Groups)[i_group][i_pair].first.Time;
-                        counter_mean_group_time++;
-                    }
-                }
-                mean_group_time[i_group] /= counter_mean_group_time;
-                // cout << "Mean Time: " << mean_group_time[i_group] << endl;
-            }
-
-            // Saving the nearest group in time and index group
-            for (int i_group = 0; i_group < nearest_group_time.size(); i_group++)
-            {
-                if (abs(NEAREST) > abs(nearest_group_time[i_group]))
-                {
-                    NEAREST_GROUP_INDEX = i_group;
-                    NEAREST = nearest_group_time[i_group];
-                }
-
-                for (int mul = 1; mul <= BETA_SIZE; mul++)
-                {
-                    if (mul <= (**SiPM_Groups)[i_group].size())
-                    {
-                        H_SiPM_Time[Strip_Label][mul]->Fill(nearest_group_time[i_group]);
-                        if (mul == 9)
-                        {
-                            H_Time_Channel[Strip_Label]->Fill(mean_group_time[i_group], energy);
-                        }
-                    }
-                }
-            }
-        }
-
-        // cout << "Nearest: " << NEAREST << "    " << NEAREST_GROUP_INDEX << endl;
-
-        int Multiplicity;
-        if (NEAREST_GROUP_INDEX == -1)
-            Multiplicity = 0;
-        else
-        {
-            Multiplicity = (**SiPM_Groups)[NEAREST_GROUP_INDEX].size();
-        }
-
-        // Filling Hist with repect to Multiplicity
-        for (int mul = 1; mul <= BETA_SIZE; mul++)
-        {
-            if (mul <= Multiplicity                              // Mulitplicity sorting condition
-                && (NEAREST > start_gate && NEAREST < end_gate)) // Time gate condition
-            {
-
-                H_Coinc[Strip_Label][mul]->Fill(energy);
-                H_SiPM_Time_Coinc[Strip_Label][mul]->Fill(NEAREST);
-                
-                if (mul == Multiplicity) // for equal Multiplicity
-                    H_Coinc_Mulitplicity[Strip_Label][mul]->Fill(energy);
-
-                for (int i = 0; i < Multiplicity; i++)
-                {
-                    if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
-                        continue;
-                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
-                }
-                for (int i = 0; i < Multiplicity; i++)
-                {
-                    if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
-                        continue;
-                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
-                }
-            }
-            else
-            {
-                H_NoCoinc[Strip_Label][mul]->Fill(energy);
-
-                // for (int i = 0; i < Multiplicity; i++)
-                // {
-                //     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
-                //         continue;
-                //     H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
-                // }
-                // for (int i = 0; i < Multiplicity; i++)
-                // {
-                //     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
-                //         continue;
-                //     H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
-                // }
-            }
-        }
-
-        for (int i_group = 0; i_group < (**SiPM_Groups).size(); i_group++)
-        {
-            for (int mul = 1; mul <= BETA_SIZE; mul++)
-            {
-                if (mul <= (**SiPM_Groups)[i_group].size()                                                                         // Mulitplicity sorting condition
-                    && ((**SiPM_Groups)[i_group][0].first.Time < start_gate || (**SiPM_Groups)[i_group][0].first.Time > end_gate)) // Time gate condition
-                {
-                    for (int i = 0; i < (**SiPM_Groups)[i_group].size(); i++)
-                    {
-                        if ((**SiPM_Groups)[i_group][i].first.isValid)
-                            H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[i_group][i].first.Label][mul]->Fill((**SiPM_Groups)[i_group][i].first.Channel);
-                        if ((**SiPM_Groups)[i_group][i].second.isValid)
-                            H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[i_group][i].second.Label][mul]->Fill((**SiPM_Groups)[i_group][i].second.Channel);
-                    }
-                }
-            }
-        }
-    }
-
-    ///////// COMPUTE COINCIDENCE CORRECTION //////////
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorSiliStrip(i))
-        {
-            for (int mul = 1; mul <= BETA_SIZE; mul++)
-            {
-                H_SiPM_Time[i][mul]->GetXaxis()->SetRangeUser(start_gate_fake, end_gate_fake);
-                HFake[i][mul] = H_SiPM_Time[i][mul]->Integral() / (abs(start_gate_fake - end_gate_fake));
-                H_SiPM_Time[i][mul]->GetXaxis()->SetRangeUser(-1111, -1111);
-                NFake[i][mul] = HFake[i][mul] * abs(end_gate - start_gate);
-            }
-        }
-    }
-
-    ///////// APPLY CORRECTION OF FAKE COINCIDENCES //////////
-
-    for (int i = 0; i < SIGNAL_MAX; i++)
-    {
-        if (IsDetectorSiliStrip(i))
-        {
-            for (int mul = 1; mul <= BETA_SIZE; mul++)
-            {
-                H_NoCoinc_Corrected[i][mul] = (TH1D *)H_NoCoinc[i][mul]->Clone(("H_NoCoinc_Corrected" + detectorName[i] + "_" + to_string(mul)).c_str());
-                H_NoCoinc_Corrected[i][mul]->SetTitle(("H_NoCoinc_Corrected" + detectorName[i] + "_" + to_string(mul)).c_str());
-                H_Coinc_Corrected[i][mul] = (TH1D *)H_Coinc[i][mul]->Clone(("H_Coinc_Corrected" + detectorName[i] + "_" + to_string(mul)).c_str());
-                H_Coinc_Corrected[i][mul]->SetTitle(("H_Coinc_Corrected" + detectorName[i] + "_" + to_string(mul)).c_str());
-
-                // perfect
-                //  H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second );
-                //  H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second );
-                //  double integral_nocoinc = H_NoCoinc[i][mul]->Integral();
-                //  double integral_coinc = H_Coinc[i][mul]->Integral();
-                //  double ratio = abs(integral_coinc - integral_nocoinc) / 2 ;
-
-                // compute
-                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
-                double integral = H_NoCoinc[i][mul]->Integral();
-                H_NoCoinc[i][mul]->Scale(1. / integral);
-                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(-1111, -1111);
-
-                // apply
-                H_Coinc_Corrected[i][mul]->Add(H_NoCoinc[i][mul], -NFake[i][mul]);
-                H_NoCoinc_Corrected[i][mul]->Add(H_NoCoinc[i][mul], NFake[i][mul]);
-
-                H_Fake[i][mul] = (TH1D *)H_NoCoinc[i][mul]->Clone(("H_Fake" + detectorName[i] + "_" + to_string(mul)).c_str());
-                H_Fake[i][mul]->Scale(NFake[i][mul]);
-                H_NoCoinc[i][mul]->Scale(integral);
-
-                // for display
-                G_NFake[mul]->AddPoint(i, NFake[i][mul]);
-            }
-        }
-    }
-
-    TCanvas *cRatioCoinc_NoCoinc[BETA_SIZE];
-    TGraph *G_RatioCoinc_NoCoinc[BETA_SIZE];
-    TCanvas *cRatioCoinc_NoCoinc_Corrected[BETA_SIZE];
-    TGraph *G_RatioCoinc_NoCoinc_Corrected[BETA_SIZE];
+    
     for (int mul = 1; mul <= BETA_SIZE; mul++)
     {
         cRatioCoinc_NoCoinc[mul] = new TCanvas(("RatioCoinc_NoCoinc_" + to_string(mul)).c_str(), ("RatioCoinc_NoCoinc_" + to_string(mul)).c_str(), 1920, 1080);
@@ -336,34 +53,34 @@ int main(int argc, char **argv)
         {
             if (H_Single[i]->GetEntries() == 0)
                 continue;
-            cout << endl;
-            Info(detectorName[i]);
+            // cout << endl;
+            if (VERBOSE == 1) Info(detectorName[i]);
             for (int mul = 1; mul <= BETA_SIZE; mul++)
             {
                 // Info("Multiplicity: " + to_string(mul), 1);
-                dir_FakeCorrection_Strip[i]->cd();
+                dir_RandomCorrection_Strip[i]->cd();
                 TCanvas *c = new TCanvas(("RAW_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("RAW_" + detectorName[i] + "_" + to_string(mul)).c_str(), 1920, 1080);
                 H_Single[i]->SetLineColor(kBlack);
                 H_Single[i]->Draw("HIST");
                 H_Coinc[i][mul]->SetLineColor(kRed);
-                H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
+                H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
                 H_Coinc[i][mul]->Draw("HIST SAME");
                 H_NoCoinc[i][mul]->SetLineColor(kBlue);
-                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
+                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
                 H_NoCoinc[i][mul]->Draw("HIST SAME");
-                H_Fake[i][mul]->SetLineColor(kGreen);
-                H_Fake[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
-                H_Fake[i][mul]->Draw("HIST SAME");
+                H_Random[i][mul]->SetLineColor(kGreen);
+                H_Random[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+                H_Random[i][mul]->Draw("HIST SAME");
                 c->Write();
 
                 TCanvas *c_Corrected = new TCanvas(("Corrected_" + detectorName[i] + "_" + to_string(mul)).c_str(), ("Corrected_" + detectorName[i] + "_" + to_string(mul)).c_str(), 1920, 1080);
                 H_Single[i]->SetLineColor(kBlack);
                 H_Single[i]->Draw("HIST");
                 H_Coinc_Corrected[i][mul]->SetLineColor(kRed);
-                H_Coinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
+                H_Coinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
                 H_Coinc_Corrected[i][mul]->Draw("HIST SAME");
                 H_NoCoinc_Corrected[i][mul]->SetLineColor(kBlue);
-                H_NoCoinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[filename][peak][i].first, WindowsMap[filename][peak][i].second);
+                H_NoCoinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
                 H_NoCoinc_Corrected[i][mul]->Draw("HIST SAME");
                 c_Corrected->Write();
 
@@ -379,16 +96,15 @@ int main(int argc, char **argv)
                 int nocoinc = H_NoCoinc[i][mul]->Integral();
                 int coinc = H_Coinc[i][mul]->Integral();
                 int single = H_Single[i]->Integral();
-                if (mul == 9)
-                {
-                Info("Single: " + to_string(single), 3);
-                }
+                // if (mul == 9)
+                    // Info("Single: " + to_string(single), 3);
+            
                 // Info("No Coinc: " + to_string(nocoinc), 3);
                 // Info("Coinc: " + to_string(coinc), 3);
                 // Info("Coinc/NoCoinc: " + to_string(coinc / (double)nocoinc), 3);
                 G_RatioCoinc_NoCoinc[mul]->AddPoint(i, coinc / (double)nocoinc);
                 // Info("## CORRECTED ##", 2);
-                // Info("## Fake: " + to_string(NFake[i][mul]), 3);
+                // Info("## Random: " + to_string(NRandom[i][mul]), 3);
                 nocoinc = H_NoCoinc_Corrected[i][mul]->Integral();
                 coinc = H_Coinc_Corrected[i][mul]->Integral();
                 // Info("No Coinc: " + to_string(nocoinc), 3);
@@ -400,7 +116,7 @@ int main(int argc, char **argv)
                 // Info("Coinc: " + to_string(H_Coinc_Corrected[i][mul]->GetMean()), 3);
                 // Info("E: " + to_string(0.5 * abs(H_NoCoinc_Corrected[i][mul]->GetMean() - H_Coinc_Corrected[i][mul]->GetMean())), 3);
 
-                dir_FakeCorrection_Strip_Write[i]->cd();
+                dir_RandomCorrection_Strip_Write[i]->cd();
                 H_NoCoinc[i][mul]->Write();
                 H_Coinc[i][mul]->Write();
                 H_NoCoinc_Corrected[i][mul]->Write();
@@ -413,7 +129,7 @@ int main(int argc, char **argv)
             }
 
             // Compare coinc with multiplicity
-            dir_FakeCorrection_Strip[i]->cd();
+            dir_RandomCorrection_Strip[i]->cd();
             TCanvas *c = new TCanvas(("H_Coinc_AtLeastMulitplicity_" + detectorName[i]).c_str(), ("H_Coinc_AtLeastMulitplicity_" + detectorName[i]).c_str(), 1920, 1080);
             TLegend *legend = new TLegend(0.1, 0.7, 0.48, 0.9);
             H_Single[i]->SetLineColor(kBlack);
@@ -449,15 +165,15 @@ int main(int argc, char **argv)
     cout << "ratio: " << all_coinc / all_nocoinc << endl;
 
     ANALYSED_File->cd();
-    // Compare NFake with multiplicity
+    // Compare NRandom with multiplicity
     for (int mul = 1; mul <= BETA_SIZE; mul++)
     {
-        TCanvas *c = new TCanvas(("H_NFake_" + to_string(mul)).c_str(), ("H_NFake_" + to_string(mul)).c_str(), 1920, 1080);
-        G_NFake[mul]->SetMarkerStyle(20);
-        G_NFake[mul]->SetMarkerSize(1);
-        G_NFake[mul]->GetXaxis()->SetTitle("Strip");
-        G_NFake[mul]->GetYaxis()->SetTitle("Fake coincidences");
-        G_NFake[mul]->Draw("AP");
+        TCanvas *c = new TCanvas(("H_NRandom_" + to_string(mul)).c_str(), ("H_NRandom_" + to_string(mul)).c_str(), 1920, 1080);
+        G_NRandom[mul]->SetMarkerStyle(20);
+        G_NRandom[mul]->SetMarkerSize(1);
+        G_NRandom[mul]->GetXaxis()->SetTitle("Strip");
+        G_NRandom[mul]->GetYaxis()->SetTitle("Random coincidences");
+        G_NRandom[mul]->Draw("AP");
         c->Write();
     }
 
@@ -556,6 +272,180 @@ int main(int argc, char **argv)
         G_RatioCoinc_NoCoinc_Corrected[mul]->Draw("AP");
         cRatioCoinc_NoCoinc_Corrected[mul]->Write();
     }
+
+    // COUNTS
+    TGraphErrors *G_Single_strip = new TGraphErrors();
+    TGraphErrors *G_Coinc_strip = new TGraphErrors();
+    TGraphErrors *G_Single_det = new TGraphErrors();
+    for (int det = 0; det <= SIGNAL_MAX; det++)
+    {
+        if (IsDetectorSiliStrip(det))
+        {
+            if (VERBOSE == 1) Info("Detector: " + detectorName[det], 2);
+
+            //SINGLE
+            double single = H_Single[det]->Integral();
+            double single_error = sqrt(single);
+            G_Single_strip->AddPoint(det, single);
+            G_Single_strip->SetPointError(G_Single_strip->GetN() - 1, 0, single_error);
+
+            if (GetDetectorChannel(det) == 1)
+            {
+                G_Single_det->SetPoint(GetDetector(det)-1, GetDetector(det), single);
+            }
+            else
+            {
+                double s = G_Single_det->GetPointY(GetDetector(det)-1);
+                G_Single_det->SetPoint(GetDetector(det)-1, GetDetector(det), s + single);
+                G_Single_det->SetPointError(GetDetector(det)-1, 0, sqrt(s + single));
+            }
+            
+            //COINC
+            double coinc = H_Coinc[det][3]->Integral();
+            double coinc_error = sqrt(coinc);
+            G_Coinc_strip->AddPoint(det, coinc);
+            G_Coinc_strip->SetPointError(G_Coinc_strip->GetN() - 1, 0, coinc_error);
+
+            // if (GetDetectorChannel(det) == 1)
+            // {
+            //     G_Coinc_det->SetPoint(GetDetector(det)-1, GetDetector(det), coinc);
+            // }
+            // else
+            // {
+            //     double s = G_Coinc_det->GetPointY(GetDetector(det)-1);
+            //     G_Coinc_det->SetPoint(GetDetector(det)-1, GetDetector(det), s + coinc);
+            //     G_Coinc_det->SetPointError(GetDetector(det)-1, 0, sqrt(s + coinc));
+            // }
+        }
+    }
+
+    TCanvas *c = new TCanvas("H_Single_Strip", "H_Single_Strip", 1920, 1080);
+    G_Single_strip->SetMarkerStyle(20);
+    G_Single_strip->SetMarkerSize(1);
+    G_Single_strip->GetXaxis()->SetTitle("Strip");
+    G_Single_strip->GetYaxis()->SetTitle("Counts");
+    G_Single_strip->Draw("AP");
+    c->Write();
+
+    TCanvas *c1 = new TCanvas("H_Coinc_Strip", "H_Coinc_Strip", 1920, 1080);
+    G_Coinc_strip->SetMarkerStyle(20);
+    G_Coinc_strip->SetMarkerSize(1);
+    G_Coinc_strip->GetXaxis()->SetTitle("Strip");
+    G_Coinc_strip->GetYaxis()->SetTitle("Counts");
+    G_Coinc_strip->Draw("AP");
+    c1->Write();
+
+    TCanvas *c2 = new TCanvas("H_Single_Det", "H_Single_Det", 1920, 1080);
+    G_Single_det->SetMarkerStyle(20);
+    G_Single_det->SetMarkerSize(1);
+    G_Single_det->GetXaxis()->SetTitle("Detector");
+    G_Single_det->GetYaxis()->SetTitle("Counts");
+    G_Single_det->Draw("AP");
+    c2->Write();
+
+    ///EHISFT Calculation
+    TDirectory *dir_Eshift = ANALYSED_File->mkdir("Eshift");
+    TDirectory *dir_Eshift_M[BETA_SIZE+1] = {nullptr};
+    Start("Compute Eshift");
+    TGraphErrors *G_Eshift[BETA_SIZE+1] = {nullptr};
+    TGraphErrors *G_Eshift_det[2][SILI_SIZE][BETA_SIZE+1] = {nullptr};
+    int dir;
+    for (int det = 0 ; det <= SIGNAL_MAX ; det++)
+    {
+        if (IsDetectorSiliStrip(det))
+        {
+            Info("Detector: " + detectorName[det], 2);
+            for (int mul = 1; mul <= BETA_SIZE; mul++)
+            {
+                pair<double, double> E = ComputeEshift(det, H_Single[det], H_Coinc_Corrected[det][mul], H_NoCoinc_Corrected[det][mul]);
+                double Eshift = E.first;
+                double Eshift_error = E.second;
+                
+                // printing
+                if (mul == 3) Info("Eshift: " + to_string(Eshift) + " +/- " + to_string(Eshift_error) + " keV");
+
+                // global
+                // Info("Global");
+                if (G_Eshift[mul] == nullptr)  G_Eshift[mul] = new TGraphErrors();
+                G_Eshift[mul]->AddPoint(det, Eshift);
+                G_Eshift[mul]->SetPointError(G_Eshift[mul]->GetN()-1, 0, Eshift_error);
+
+                // per hemisphere and strip
+                // Info("Hemi");
+                if (GetDetector(det) < 5 ) dir = 0;
+                else dir = 1;
+                // cout << "dir: " << dir << " Strip: " << GetDetectorChannel(det) << " mul: " << mul << endl;
+                if (G_Eshift_det[dir][GetDetectorChannel(det)][mul] == nullptr) G_Eshift_det[dir][GetDetectorChannel(det)][mul] = new TGraphErrors();
+                G_Eshift_det[dir][GetDetectorChannel(det)][mul]->AddPoint(GetDetector(det), Eshift);
+                G_Eshift_det[dir][GetDetectorChannel(det)][mul]->SetPointError(G_Eshift_det[dir][GetDetectorChannel(det)][mul]->GetN()-1, 0, Eshift_error);
+            }
+        }
+    }
+
+
+    TMultiGraph *MG_Eshift[SILI_SIZE][BETA_SIZE+1] = {nullptr};
+    TLine *line_sigma_plus[2][SILI_SIZE][BETA_SIZE+1] = {nullptr};
+    TLine *line_sigma_minus[2][SILI_SIZE][BETA_SIZE+1] = {nullptr};
+    TLine *line[2][SILI_SIZE][BETA_SIZE+1] = {nullptr};
+
+    for (int mul = 1; mul <= BETA_SIZE; mul++)
+    {
+        // Info("Multiplicity: " + to_string(mul), 1);
+        dir_Eshift_M[mul] = dir_Eshift->mkdir(("Eshift_M" + to_string(mul)).c_str());
+        dir_Eshift_M[mul]->cd();
+        TCanvas *c = new TCanvas(("Eshift_" + to_string(mul)).c_str(), ("Eshift_M" + to_string(mul)).c_str(), 1920, 1080);
+        G_Eshift[mul]->SetMarkerStyle(20);
+        G_Eshift[mul]->SetMarkerSize(1);
+        G_Eshift[mul]->GetXaxis()->SetTitle("Strip");
+        G_Eshift[mul]->GetYaxis()->SetTitle("Eshift");
+        G_Eshift[mul]->Draw("AP");
+        c->Write();
+
+        TCanvas *c1[SILI_SIZE];
+        for (int strip = 1; strip < SILI_SIZE; strip++)
+        {
+            // Info("Strip: " + to_string(strip), 2);
+            c1[strip] = new TCanvas(("Eshift_M" + to_string(mul) + "_Strip" + to_string(strip)).c_str(), ("Eshift_" + to_string(mul) + "_Strip" + to_string(strip)).c_str(), 1920, 1080);
+            MG_Eshift[strip][mul] = new TMultiGraph();
+            for (int dir = 0; dir <= 1; dir++)
+            {
+                // Info("Dir: " + to_string(dir), 3);
+                c1[strip]->cd();
+                TF1 *f = new TF1("pol0", "pol0", 0, 10);
+                G_Eshift_det[dir][strip][mul]->Fit(f, "QN");
+                G_Eshift_det[dir][strip][mul]->SetMarkerStyle(20);
+                double from = (dir == 0 ? 0.8 : 4.5);
+                double to = (dir == 0 ? 4.5 : 8.2);
+                
+                double Eshift_err = f->GetParError(0);
+                // Info("Lines", 4);
+                line_sigma_plus[dir][strip][mul] = new TLine(from, f->GetParameter(0) + Eshift_err, to, f->GetParameter(0) + Eshift_err);
+                line_sigma_plus[dir][strip][mul]->SetLineColor(kRed);
+                line_sigma_plus[dir][strip][mul]->SetLineStyle(2);
+                line_sigma_minus[dir][strip][mul] = new TLine(from, f->GetParameter(0) - Eshift_err, to, f->GetParameter(0) - Eshift_err);
+                line_sigma_minus[dir][strip][mul]->SetLineColor(kRed);
+                line_sigma_minus[dir][strip][mul]->SetLineStyle(2);
+                line[dir][strip][mul] = new TLine(from, f->GetParameter(0), to, f->GetParameter(0));
+                line[dir][strip][mul]->SetLineColor(kRed);
+
+                MG_Eshift[strip][mul]->Add(G_Eshift_det[dir][strip][mul]);
+            }
+
+            // Info("Draw", 3);
+            c1[strip]->cd();
+            MG_Eshift[strip][mul]->GetYaxis()->SetRangeUser(0, 5);
+            MG_Eshift[strip][mul]->GetXaxis()->SetRangeUser(0.8, 8.2);
+            MG_Eshift[strip][mul]->Draw("AP");
+            line_sigma_minus[0][strip][mul]->Draw("SAME");
+            line_sigma_plus[0][strip][mul]->Draw("SAME");
+            line[0][strip][mul]->Draw("SAME");
+            line_sigma_minus[1][strip][mul]->Draw("SAME");
+            line_sigma_plus[1][strip][mul]->Draw("SAME");
+            line[1][strip][mul]->Draw("SAME");
+            c1[strip]->Write();
+        }
+    }
+
 
     ANALYSED_File->Close();
 

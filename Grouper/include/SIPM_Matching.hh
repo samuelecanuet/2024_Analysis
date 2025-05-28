@@ -101,7 +101,7 @@ TF1 *InvertingLinear(TF1 *f)
     TF1 *f_inv = new TF1("f_inv", "[0]*x + [1]", 0, 10000e3);
     double a = f->GetParameter(0);
     double b = f->GetParameter(1);
-    f_inv->SetParameter(0, 1 / a);
+    f_inv->SetParameter(0,1. / a);
     f_inv->SetParameter(1, -b / a);
     return f_inv;
 }
@@ -974,7 +974,7 @@ void WriteHistograms(int Verbose = 0)
 
                     
                     H_SiPM_High[run][i] = (TH1D*)MATCHED_File->Get((run + "/SiPM_" + to_string(GetDetectorChannel(i)) + "/H_SiPM_High_" + run + "_" + detectorName[i]).c_str());
-                    H_SiPM_High[run][i]->Scale(1 / H_SiPM_High[run][i]->Integral());
+                    H_SiPM_High[run][i]->Scale(1. / H_SiPM_High[run][i]->Integral());
                     cNucleus_SiPM_High[i]->cd();
                     if (stoi(run) == 77)
                     {
@@ -1002,7 +1002,7 @@ void WriteHistograms(int Verbose = 0)
 
                     cNucleus_SiPM_Low[i]->cd();
                     H_SiPM_Low[run][i] = (TH1D*)MATCHED_File->Get((run + "/SiPM_" + to_string(GetDetectorChannel(i)) + "/H_SiPM_Low_" + run + "_" + detectorName[i]).c_str());
-                    H_SiPM_Low[run][i]->Scale(1 / H_SiPM_Low[run][i]->Integral());
+                    H_SiPM_Low[run][i]->Scale(1. / H_SiPM_Low[run][i]->Integral());
                     if (stoi(run) == 77)
                     {
                         H_SiPM_Low[run][i]->SetLineColor(kRed);

@@ -18,7 +18,7 @@ m_e = 0.511 #MeV/c^2
 
 a = 1
  
-alpha= 1/137 #fine structure constant
+alpha=1./137 #fine structure constant
 c= 3*10**8  #m/s
 
 Phi_max = np.arccos(1)

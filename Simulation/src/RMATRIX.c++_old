@@ -61,7 +61,7 @@
 // // }
 
 // // double RMatrix::Penetrability(double energy) {
-// //     // Sommerfeld parameter: Z1 * Z2 * e^2 / (ħc)
+// //     // Sommerfeld parameter: Z1 * Z2 * e^2. / (ħc)
 // //     double eta = Z1 * Z2 * 1.4399764 / energy;
 
 // //     double rho = sqrt(2 * reducedMass * energy) * radius;
@@ -85,7 +85,7 @@
 
 
 // // double RMatrix::PhaseShift(double energy) {
-// //     // Sommerfeld parameter: Z1 * Z2 * e^2 / (ħc)
+// //     // Sommerfeld parameter: Z1 * Z2 * e^2. / (ħc)
 // //     double eta = Z1 * Z2 * 1.4399764 / energy;
     
 // //     // Coulomb wave parameters

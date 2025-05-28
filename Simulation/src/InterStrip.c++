@@ -56,7 +56,7 @@ int main()
 
                 TH1D* copy = (TH1D*)H[counter][det]->Clone();
                 H[counter][det]->Reset();
-                double prob = 1/10;
+                double prob =1./10;
                 for (int i = 1; i <= copy->GetEntries(); i++)
                 {
                     double value = copy->GetRandom();

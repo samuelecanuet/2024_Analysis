@@ -39,6 +39,7 @@ TTree *PlasticIASTree;
 int sili_code;
 double sili_e;
 double SiPM_e;
+TTree *OutTree_Total;
 
 double size_interstrip = 0.07;
 

@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2025 = true;
+    FLAG2024 = true;
     
     InitDetectors("Config_Files/sample.pid");
     VERBOSE = 0;
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     ///////////////////////////////////  2025 //////////////////////////////////
     else if (YEAR == 2025)
     {
-        Nuclei = {"32Ar", "33Ar", "33Ar_thick"};
+        Nuclei = {"32Ar", "33Ar"};
         Start("DATA Files");
         MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
         MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 
         CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
         CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35};
-        CalibrationPeaks["33Ar_thick"] = {2, 12, 21, 26, 35};
+        // CalibrationPeaks["33Ar_thick"] = {2, 12, 21, 26, 35};
 
         // CalibrationPeaks["32Ar"] = {14};
         // CalibrationPeaks["33Ar"] = {21};
@@ -82,20 +82,23 @@ int main(int argc, char *argv[])
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     Start("OUTPUT Files");
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + ".root").c_str(), "RECREATE");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "test.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
 
     ///////////////////////////////////////////////////////////////////////////////
     int first = 11;
     int last = 86;
+    Fitting_Resolution_FLAG = true;
 
     FillingSimHitograms();
     InitAlphaPeaks();
     InitWindows();
     InitManualCalibration();
     InitElectronicResolution();
+    InitResolution();
     InitPileUp();
-
+    
+    
     Info("Loading Experimental Trees");
     // SET ALL EXPERIMENTAL TREE FOR EACH DETECTOR
     for (string Nucleus : Nuclei)
@@ -103,7 +106,7 @@ int main(int argc, char *argv[])
         NUCLEUS = Nucleus;
         Info(NUCLEUS, 1);
 
-        InitEnergyErrors();
+        InitEnergyErrors(NUCLEUS);
         InitHistograms(first, last);
 
         // taking exp tree for each detector
@@ -122,7 +125,7 @@ int main(int argc, char *argv[])
 
     /// LINEAR MANUAL CALIB ON 32Ar
     NUCLEUS = "32Ar";
-    Info("Manual Calibration");
+    Start("Manual Calibration");
     for (int i = first; i < last; i++)
     {
         if (IsDetectorSiliStrip(i))
@@ -130,29 +133,30 @@ int main(int argc, char *argv[])
             Reader = new TTreeReader(MERGED_Tree_Detectors[NUCLEUS][i]);
             current_detector = i;
             Manual_Calibration(VERBOSE);
-            ApplyCalibration(VERBOSE);
+            ApplyCalibration(VERBOSE);            
         }
     }
 
 
     // Fitting all peak with quadratic function
-    Info("Fitting Calibration Peaks");
+    Start("Fitting Calibration & Resolution");   
     for (int i = first; i < last; i++)
     {
         if (IsDetectorSiliStrip(i))
         {
+            Info(detectorName[i], 1);
             current_detector = i;
             Fitting_Calibration(VERBOSE);
             ApplyCalibration(VERBOSE);
+            FittingResolution(VERBOSE);
         }
     }
 
     // WriteCalibInFile();
 
     NUCLEUS = "32Ar";
-
     // Apply Calibration & Resolution minimization
-    Info("Apply Calibration & Resolution minimization");
+    Start("Applying Calibration & Resolution");
     for (int i = first; i < last; i++)
     {
         if (IsDetectorSiliStrip(i))
@@ -161,15 +165,19 @@ int main(int argc, char *argv[])
             current_detector = i;
             CHI2Minimization();
             Resolution_applied = true;
-            // Fitting_Calibration();
-            // ApplyCalibration(VERBOSE);
-            // CHI2Minimization();
         }
     }
 
 
     PlottingWindows(first, last);
     PlottingSummed(first, last);
+    PlottingFitParameters(first, last);
+
+    for (string Nucleus : Nuclei)
+    {
+        MERGED_File[Nucleus]->Close();
+    }
+    CALIBRATED_File->Close();
 
     
     return 0;

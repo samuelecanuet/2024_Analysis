@@ -84,6 +84,9 @@
         "Plotting_function.C": "cpp",
         ".Plotting_points.C": "cpp",
         "CRADLE_READER.C": "cpp",
-        "codecvt": "cpp"
+        "codecvt": "cpp",
+        "Eshift_Quick.C": "cpp",
+        "*.hhh": "cpp",
+        "regex": "cpp"
     }
 }

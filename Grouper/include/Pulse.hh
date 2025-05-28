@@ -695,7 +695,7 @@ double MyReleaseCurve(double *x, double *par)
   double parC4[4] = {lambda1+lambda3, sigma_T, T0, t0};
   double C4 = - (1 - alpha) * expo(x, par);
 
-  return 1/A * (C1 + C2 + C3 + C4);
+  return 1./A * (C1 + C2 + C3 + C4);
 }
 
 double ReleaseCurve(double *x, double *par)
@@ -707,9 +707,9 @@ double ReleaseCurve(double *x, double *par)
   double lambda3 = log(2)/par[4];
   double t0 = par[5];
 
-  double main = 1/A * (1-exp(-lambda1*(x[0]-t0))) *(alpha * exp(-lambda2*(x[0]-t0)) + (1-alpha) * exp(-lambda3*(x[0]-t0)));
+  double main =1./A * (1-exp(-lambda1*(x[0]-t0))) *(alpha * exp(-lambda2*(x[0]-t0)) + (1-alpha) * exp(-lambda3*(x[0]-t0)));
   t0 -= 2.4;
-  double pre = 1/A * (1-exp(-lambda1*(x[0]-t0))) *(alpha * exp(-lambda2*(x[0]-t0)) + (1-alpha) * exp(-lambda3*(x[0]-t0)));
+  double pre =1./A * (1-exp(-lambda1*(x[0]-t0))) *(alpha * exp(-lambda2*(x[0]-t0)) + (1-alpha) * exp(-lambda3*(x[0]-t0)));
 
   return main+pre;
 }

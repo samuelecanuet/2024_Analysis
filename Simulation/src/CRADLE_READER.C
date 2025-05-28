@@ -53,7 +53,7 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
     const Char_t *Color;
     Double_t Frac = 1.0 * cEntry / TotalEntries;
     Double_t Timeclock = ((double)(Current - start) / CLOCKS_PER_SEC);
-    Double_t TimeLeft = Timeclock * (1 / Frac - 1.);
+    Double_t TimeLeft = Timeclock * (1. / Frac - 1.);
     Color = "\e[1;31m";
 
     cout << Form(("\r"+Prefix+" Entries : ").c_str())
@@ -72,7 +72,7 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
     const Char_t *Color;
     Double_t Frac = 1.0 * cEntry / TotalEntries;
     Double_t Timeclock = ((double)(Current - start) / CLOCKS_PER_SEC);
-    Double_t TimeLeft = Timeclock * (1 / Frac - 1.);
+    Double_t TimeLeft = Timeclock * (1. / Frac - 1.);
     Color = "\e[1;31m";
     cout << Form(("\r"+Prefix+" Entries : ").c_str())
          << TotalEntries

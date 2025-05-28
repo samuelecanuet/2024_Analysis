@@ -51,7 +51,7 @@ class MovePoint(object):
 
         self.find = True
         # print(list_corner[index][1])
-        # graf.set_center([1/25*self.initx, 1/25*self.inity])
+        # graf.set_center([1/25*self.initx,1./25*self.inity])
         self.graf.set_center([list_corner[index][0], list_corner[index][1]])
 
         graf.set_radius(graf.get_radius()/self.ratio)

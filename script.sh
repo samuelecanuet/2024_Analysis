@@ -1,6 +1,6 @@
 #!/bin/bash
 
-YEAR="2021"
+YEAR="2024"
 
 run_list=$(awk '
 /#32Ar/ {f=1}
@@ -21,4 +21,3 @@ done
 
 cd Grouper
 Merger
-Calibration

@@ -115,7 +115,7 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
     const Char_t *Color;
     Double_t Frac = 1.0 * cEntry / TotalEntries;
     Double_t Timeclock = ((double)(Current - start) / CLOCKS_PER_SEC);
-    Double_t TimeLeft = Timeclock * (1 / Frac - 1.);
+    Double_t TimeLeft = Timeclock * (1. / Frac - 1.);
     Color = "\e[1;31m";
 
     cout << ("\r"+Prefix+" Entries : ").c_str()
@@ -134,7 +134,7 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
     const Char_t *Color;
     Double_t Frac = 1.0 * cEntry / TotalEntries;
     Double_t Timeclock = ((double)(Current - start) / CLOCKS_PER_SEC);
-    Double_t TimeLeft = Timeclock * (1 / Frac - 1.);
+    Double_t TimeLeft = Timeclock * (1. / Frac - 1.);
     Color = "\e[1;31m";
     cout << ("\r"+Prefix+" Entries : ").c_str()
          << TotalEntries
@@ -148,16 +148,22 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
   }
 }
 
-void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepping = 1)
+void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepping = 1, int indent = 0)
 {
     if (cEntry % stepping == 0 || cEntry == TotalEntries - 1) // Refresh only at stepping intervals or the last entry
     {
-        cout << BLUE
-             << Form(("\r" + Prefix + " : ").c_str())
-             << cEntry
-             << " / "
-             << TotalEntries
-             << flush;
+        cout << BLUE << setw(GENERAL_INDENT); 
+        if (indent > 0)
+        {
+            for (int i = 0; i < indent; i++)
+                cout << " ";
+            cout << "├─";
+        }
+        cout << Form(("\r" + Prefix + " : ").c_str())
+        << cEntry
+        << " / "
+        << TotalEntries
+        << flush;
     }
 
     if (cEntry == TotalEntries - 1)
@@ -169,8 +175,6 @@ void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepp
              << endl;
     }
 }
-
-
 
 string formatValueWithError(double value, double error, string type = "latex") {
     // Calculate the number of decimal places in the error
@@ -196,7 +200,7 @@ string formatValueWithError(double value, double error, string type = "latex") {
     if (type == "latex") {
         ss << ssValue.str() << " #pm " << ssError.str();
     } else {
-        ss << ssValue.str() << " +/- " << ssError.str();
+        ss << ssValue.str() << " ± " << ssError.str();
     }
 
     return ss.str();
