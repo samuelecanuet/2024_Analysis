@@ -579,26 +579,27 @@ void PlottingPeak(string Nucleus, double peak)
     // Release curve
     c->cd(3);
     TLegend *legend_release = new TLegend(0.7, 0.7, 0.9, 0.9);
-    for (string dir : Directions)
-    {
-        H_Release[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(0, 1.2);
-        H_Release[Nucleus][peak][dir]->SetTitle("Release Curve");
-        H_Release[Nucleus][peak][dir]->SetStats(false);
-        if (dir == "Up") H_Release[Nucleus][peak][dir]->Draw("HIST");
-        else H_Release[Nucleus][peak][dir]->Draw("HIST SAME");
+    H_Release[Nucleus][peak]["Down"]->Add(H_Release[Nucleus][peak]["Up"]);
+    H_Release_Coinc[Nucleus][peak]["Down"]->Add(H_Release_Coinc[Nucleus][peak]["Up"]);
 
-        H_Release_Coinc[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(0, 1.2);
-        H_Release_Coinc[Nucleus][peak][dir]->SetLineColor(kRed);
-        H_Release_Coinc[Nucleus][peak][dir]->SetTitle("Release Curve in Coincidence");
-        H_Release_Coinc[Nucleus][peak][dir]->SetStats(false);
-        H_Release_Coinc[Nucleus][peak][dir]->Draw("HIST SAME");
+    H_Release[Nucleus][peak]["Down"]->GetXaxis()->SetRangeUser(0, 1.2);
+    H_Release[Nucleus][peak]["Down"]->SetTitle("Release Curve");
+    H_Release[Nucleus][peak]["Down"]->SetStats(false);
+    H_Release[Nucleus][peak]["Down"]->Draw("HIST");
+    legend_release->AddEntry(H_Release[Nucleus][peak]["Down"], "Single", "l");
 
-        legend_release->AddEntry(H_Release[Nucleus][peak][dir], (dir).c_str(), "l");
-    }
+    H_Release_Coinc[Nucleus][peak]["Down"]->GetXaxis()->SetRangeUser(0, 1.2);
+    H_Release_Coinc[Nucleus][peak]["Down"]->SetLineColor(kRed);
+    H_Release_Coinc[Nucleus][peak]["Down"]->SetTitle("Release Curve in Coincidence");
+    H_Release_Coinc[Nucleus][peak]["Down"]->SetStats(false);
+    H_Release_Coinc[Nucleus][peak]["Down"]->Draw("HIST SAME");
+    legend_release->AddEntry(H_Release[Nucleus][peak]["Down"], "In Coincidence", "l");
 
-    TH1D* HIAS = (TH1D*)H_Release[Nucleus][IAS[Nucleus]]["Down"]->Clone(("H_Release_IAS_" + Nucleus + "_" + to_string(peak)).c_str());
+    TH1D *HIAS = (TH1D *)H_Release[Nucleus][IAS[Nucleus]]["Down"]->Clone(("H_Release_IAS_" + Nucleus + "_" + to_string(peak)).c_str());
     HIAS->Scale(H_Release_Coinc[Nucleus][peak]["Down"]->Integral() / HIAS->Integral());
+    HIAS->SetLineColor(kBlack);
     HIAS->Draw("HIST SAME");
+    legend_release->AddEntry(HIAS, "IAS", "l");
     legend_release->Draw("SAME");
 
     // Beta Spectrum
@@ -608,7 +609,7 @@ void PlottingPeak(string Nucleus, double peak)
     for (string dir : Directions)
     {
         // H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(1, WindowsBetaMap[Nucleus][peak]);
-        H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(1, -1111);
+        H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(H_Exp_Beta[Nucleus][peak][dir]->GetBinWidth(1), -1111);
         H_Exp_Beta[Nucleus][peak][dir]->SetTitle("#beta Spectrum");
         H_Exp_Beta[Nucleus][peak][dir]->SetStats(false);
         double factor = (double)Freedman_Diaconis(H_Exp_Beta[Nucleus][peak][dir]);

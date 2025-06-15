@@ -12,6 +12,8 @@
 #include "TF1Convolution.h" 
 #include "TCanvas.h"
 #include "TGraph.h"
+#include "TLegend.h"
+#include "TLatex.h"
 
 #include "Constants.hh"
 #include "Peak.hh"

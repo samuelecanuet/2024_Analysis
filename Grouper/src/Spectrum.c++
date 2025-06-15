@@ -64,7 +64,7 @@ int main()
     // #SiPM
     // InitSiPM_Calibration();
     // InitSiPM_Resolution();
-    InitExperimentalSpectrum();
+    // InitExperimentalSpectrum();
     InitDirectionDeltaEnergy(false);
 
     //// READING DATA FOR IDENTIFICATION AND SPECTROCOPY ////

@@ -16,7 +16,7 @@ public:
 
     int fNSteps;
         
-    double Evaluate(double *x, double *params);
+    double Evaluate(double *x, double *params) const;
     int GetNPeak();
     int GetXmin();
     int GetXmax();

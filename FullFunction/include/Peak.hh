@@ -5,6 +5,9 @@
 #include "TCanvas.h"
 #include "Convolution.hh"
 #include "Constants.hh"
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 class Peak
 {
@@ -28,6 +31,7 @@ public:
     }
 
     vector<double> Parameters;
+    vector<string> ParName;
     bool FinalParameters = false;
     void FixAllParameters(TF1 *, int);
 
@@ -58,7 +62,7 @@ public:
         return os;
     }
 
-private:
+
     double fEnergy;
     double fBranchingRatio;
     double fHalfLife;

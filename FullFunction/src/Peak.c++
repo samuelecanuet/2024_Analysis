@@ -20,6 +20,7 @@ Peak::Peak(double Energy, double BranchingRatio, double HalfLife, double Q_beta,
     NPar = NParKinematic + NParNuclear;
 
     Parameters = {1, fEnergy, fQ_beta, K(fEnergy, fA * m), fa, (double)fA, (double)fZ, fPhi_min, fPhi_max, 1, fHalfLife};
+    ParName = {"Amp", "E_p", "W0", "k", "a", "A", "Z", "Phi_min", "Phi_max", "A_lor", "T1/2"};
 
     fE_min_func = -K(fEnergy, fA * m) * sqrt(fQ_beta * fQ_beta - m_e * m_e) + fEnergy;
     fE_max_func = K(fEnergy, fA * m) * sqrt(fQ_beta * fQ_beta - m_e * m_e) + fEnergy;
@@ -104,6 +105,12 @@ void Peak::ExternalFixAllParameters(TF1 *f, int peak_number, vector<int> except)
         if (find(except.begin(), except.end(), ipar) == except.end())
         {
             f->FixParameter(NPar * peak_number + ipar, Parameters[ipar]);
+            ostringstream oss;
+            oss << "Peak_" << peak_number << "_" << ParName[ipar];
+            string name = oss.str();
+            ostringstream oss1;
+            oss1 << left << setw(15) << name;
+            f->SetParName(NPar * peak_number + ipar, oss1.str().c_str());
         }
     }
 }
@@ -111,16 +118,34 @@ void Peak::ExternalFixAllParameters(TF1 *f, int peak_number, vector<int> except)
 void Peak::ExternalSetParameter(TF1 *f, int peak_number, int ipar)
 {
     f->SetParameter(NPar * peak_number + ipar, Parameters[ipar]);
+    ostringstream oss;
+    oss << "Peak_" << peak_number << "_" << ParName[ipar];
+    string name = oss.str();
+    ostringstream oss1;
+    oss1 << left << setw(15) << name;
+    f->SetParName(NPar * peak_number + ipar, oss1.str().c_str());
 }
 
 void Peak::ExternalSetParameter(TF1 *f, int peak_number, int ipar, double value)
 {
     f->SetParameter(NPar * peak_number + ipar, value);
+    ostringstream oss;
+    oss << "Peak_" << peak_number << "_" << ParName[ipar];
+    string name = oss.str();
+    ostringstream oss1;
+    oss1 << left << setw(15) << name;
+    f->SetParName(NPar * peak_number + ipar, oss1.str().c_str());
 }
 
 void Peak::ExternalSetParLimits(TF1 *f, int peak_number, int ipar, double low, double high)
 {
     f->SetParLimits(NPar * peak_number + ipar, low, high);
+    ostringstream oss;
+    oss << "Peak_" << peak_number << "_" << ParName[ipar];
+    string name = oss.str();
+    ostringstream oss1;
+    oss1 << left << setw(15) << name;
+    f->SetParName(NPar * peak_number + ipar, oss1.str().c_str());
 }
 
 int Peak::GetNPeak()
