@@ -1,6 +1,6 @@
 #!/bin/bash
 
-YEAR="2024"
+YEAR="2021"
 
 run_list=$(awk '
 /#32Ar/ {f=1}
@@ -19,5 +19,5 @@ do
     cd -
 done
 
-cd Grouper
-Merger
+# cd Grouper
+# Merger

@@ -168,8 +168,14 @@ void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepp
 
     if (cEntry == TotalEntries - 1)
     {
-        cout << BLUE
-             << Form(("\r" + Prefix + " : ").c_str())
+        cout << BLUE << setw(GENERAL_INDENT); 
+        if (indent > 0)
+        {
+            for (int i = 0; i < indent; i++)
+                cout << " ";
+            cout << "├─";
+        }
+        cout << Form(("\r" + Prefix + " : ").c_str())
              << "Completed "
              << RESET
              << endl;

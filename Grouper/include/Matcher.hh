@@ -14,8 +14,6 @@ string REFERENCE_filename;
 TFile *REFERENCE_File;
 TFile *MATCHED_File;
 
-map<string, vector<string>> Map_RunFiles;   
-
 int Run;
 vector<string> Runs;
 map<int, int> REFERENCE_Run;
@@ -36,15 +34,14 @@ TF1 *fpol1[999][SIGNAL_MAX];
 pair<double, double> ManualCalib[100][SIGNAL_MAX];
 TF1 *linearfit[SIGNAL_MAX];
 TGraph *G_ManualCalib[SIGNAL_MAX];
-TGraphErrors *G_Mean_Run[99][SIGNAL_MAX];
-TGraphErrors *G_Mean_Run_corr[99][SIGNAL_MAX];
+map<double, TGraphErrors *[SIGNAL_MAX]>G_Mean_Run;
+map<double, TGraphErrors *[SIGNAL_MAX]>G_Mean_Run_corr;
 TGraphErrors *G_resPar0[SIGNAL_MAX];
 TGraphErrors *G_resPar1[SIGNAL_MAX];
 TLine *line[99][SIGNAL_MAX];
 TH1D* H_Run_BEFORE[SIGNAL_MAX];
 TH1D* H_Run_AFTER[SIGNAL_MAX];
 int counter_graph[SIGNAL_MAX] = {0};
-pair<double, double> WindowsMap[100][SIGNAL_MAX];
 
 int current_detector = 0;
 double CHI2;
@@ -72,56 +69,6 @@ void InitHistograms(string Run_string)
             H_Run_corr[Run][i]->GetYaxis()->CenterTitle();
         }
     }
-}
-
-void InitRuns()
-{
-  ifstream file(("./Config_Files/" + to_string(YEAR) + "/Runs_" + to_string(YEAR) + ".txt").c_str());
-  if (!file.is_open())
-  {
-    Error("Could not open the file Runs_" + to_string(YEAR) + ".txt");
-  }
-
-  string line;
-  string nucleus;
-  while (getline(file, line))
-  {
-    if (line.empty())
-      continue;
-
-    if (line[0] == '#')
-      nucleus = line.substr(1);
-
-    else
-    {
-      stringstream ss(line);
-      string number;
-      while (ss >> number)
-      {
-        Map_RunFiles[nucleus].push_back(number);
-      }
-    }
-  }
-
-  file.close();
-
-  Info("Runs loaded");
-  for (const auto &pair : Map_RunFiles)
-  {
-    string nucleus = pair.first;
-    vector<string> runs = pair.second;
-    Info("Nucleus : " + nucleus, 1);
-    string runstring = "";
-    for (const auto &run : runs)
-    {
-      runstring += run + " ";
-    }
-    Info(runstring, 2);
-  }
-
-    REFERENCE_Run[2021] = 36;
-    REFERENCE_Run[2024] = 77;
-    REFERENCE_Run[2025] = 69;
 }
 
 double FunctionToMinimize(const double *par)
@@ -187,10 +134,10 @@ void CHI2Minimization(int i)
 
     C_Det[i]->cd();
 
-    for (int peak : Peaks)
+    for (double peak : Peaks)
     {   
-        H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
-        H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
+        H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
+        H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
 
         if (H_Run[Run][i]->GetMean() == 0)
             continue;
@@ -198,8 +145,8 @@ void CHI2Minimization(int i)
         G_Mean_Run[peak][i]->SetPointError(G_Mean_Run[peak][i]->GetN()-1, 0, H_Run[Run][i]->GetMeanError());
     }
 
-    H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
-    H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
+    H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
+    H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
     // H_Run[Run][i]->Scale(H_Run_Ref[i]->Integral() / H_Run[Run][i]->Integral());
     H_Run[Run][i]->SetLineColor(Run);
     H_Run[Run][i]->Draw("HIST SAME");
@@ -214,14 +161,14 @@ void CHI2Minimization(int i)
     fpol1[Run][i] = new TF1(("poll1"+to_string(Run)+to_string(i)).c_str(), "[0] + [1]*x", 0, 100000);
 
     // correction
-    for (int peak : Peaks)
+    for (double peak : Peaks)
     {
         
-        if (WindowsMap[peak][i].first == -1 || !WindowsMap[peak][i].first)
+        if (WindowsMap["32Ar"][peak][i].first == -1 || !WindowsMap["32Ar"][peak][i].first)
             continue;
 
-        H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
-        H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
+        H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
+        H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
 
         if (H_Run[Run][i]->GetMean() < 1000 || H_Run_Ref[i]->GetMean() < 1000)
             continue;
@@ -273,17 +220,17 @@ void CHI2Minimization(int i)
     FunctionToMinimize(par_corr);
 
 
-    for (int peak : Peaks)
+    for (double peak : Peaks)
     {   
-        H_Run_corr[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
-        H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
+        H_Run_corr[Run][i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
+        H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
 
         G_Mean_Run_corr[peak][i]->AddPoint(Run, H_Run_corr[Run][i]->GetMean());
         G_Mean_Run_corr[peak][i]->SetPointError(G_Mean_Run_corr[peak][i]->GetN()-1, 0, H_Run_corr[Run][i]->GetMeanError());
     }
 
-    H_Run_corr[Run][i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
-    H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
+    H_Run_corr[Run][i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
+    H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
     // H_Run_corr[Run][i]->Scale(H_Run_Ref[i]->Integral() / H_Run_corr[Run][i]->Integral());
     H_Run_corr[Run][i]->SetLineColor(Run);
     H_Run_corr[Run][i]->Draw("HIST SAME");
@@ -366,57 +313,6 @@ void InitManualCalibration()
 
     
 }
-
-
-void InitWindows()
-{
-    string direction[2] = {"Up", "Down"};
-    for (auto dir : direction)
-    {
-        for (int strip = 1; strip <= 5; strip++)
-        {
-            ifstream file("Config_Files/Detector_Window/" + dir + "_" + to_string(strip) + ".txt");
-            if (!file.is_open())
-            {
-                Error("Impossible to open " + dir + "_" + to_string(strip) + ".txt");
-            }
-
-            string line;
-            double energy_low;
-            double energy_high;
-            int number;
-            string nuclei;
-            while (getline(file, line))
-            {
-                energy_high = -1;
-                energy_low = -1;
-
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                if (line.find("#") != string::npos)
-                {
-                    nuclei = line.substr(1);
-                    continue;
-                }
-                stringstream ss(line);
-                ss >> number >> energy_low >> energy_high;
-
-                if (nuclei == "32Ar")
-                {
-                    for (int i : Dir2Det(dir, strip))
-                    {
-                        WindowsMap[number][i] = make_pair(linearfit[i]->Eval(energy_low), linearfit[i]->Eval(energy_high));
-                        // cout << "Nuclei : " << nuclei << " Number : " << number << " Detector : " << detectorName[i] << " Energy Low : " << energy_low << " Energy High : " << energy_high << endl;
-                    }
-                }
-            }
-        }
-    }
-}
-
 
 
 #endif

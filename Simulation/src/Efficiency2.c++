@@ -9,7 +9,7 @@ int VERBOSE = 0;
 
 int main()
 {
-    FLAG2024 = true;
+    FLAG2025 = true;
     InitDetectors("../Grouper/Config_Files/sample.pid");
     InitWindows();
 
@@ -18,30 +18,13 @@ int main()
         DIR_DATA_HDD += "../../2024_DATA/DETECTOR_DATA/";
     }
 
-    strip_ref = 1;
-    detector_ref = 4;
+    strip_ref = 5;
+    detector_ref = 5;
     bool display_ref = true;
 
     string NUCLEUS = "32Ar";
 
-    vector<int> Peaks = {1, 3, 14};
-
-    TTree *Result_Tree[SILI_NUM + 1];
-    double y_tree, z_tree, theta_tree, chi2_tree;
-    for (int det = 1; det <= SILI_NUM; det++)
-    {
-        Result_Tree[det] = new TTree(("Efficiency_Ratio_" + to_string(det)).c_str(), ("Efficiency Ratio for " + detectorName[det]).c_str());
-        Result_Tree[det]->Branch("y", &y_tree, "y/D");
-        Result_Tree[det]->Branch("z", &z_tree, "z/D");
-        Result_Tree[det]->Branch("theta", &theta_tree, "theta/D");
-        Result_Tree[det]->Branch("chi2", &chi2_tree, "chi2/D");  
-    }
-
-    TNtuple *Result_Ntuple[SILI_NUM + 1];
-    for (int det = 1; det <= SILI_NUM; det++)
-    {
-        Result_Ntuple[det] = new TNtuple(("Efficiency_Ratio_Ntuple_" + to_string(det)).c_str(), ("Efficiency Ratio Ntuple for " + detectorName[det]).c_str(), "y:z:theta:chi2");
-    }
+    vector<int> Peaks = {14};
 
     
     ////////////// ######################## SIMULATION ######################## /////////////
@@ -204,15 +187,24 @@ int main()
             }
         }
 
+        for (int dir = 0; dir <= 1; dir++)
+        {
+            for (int strip = 1; strip < SILI_SIZE; strip++)
+                {
+
+                    delete H_Sim[dir][strip];
+                }
+        }
+
         SIM_FILE->Close();
     }
 
 
 
     ////////////// ######################## EXPERIMENTAL ######################## /////////////
-    TFile *EXP_FILE = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
+    TFile *EXP_FILE = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "test.root").c_str(), "READ");
     if (EXP_FILE == nullptr)
-        Error("Impossible to open " + DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root");
+        Error("Impossible to open " + DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "test.root");
 
     TH1D* H_Exp[SIGNAL_MAX] = {nullptr};
     map<int, map<int, TGraphErrors*>> G_EfficiencyRatio_Exp;
@@ -307,6 +299,8 @@ int main()
                 
                 
                 double chi2 = Chi2(ge, G_EfficiencyRatio_Exp[detector][peak]);
+                if (isnan(chi2))
+                    continue; // skip if chi2 is NaN
                 chi2_map[chi2] = pos_i;
                 if (peak == 14)
                 {
@@ -322,11 +316,11 @@ int main()
                     }
                     H_yztheta[detector]->Fill(pos.y, pos.z, pos.theta, chi2);
 
-                    y_tree = pos.y;
-                    z_tree = pos.z;
-                    theta_tree = pos.theta;
-                    chi2_tree = chi2;
-                    Result_Tree[detector]->Fill();
+                    // y_tree = pos.y;
+                    // z_tree = pos.z;
+                    // theta_tree = pos.theta;
+                    // chi2_tree = chi2;
+                    // Result_Tree[detector]->Fill();
                 }
 
                 ostringstream ossx;
@@ -371,13 +365,11 @@ int main()
                 int pos_i = it->second;
                 double chi2 = it->first;
 
-                if (abs(chi_best - chi2) <= 1.)
-                    Best_Position_Det[detector][peak].push_back(pos_i); 
-                
-                if (counter_graph > 10)
+                if (counter_graph > 20) // limiting the number of points displayed
                     continue;
 
                 cout << "Detector " << detector << "   " << "χ2 = " << chi2 << endl;
+                Best_Position_Det[detector][peak].push_back(pos_i); 
 
                 Position pos = Position_Map[pos_i];
                 ostringstream ossx;
@@ -428,7 +420,7 @@ int main()
             c->Write();
         }
 
-        ////////// DETECTOR RATIO ///////////
+        ////////// DETECTOR RATIO ONLY THE BEST SOLUTION ///////////
 
         for (int detector = 1; detector <= SILI_NUM; detector++)
         {
@@ -464,7 +456,7 @@ int main()
 
             for (int best_pos_i : Best_Position_Det[detector][peak])
             {
-                cout << "Best position for detector " << detector << " : " << best_pos_i << endl;
+                // cout << "Best position for detector " << detector << " : " << best_pos_i << endl;
                 double ratio_sim_exp = G_Counts_Sim_Det[best_pos_i][dir][peak] / G_Counts_Exp_Det[peak]->GetY()[detector - 1];
                 double ratio_sim_exp_err = sqrt(pow(sqrt(G_Counts_Sim_Det[best_pos_i][dir][peak]) / G_Counts_Exp_Det[peak]->GetY()[detector - 1], 2) + pow(G_Counts_Sim_Det[best_pos_i][dir][peak] * sqrt(G_Counts_Exp_Det[peak]->GetY()[detector - 1]) / (G_Counts_Exp_Det[peak]->GetY()[detector - 1] * G_Counts_Exp_Det[peak]->GetY()[detector - 1]), 2));
                 G_EfficiencyRatio_SimExp_Det->AddPoint(detector, ratio_sim_exp);
@@ -472,6 +464,8 @@ int main()
             }
             
         }
+
+        
 
         TCanvas *c2 = new TCanvas(("EfficiencyRatio_Detector_Ratio_" + to_string(peak)).c_str(), ("EfficiencyRatio_Detector_Ratio_" + to_string(peak)).c_str(), 1920, 1080);
         c2->cd();
@@ -496,6 +490,141 @@ int main()
         c3->cd();
         G_EfficiencyRatio_SimExp_Det->Draw("AP");
         c3->Write();
+
+
+        ////////// DETECTOR RATIO ALL THE BEST SOLUTION TESTED ///////////
+        
+        double BEST_Pos_REF = -1;
+        double BEST_BEST_Pos_det[SILI_NUM+1]; // to store the best position for each detector
+        double BEST_Chi2 = 1e10; // to store the best chi2 value
+
+        for (int best_pos_i_ref : Best_Position_Det[detector_ref][peak]) // looping over the best solution of the reference
+        {
+            int dir_ref = detector_ref <= 4 ? 0 : 1;
+            double BEST_Pos_det[SILI_NUM+1];      
+            TGraphErrors *G = new TGraphErrors(); 
+
+            double sumchi2_strip = 0;
+
+            for (int detector = 1; detector <= SILI_NUM; detector++) // looping over det to construct Point
+            {
+                double best_diff = 1e10;
+                double best_diff_i = -1;
+
+                int dir = detector <= 4 ? 0 : 1;
+                for (int best_pos_i : Best_Position_Det[detector][peak]) // looping over the best solution of the current point/detector
+                {
+
+                    
+                    double ratio = G_Counts_Sim_Det[best_pos_i][dir][peak] / G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak];
+                    double ratio_err = sqrt(pow(sqrt(G_Counts_Sim_Det[best_pos_i][dir][peak]) / G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak], 2) + pow(G_Counts_Sim_Det[best_pos_i][dir][peak] * sqrt(G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak]) / (G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak] * G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak]), 2));
+                    
+                    double diff = abs(ratio - G_EfficiencyRatio_Exp_Det->GetY()[detector - 1]);
+                    if (diff < best_diff)
+                    {
+                        best_diff = diff;
+                        best_diff_i = best_pos_i;
+                    }              
+                }
+
+                BEST_Pos_det[detector] = best_diff_i;
+
+                // SIMULATION (taking the best diff)
+                double ratio = G_Counts_Sim_Det[best_diff_i][dir][peak] / G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak];
+                double ratio_err = sqrt(pow(sqrt(G_Counts_Sim_Det[best_diff_i][dir][peak]) / G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak], 2) + pow(G_Counts_Sim_Det[best_diff_i][dir][peak] * sqrt(G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak]) / (G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak] * G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak]), 2));
+                G->AddPoint(detector, ratio);
+                G->SetPointError(G->GetN() - 1, 0, ratio_err);
+
+                // find BEST_Pos_det[detector] in chi2_map
+
+                sumchi2_strip += Chi2(G_EfficiencyRatio_Sim[best_diff_i][dir][peak], G_EfficiencyRatio_Exp[detector][peak]);
+            
+            }
+
+            double chi2 = Chi2(G, G_EfficiencyRatio_Exp_Det) + sumchi2_strip;
+            if (chi2 < BEST_Chi2)
+            {
+                BEST_Chi2 = chi2;
+                BEST_Pos_REF = best_pos_i_ref;
+                for (int detector = 1; detector <= SILI_NUM; detector++)
+                {
+                    BEST_BEST_Pos_det[detector] = BEST_Pos_det[detector];
+                }
+            }
+        }
+
+            // PLOTTING THE RESULT 
+
+        TGraphErrors* G_EfficiencyRatio_Sim_DetN = new TGraphErrors();
+        for (int detector = 1; detector <= SILI_NUM; detector++)
+        {
+            int best_pos_i = BEST_BEST_Pos_det[detector];
+            int dir = detector <= 4 ? 0 : 1;
+
+            int best_pos_i_ref = BEST_Pos_REF;
+            int dir_ref = detector_ref <= 4 ? 0 : 1;
+
+            // cout << "Best position for detector " << detector << " : " << best_pos_i << endl;
+            // cout << "Counts Sim : " << G_Counts_Sim_Det[best_pos_i][dir][peak] << endl;
+            // cout << "Counts Exp: " << G_Counts_Exp_Det[peak]->GetY()[detector - 1] << endl;
+    
+            // SIMULATION
+            double ratio = G_Counts_Sim_Det[best_pos_i][dir][peak] / G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak];
+            double ratio_err = sqrt(pow(sqrt(G_Counts_Sim_Det[best_pos_i][dir][peak]) / G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak], 2) + pow(G_Counts_Sim_Det[best_pos_i][dir][peak] * sqrt(G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak]) / (G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak] * G_Counts_Sim_Det[best_pos_i_ref][dir_ref][peak]), 2));
+            G_EfficiencyRatio_Sim_DetN->AddPoint(detector, ratio);
+            G_EfficiencyRatio_Sim_DetN->SetPointError(G_EfficiencyRatio_Sim_DetN->GetN() - 1, 0, ratio_err);
+
+            cout << "Position for detector " << detector << " : " << Position_Map[best_pos_i] << endl;
+            
+        }
+
+    
+        TCanvas *c2n = new TCanvas(("best_EfficiencyRatio_Detector_Ratio_" + to_string(peak)).c_str(), ("EfficiencyRatio_Detector_Ratio_" + to_string(peak)).c_str(), 1920, 1080);
+        c2n->cd();
+        TMultiGraph *mg_det_ration = new TMultiGraph();
+        TLegend *leg_det_ration = new TLegend(0.5, 0.7, 1.0, 1.0);
+        G_EfficiencyRatio_Sim_DetN->SetMarkerColor(kRed);
+        G_EfficiencyRatio_Sim_DetN->SetMarkerStyle(20);
+        G_EfficiencyRatio_Sim_DetN->SetMarkerSize(2);
+        G_EfficiencyRatio_Sim_DetN->SetLineColor(kRed);
+        G_EfficiencyRatio_Sim_DetN->SetLineWidth(3);
+        G_EfficiencyRatio_Exp_Det->SetMarkerColor(kBlack);
+        G_EfficiencyRatio_Exp_Det->SetMarkerStyle(20);
+        G_EfficiencyRatio_Exp_Det->SetMarkerSize(2);
+        G_EfficiencyRatio_Exp_Det->SetLineColor(kBlack);
+        G_EfficiencyRatio_Exp_Det->SetLineWidth(3);
+        mg_det_ration->Add(G_EfficiencyRatio_Sim_DetN);
+        mg_det_ration->Add(G_EfficiencyRatio_Exp_Det);
+        mg_det_ration->Draw("ALP");
+        ostringstream oss_chi2;
+        oss_chi2 << fixed << setprecision(2) << BEST_Chi2;
+        string str_value_chi2 = oss_chi2.str();
+        leg_det_ration->AddEntry(G_EfficiencyRatio_Sim_DetN, ("Simulation #Chi^2 = " + str_value_chi2).c_str(), "p");
+        leg_det_ration->AddEntry(G_EfficiencyRatio_Exp_Det, "Experimental", "p");
+        leg_det_ration->Draw("SAME");
+        c2n->Write();
+
+        TCanvas *c6 = new TCanvas(("best_EfficiencyRatio_SimExp_Detector_Ratio_" + to_string(peak)).c_str(), ("EfficiencyRatio_SimExp_Detector_Ratio_" + to_string(peak)).c_str(), 1920, 1080);
+        c6->Divide(4, 2);
+        for (int detector = 1; detector <= 8; detector++)
+        {
+            int dir = detector <= 4 ? 0 : 1;
+            TMultiGraph *mg_det = new TMultiGraph();
+            mg_det->Add(G_EfficiencyRatio_Sim[BEST_BEST_Pos_det[detector]][dir][peak]);
+            mg_det->Add(G_EfficiencyRatio_Exp[detector][peak]);
+            c6->cd(detector);
+            TLegend *leg_det = new TLegend(0.3, 0.8, 1.0, 1.0);
+            ostringstream oss_chi2;
+            double chi2 = Chi2(G_EfficiencyRatio_Sim[BEST_BEST_Pos_det[detector]][dir][peak], G_EfficiencyRatio_Exp[detector][peak]);
+            oss_chi2 << fixed << setprecision(2) << chi2;
+            string str_value_chi2 = oss_chi2.str();
+            leg_det->AddEntry(G_EfficiencyRatio_Sim[BEST_BEST_Pos_det[detector]][dir][peak], ("Simulation #Chi^2 = " + str_value_chi2).c_str(), "p");
+            mg_det->Draw("ALP");
+            leg_det->AddEntry(G_EfficiencyRatio_Exp[detector][peak], "Experimental", "p");
+            leg_det->Draw("SAME");
+        }
+        c6->Write();
+
 
     }
 

@@ -12,7 +12,8 @@ public:
     Spectrum(int, int, string);
     ~Spectrum();
 
-    string PATH = "../../CRADLE/RadiationData/";
+    // string PATH = "../../CRADLE/RadiationData/";
+    string PATH = "../Simulation/CRADLE_FILE_GENETATOR/33Ar/";
     string Parent_filename;
     string Daughter_filename;
 

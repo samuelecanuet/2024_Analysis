@@ -51,9 +51,9 @@ using namespace ROOT::Math;
 random_device rd;
 mt19937 gen(rd());
 
-vector<string> NUCLEI = {"32Ar"};//, "32Ar_thick", "33Ar"};
-map<string, vector<string>> Map_RunFiles;
+
 TFile *MERGED_File;
+TTree *MERGED_Tree;
 TFile *MATCHED_File;
 string GROUPED_filename;
 TFile *GROUPED_File;
@@ -88,51 +88,13 @@ double Channel;
 
 TH1D* H_Sum;
 
-void InitRuns()
-{
-  ifstream file(("./Config_Files/" + to_string(YEAR) + "/Runs_" + to_string(YEAR) + ".txt").c_str());
-  if (!file.is_open())
-  {
-    Error("Could not open the file Runs_" + to_string(YEAR) + ".txt");
-  }
+// for ISOLDE proton pulses
+map<string, double> Calibration_Shift_Proton_Pulses;
+map<string, TTree*> Tree_ISOLDE_Proton; 
+map<string, TTreeReader*> Reader_ISOLDE_Proton;
+map<string, TTreeReaderValue<double>*> Reader_ISOLDE_Proton_Time;
 
-  string line;
-  string nucleus;
-  while (getline(file, line))
-  {
-    if (line.empty())
-      continue;
 
-    if (line[0] == '#')
-      nucleus = line.substr(1);
-
-    else
-    {
-      stringstream ss(line);
-      string number;
-      while (ss >> number)
-      {
-        Map_RunFiles[nucleus].push_back(number);
-      }
-    }
-  }
-
-  file.close();
-
-  Info("Runs loaded");
-  for (const auto &pair : Map_RunFiles)
-  {
-    string nucleus = pair.first;
-    vector<string> runs = pair.second;
-    Info("Nucleus : " + nucleus, 1);
-    string runstring = "";
-    for (const auto &run : runs)
-    {
-      runstring += run + " ";
-    }
-    Info(runstring, 2);
-  }
-}
 
 void InitGraph()
 {
@@ -218,6 +180,48 @@ void InitGraph()
   G_Fake = new TGraph();
 }
 
+void InitProtonPulse()
+{
+  if (YEAR != 2024)
+    return;
+
+  // load ISOLDE proton pulses
+  TFile *fISOLDE = MyTFile(DIR_DATA_ISOLDE + "ISOLDE_pulses.root", "READ");
+  for (const auto &pair : Map_RunFiles)
+  {
+    string NUCLEUS = pair.first;
+    vector<string> Runs = pair.second;
+    for (const auto &Run : Runs)
+    {
+      Tree_ISOLDE_Proton[Run] = (TTree*)fISOLDE->Get(("Tree_ISOLDE_Proton_" + Run).c_str());
+      if (Tree_ISOLDE_Proton[Run] == NULL)
+      {
+        Error("Tree_ISOLDE_Proton_" + Run + " not found in ISOLDE_pulses.root");
+      }
+      else
+      {
+        Reader_ISOLDE_Proton[Run] = new TTreeReader(Tree_ISOLDE_Proton[Run]);
+        Reader_ISOLDE_Proton_Time[Run] = new TTreeReaderValue<double>(*Reader_ISOLDE_Proton[Run], "Time");
+        Reader_ISOLDE_Proton[Run]->Next();
+        Info("Tree_ISOLDE_Proton_" + Run + " loaded successfully", 2);
+      }
+    }
+  }
+
+  // correction factor
+  TFile *f = MyTFile((DIR_ROOT_DATA_MATCHED + "Time_Pulse_FitParameters_" + to_string(YEAR) + " (copy).root").c_str(), "READ");
+  TGraphErrors *G_Calibration_Shift_Proton_Pulse = (TGraphErrors*)f->Get("G_Time_Pulse_Calibration");
+  for (int i = 0; i < G_Calibration_Shift_Proton_Pulse->GetN(); i++)
+  {
+    double Run, Shift;
+    G_Calibration_Shift_Proton_Pulse->GetPoint(i, Run, Shift);
+    string Run_str = Run < 100 ? "0" + to_string((int)Run) : to_string((int)Run);
+    Calibration_Shift_Proton_Pulses[Run_str] = Shift;
+  }
+  f->Close();
+  
+}
+
 void LoadMatchingFunction(int Run)
 {
   for (int i = 0; i <= SIGNAL_MAX; i++)
@@ -231,6 +235,34 @@ void LoadMatchingFunction(int Run)
         Matching_function[i] = new TF1(("poll1" + to_string(Run) + to_string(i)).c_str(), "x", 0, 10000); 
       }
     }
+  }
+}
+
+void InsertProtonPulse(string Run, double Time)
+{
+  if (YEAR != 2024)
+    return;
+
+  double ISOLDE_Time = (**Reader_ISOLDE_Proton_Time[Run] - Calibration_Shift_Proton_Pulses[Run] + 0.5) * 1e9;
+  // cout << "ISOLDE Time : " << ISOLDE_Time*1e-9 << " s" << endl;
+  // cout << "Current Time : " << Time*1e-9 << " s" << endl;
+  if (ISOLDE_Time < Time)
+  {
+    Signal HRS = Signal(99, ISOLDE_Time, 0);
+    MERGED_Tree_HRS = HRS;
+    MERGED_Tree->Fill();
+    
+    // cout << "        Inserted proton pulse at " << ISOLDE_Time << " s" << endl;
+
+    // next proton pulse
+    Reader_ISOLDE_Proton[Run]->Next();
+
+    // initialize the MERGED_Tree for current detector data
+    MERGED_Tree_HRS = Signal();
+    MERGED_Tree_SiPMGroup = vector<vector<pair<Signal, Signal>>>();
+    MERGED_Tree_Silicon = vector<Signal>();
+
+    InsertProtonPulse(Run, Time);
   }
 }
 

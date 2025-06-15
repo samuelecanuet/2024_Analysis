@@ -26,8 +26,6 @@ vector<Signal> SiPM;
 
 int Entry_MAX;
 bool FULL = false;
-/// WINDOWS ///
-map<string, pair<double, double>[100][SIGNAL_MAX]> WindowsMap;
 
 // TREE PEAKS //
 map<string, TTree *[50][SIGNAL_MAX]> Tree_Peaks;
@@ -71,11 +69,6 @@ double SiliconCalibrationParameter[SIGNAL_MAX][3];
 map<string, TF1 *[SIGNAL_MAX]> MatchingLowHigh;
 map<string, TF1 *[SIGNAL_MAX]> MatchingSiPM;
 
-map<string, vector<string>> Map_RunFiles;
-
-
-
-
 
 void init()
 {
@@ -104,52 +97,6 @@ TF1 *InvertingLinear(TF1 *f)
     f_inv->SetParameter(0,1. / a);
     f_inv->SetParameter(1, -b / a);
     return f_inv;
-}
-
-void InitWindows()
-{
-    string direction[2] = {"Up", "Down"};
-    for (auto dir : direction)
-    {
-        for (int strip = 1; strip <= 5; strip++)
-        {
-            ifstream file("Config_Files/Detector_Window/" + dir + "_" + to_string(strip) + ".txt");
-            if (!file.is_open())
-            {
-                Error("Impossible to open " + dir + "_" + to_string(strip) + ".txt");
-            }
-
-            string line;
-            double energy_low;
-            double energy_high;
-            int number;
-            string nuclei;
-            while (getline(file, line))
-            {
-                energy_high = -1;
-                energy_low = -1;
-
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                if (line.find("#") != string::npos)
-                {
-                    nuclei = line.substr(1);
-                    continue;
-                }
-                stringstream ss(line);
-                ss >> number >> energy_low >> energy_high;
-
-                // init silicon detector window
-                for (int i : Dir2Det(dir, strip))
-                {
-                    WindowsMap[nuclei][number][i] = make_pair(energy_low, energy_high);
-                }
-            }
-        }
-    }
 }
 
 void WriteValues(bool first)

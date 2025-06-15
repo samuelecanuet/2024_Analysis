@@ -27,7 +27,7 @@ int main()
     CALIBRATED_File->cd();
     
     ///////////////////////////////  INITIALISATION ///////////////////////////////
-    InitWindows();
+    InitWindowss();
     InitSiliconCalibration();
     InitHistograms();
     InitThresholds();

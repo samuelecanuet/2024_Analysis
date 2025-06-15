@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     
     NUCLEUS = "32Ar";
-    IAS = 14;
+    IAS[NUCLEUS] = 14;
     FLAG2025 = true;
     VERBOSE = 0;
 
@@ -63,13 +63,13 @@ int main(int argc, char **argv)
                 H_Single[i]->SetLineColor(kBlack);
                 H_Single[i]->Draw("HIST");
                 H_Coinc[i][mul]->SetLineColor(kRed);
-                H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+                H_Coinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second);
                 H_Coinc[i][mul]->Draw("HIST SAME");
                 H_NoCoinc[i][mul]->SetLineColor(kBlue);
-                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second);
                 H_NoCoinc[i][mul]->Draw("HIST SAME");
                 H_Random[i][mul]->SetLineColor(kGreen);
-                H_Random[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+                H_Random[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second);
                 H_Random[i][mul]->Draw("HIST SAME");
                 c->Write();
 
@@ -77,10 +77,10 @@ int main(int argc, char **argv)
                 H_Single[i]->SetLineColor(kBlack);
                 H_Single[i]->Draw("HIST");
                 H_Coinc_Corrected[i][mul]->SetLineColor(kRed);
-                H_Coinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+                H_Coinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second);
                 H_Coinc_Corrected[i][mul]->Draw("HIST SAME");
                 H_NoCoinc_Corrected[i][mul]->SetLineColor(kBlue);
-                H_NoCoinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+                H_NoCoinc_Corrected[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second);
                 H_NoCoinc_Corrected[i][mul]->Draw("HIST SAME");
                 c_Corrected->Write();
 

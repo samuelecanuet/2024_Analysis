@@ -6,6 +6,7 @@ int main(int argc, char *argv[])
     FLAG2024 = true;
     InitDetectors("Config_Files/sample.pid");
     InitRuns();
+    InitProtonPulse();
 
     MATCHED_File = MyTFile((DIR_ROOT_DATA_MATCHED + "matched.root").c_str(), "READ");
 
@@ -23,7 +24,7 @@ int main(int argc, char *argv[])
         MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + NUCLEUS_Run.first + "_merged.root").c_str(), "RECREATE");
         InitGraph();
         TDirectory *dir = MERGED_File->mkdir("Strips");
-        TTree *MERGED_Tree = new TTree("MERGED_Tree", "MERGED_Tree");
+        MERGED_Tree = new TTree("MERGED_Tree", "MERGED_Tree");
         MERGED_Tree->Branch("MERGED_Tree_Silicon", &MERGED_Tree_Silicon);
         MERGED_Tree->Branch("MERGED_Tree_SiPMGroup", &MERGED_Tree_SiPMGroup);
         MERGED_Tree->Branch("MERGED_Tree_HRS", &MERGED_Tree_HRS);
@@ -79,11 +80,17 @@ int main(int argc, char *argv[])
             int Entries = Reader->GetEntries();
             while (Reader->Next())
             {
-                ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "");
+                int CurrentEntry = Reader->GetCurrentEntry();
+                ProgressBar(CurrentEntry, Entries, start, Current, "");
+
+                double Silicon_Channel = (*Silicon)[1].Channel;
+                int Silicon_Label = (*Silicon)[1].Label;
 
                 MERGED_Tree_HRS = Signal();
                 MERGED_Tree_SiPMGroup = vector<vector<pair<Signal, Signal>>>();
                 MERGED_Tree_Silicon = vector<Signal>();
+
+                // HRS already exist in the data
                 if (YEAR == 2025)
                 {
                     if ((**HRS).isValid)
@@ -93,20 +100,25 @@ int main(int argc, char *argv[])
                         continue;
                     }
                 }
+                // including the offline proton pulse for 2024
+                else if (YEAR == 2024)
+                {
+                    InsertProtonPulse(Run, (*Silicon)[1].Time);
+                }
 
                 MERGED_Tree_Silicon.push_back((*Silicon)[0]);
 
                 // run matching correction
-                (*Silicon)[1].Channel = Matching_function[(*Silicon)[1].Label]->Eval((*Silicon)[1].Channel);
+                (*Silicon)[1].Channel = Matching_function[Silicon_Label]->Eval(Silicon_Channel);
 
                 MERGED_Tree_Silicon.push_back((*Silicon)[1]);
-                Channel = (*Silicon)[1].Channel;
+                Channel = Silicon_Channel;
 
                 // !!! ADDING SIPM MATCHING !!! //
                 MERGED_Tree_SiPMGroup = **SiPM_Groups;
 
                 MERGED_Tree->Fill();
-                MERGED_Tree_Detector[(*Silicon)[1].Label]->Fill();
+                MERGED_Tree_Detector[Silicon_Label]->Fill();
 
                 MERGED_Tree_Silicon.clear();
                 MERGED_Tree_SiPMGroup.clear();

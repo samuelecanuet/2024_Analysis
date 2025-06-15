@@ -2172,7 +2172,7 @@ double MyGaussian(double *x, double *par)
     double sigma_gy = par[4];
 
     // RAW EXPRESSION  OF 2D GAUSSIAN (R)
-    double gauss = A_g /(2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
+    double gauss = A_g /(2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (2 * sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (2 * sigma_gy * sigma_gy)));
 
     return gauss;
 }

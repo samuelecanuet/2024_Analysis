@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2024 = true;
+    FLAG2021 = true;
     
     InitDetectors("Config_Files/sample.pid");
     

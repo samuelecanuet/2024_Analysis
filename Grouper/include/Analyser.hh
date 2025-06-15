@@ -12,9 +12,6 @@ TTreeReaderValue<vector<vector<pair<Signal, Signal>>>> *SiPM_Groups;
 TTreeReaderValue<Signal> *HRS;
 
 string NUCLEUS = "32Ar";
-int IAS;
-
-map<string, pair<double, double>[100][SIGNAL_MAX]> WindowsMap;
 
 TF1* Calibration[SIGNAL_MAX];
 TH1D* H_NoCoinc[SIGNAL_MAX][MAX_MULTIPLICTY];
@@ -75,7 +72,7 @@ void InitHistograms()
             H_Single[i]->GetXaxis()->CenterTitle();
             H_Single[i]->GetYaxis()->CenterTitle();
 
-            H_Time_Channel[i] = new TH2D(("H_Time_Channel_" + detectorName[i]).c_str(), ("H_Time_Channel_" + detectorName[i]).c_str(), 300, -300, 300, (WindowsMap[NUCLEUS][IAS][i].second-WindowsMap[NUCLEUS][IAS][i].first)*10, WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+            H_Time_Channel[i] = new TH2D(("H_Time_Channel_" + detectorName[i]).c_str(), ("H_Time_Channel_" + detectorName[i]).c_str(), 300, -300, 300, (WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second-WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first)*10, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second);
             H_Time_Channel[i]->GetXaxis()->SetTitle("Time [ns]");
             H_Time_Channel[i]->GetYaxis()->SetTitle("Energy [keV]");
             H_Time_Channel[i]->GetXaxis()->CenterTitle();
@@ -170,52 +167,6 @@ void InitHistograms()
     Info("Init Histograms end");
 }
 
-void InitWindows(string add = "")
-{
-    string direction[2] = {"Up", "Down"};
-    for (auto dir : direction)
-    {
-        for (int strip = 1; strip <= 5; strip++)
-        {
-            ifstream file(add + "Config_Files/Detector_Window/" + dir + "_" + to_string(strip) + ".txt");
-            if (!file.is_open())
-            {
-                Error("Impossible to open " + dir + "_" + to_string(strip) + ".txt");
-            }
-
-            string line;
-            double energy_low;
-            double energy_high;
-            int number;
-            string nuclei;
-            while (getline(file, line))
-            {
-                energy_high = -1;
-                energy_low = -1;
-
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                if (line.find("#") != string::npos)
-                {
-                    nuclei = line.substr(1);
-                    continue;
-                }
-                stringstream ss(line);
-                ss >> number >> energy_low >> energy_high;
-
-                // init silicon detector window
-                for (int i : Dir2Det(dir, strip))
-                {
-                    WindowsMap[nuclei][number][i] = make_pair(energy_low, energy_high);
-                }
-            }
-        }
-    }
-}
-
 void InitCalib()
 {
     CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
@@ -260,13 +211,14 @@ void ReaderData()
         double energy = Calibration[Strip_Label]->Eval((*Silicon)[1].Channel / 1000);
 
         // cout << "Energy: " << energy << "    " << Strip_Label << endl;
-        double NEAREST = 1e9;
+       
 
-        if (WindowsMap[NUCLEUS][IAS][Strip_Label].first > energy || energy > WindowsMap[NUCLEUS][IAS][Strip_Label].second) // only for ias
+        if (WindowsMap[NUCLEUS][IAS[NUCLEUS]][Strip_Label].first > energy || energy > WindowsMap[NUCLEUS][IAS[NUCLEUS]][Strip_Label].second) // only for ias
         {
             continue;
         }
         H_Single[Strip_Label]->Fill(energy);
+        double NEAREST = 1e9;
         int NEAREST_GROUP_INDEX = -1;
         vector<double> nearest_group_time;
         vector<double> mean_group_time = vector<double>(10, 0);
@@ -444,7 +396,7 @@ void RandomCorrection()
                 H_Coinc_Corrected[i][mul]->SetTitle(("H_Coinc_Corrected" + detectorName[i] + "_" + to_string(mul)).c_str());
 
                 // compute
-                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][i].first, WindowsMap[NUCLEUS][IAS][i].second);
+                H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][i].second);
                 double integral = H_NoCoinc[i][mul]->Integral();
                 H_NoCoinc[i][mul]->Scale(1. / integral);
                 H_NoCoinc[i][mul]->GetXaxis()->SetRangeUser(-1111, -1111);
@@ -466,9 +418,9 @@ void RandomCorrection()
 
 pair<double, double> ComputeEshift(int det, TH1D *H_Single, TH1D *H_Coinc, TH1D *H_NoCoinc)
 {
-    H_Single->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][det].first, WindowsMap[NUCLEUS][IAS][det].second);
-    H_Coinc->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][det].first, WindowsMap[NUCLEUS][IAS][det].second);
-    H_NoCoinc->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS][det].first, WindowsMap[NUCLEUS][IAS][det].second);
+    H_Single->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
+    H_Coinc->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
+    H_NoCoinc->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
 
     double Ns = H_Single->Integral();
     double Nc = H_Coinc->Integral();

@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     InitWindows();
 
     ///////////////////////////////////  REFERENCE  //////////////////////////////
-    REFERENCE_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, "0"+to_string(REFERENCE_Run[YEAR]));
+    REFERENCE_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, "0"+to_string(MATCHING_RUN));
     REFERENCE_File = MyTFile((DIR_ROOT_DATA_GROUPED + REFERENCE_filename).c_str(), "READ");
     MATCHED_File = MyTFile((DIR_ROOT_DATA_MATCHED + "matched.root").c_str(), "RECREATE");
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     int counter_R[SIGNAL_MAX] = {0};
     for (auto Run_string : Map_RunFiles["32Ar"])
     {
-        if (atoi(Run_string.c_str()) == REFERENCE_Run[YEAR])
+        if (atoi(Run_string.c_str()) == MATCHING_RUN)
             continue;
         Info("Current Run : " + Run_string);
         InitHistograms(Run_string);
@@ -150,10 +150,10 @@ int main(int argc, char *argv[])
             c->Divide(2, 2);
 
             int counter_c = 1;
-            for (int peak : Peaks)
+            for (double peak : Peaks)
             {
                 c->cd(counter_c);
-                H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap[peak][i].first, WindowsMap[peak][i].second);
+                H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
 
                 G_Mean_Run[peak][i]->SetMarkerStyle(20);
                 G_Mean_Run[peak][i]->SetMarkerColor(kGray);
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
                 pt->Draw("SAME");
 
                 TGraph *G_Ref = new TGraph();
-                G_Ref->SetPoint(0, REFERENCE_Run[YEAR], H_Run_Ref[i]->GetMean());
+                G_Ref->SetPoint(0, MATCHING_RUN, H_Run_Ref[i]->GetMean());
                 G_Ref->SetMarkerStyle(20);
                 G_Ref->SetMarkerColor(kRed);
                 G_Ref->SetLineColor(kRed);
@@ -203,8 +203,8 @@ int main(int argc, char *argv[])
             H_Run_AFTER[i]->Draw("HIST SAME");
 
             TPaveText *pt = new TPaveText(0.7, 0.7, 0.9, 0.9, "NDC");
-            H_Run_BEFORE[i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
-            H_Run_AFTER[i]->GetXaxis()->SetRangeUser(WindowsMap[14][i].first, WindowsMap[14][i].second);
+            H_Run_BEFORE[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
+            H_Run_AFTER[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
             pt->AddText(("STD Before : " + to_string(H_Run_BEFORE[i]->GetRMS())).c_str());
             pt->AddText(("STD After : " + to_string(H_Run_AFTER[i]->GetRMS())).c_str());
             pt->Draw("SAME");

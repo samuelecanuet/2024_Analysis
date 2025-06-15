@@ -8,77 +8,94 @@ int main()
 
     default_random_engine gen;
 
-    Spectrum *spectrum = new Spectrum(18, 32, "proton");
-    spectrum->GenerateSpectrum();
-    TF1* fTotal = spectrum->GetFunction();
-    vector <TF1*> fPeaks = spectrum->GetTF1Peaks();
-    vector <Peak*> Peaks = spectrum->GetPeaks();
+    // Spectrum *spectrum = new Spectrum(18, 33, "proton");
+    // spectrum->GenerateSpectrum();
+    // TF1* fTotal = spectrum->GetFunction();
+    // vector <TF1*> fPeaks = spectrum->GetTF1Peaks();
+    // vector <Peak*> Peaks = spectrum->GetPeaks();
 
     // Input parameters
     double step = 0.1; //keV
-    double A = 32.0;
-    double Z = 18;
+    double A = 33.;
+    double Z = 18.;
     double Phi_max = 0;
     double Phi_min = M_PI;
     
 
     // ////////////// SPECTRUM //////////////
-    // double E_p = 3356.6;                       
-    // double Gamma = 20e-3;                       
-    // double Q = 5046.6;                          
-    // double W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
-    // double a = 1;
-    // double E_min = (int)E_p - 50;
-    // double E_max = (int)E_p + 50;
+    double E_p = 3356.6;                       
+    double Gamma = 20e-3;                       
+    double Q = 5046.6;                          
+    double W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
+    double a = 1;
+    double E_min = (int)E_p - 50;
+    double E_max = (int)E_p + 50;
 
-    // Peak *IAS = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
-    // TF1 *fIAS = (TF1*)IAS->GetFunction();
+    Peak *IAS = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
+    TF1 *fIAS = (TF1*)IAS->GetFunction();
 
-    // // GT1
-    // E_p = 2190.6*31/32;
-    // Gamma = 3;//SecondTokeV(1.52e-19);
-    // Q = 7362.32-1022;
-    // W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
-    // a = -1/3.;
-    // E_min = (int)E_p - 500;
-    // E_max = (int)E_p + 500;
+    // GT1
+    E_p = 2190.6*31/32;
+    Gamma = 3;//SecondTokeV(1.52e-19);
+    Q = 7362.32-1022;
+    W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
+    a = -1/3.;
+    E_min = (int)E_p - 500;
+    E_max = (int)E_p + 500;
 
-    // Peak *GT1 = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
-    // TF1 *fGT1 = (TF1*)GT1->GetFunction();
+    Peak *GT1 = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
+    TF1 *fGT1 = (TF1*)GT1->GetFunction();
 
-    // // // GT2
-    // E_p = 2499.0*31/32;
-    // Gamma = 3;//SecondTokeV(2.68e-20);
-    // Q = 7052.72-1022;
-    // W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
-    // a = -1/3.;
-    // E_min = (int)E_p - 500;
-    // E_max = (int)E_p + 500;
+    // // GT2
+    E_p = 2499.0*31/32;
+    Gamma = 3;//SecondTokeV(2.68e-20);
+    Q = 7052.72-1022;
+    W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
+    a = -1/3.;
+    E_min = (int)E_p - 500;
+    E_max = (int)E_p + 500;
 
-    // Peak *GT2 = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
-    // TF1 *fGT2 = (TF1*)GT2->GetFunction();
+    Peak *GT2 = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
+    TF1 *fGT2 = (TF1*)GT2->GetFunction();
 
-    // //GT3
-    // E_p = 2593.5*31/32;
-    // Gamma = 3;//SecondTokeV(1.3e-20);
-    // Q = 5708.92;                          
-    // W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
-    // a = -1/3.;
-    // E_min = (int)E_p - 500;
-    // E_max = (int)E_p + 500;
+    //GT3
+    E_p = 2593.5*31/32;
+    Gamma = 3;//SecondTokeV(1.3e-20);
+    Q = 5708.92;                          
+    W0 = sqrt((Q+511) * (Q+511) + 511 * 511);
+    a = -1/3.;
+    E_min = (int)E_p - 500;
+    E_max = (int)E_p + 500;
 
-    // Peak *GT3 = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
-    // TF1 *fGT3 = (TF1*)GT3->GetFunction();
+    Peak *GT3 = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
+    TF1 *fGT3 = (TF1*)GT3->GetFunction();
+
+
+    // 33Ar one peak to test the lozentizn 
+    // double E_p = 5103*32/33;
+    // double Gamma = 0;
+    // double Q = 7540.0 - 1022; // Q value in keV
+    // double W0 = sqrt((Q + 511) * (Q + 511) + 511 * 511);
+    // double a = -1/3;
+    // double E_min = E_p - 500;
+    // double E_max = E_p + 500;
+    // Peak *p = new Peak(E_p, 1, Gamma, W0, A, Z, a, Phi_max, Phi_min, E_min, E_max, step);
+    // TF1 *fp = (TF1*)p->GetFunction();
+
+
+
+    // vector fPeaks = {fp};
+    // vector <Peak*> Peaks = {p};
 
 
     // // TOTAL Spectrum
 
-    // vector <TF1*> fPeaks = {fGT1, fGT2, fGT3};
-    // vector <Peak*> Peaks = {GT1, GT2, GT3};
-    // Addition Total(fPeaks);
-    // TF1 *fTotal = new TF1("fTotal", [&Total](double *x, double *p) {
-    //     return Total.Evaluate(x, p);
-    // }, Total.GetXmin(), Total.GetXmax(), Total.GetNpar());
+    vector <TF1*> fPeaks = {fGT1, fGT2, fGT3};
+    vector <Peak*> Peaks = {GT1, GT2, GT3};
+    Addition Total(fPeaks);
+    TF1 *fTotal = new TF1("fTotal", [&Total](double *x, double *p) {
+        return Total.Evaluate(x, p);
+    }, Total.GetXmin(), Total.GetXmax(), Total.GetNpar());
     ////////////////////////////////////////
 
     ////////////// RESOLUTION //////////////
@@ -112,7 +129,7 @@ int main()
     ////////////////////////////////////////////////////////////////
     
     ////////////// CREATING DATA //////////////
-    TFile *file = TFile::Open("../../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/14-11/32Ar_CS0_CSP0_CV1_CVP1_wogamma_analysed.root", "READ");
+    TFile *file = TFile::Open("/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/06-01/32Ar_ENSDF_CS0_CSP0_CV1_CVP1_analysed.root", "READ");
     TH1D *hh = (TH1D*)(file->Get("p/Initial/E0_p"));
     
     TH1D* h = (TH1D*)hh->Clone("h");

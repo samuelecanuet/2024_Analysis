@@ -12,13 +12,16 @@ int main(int argc, char *argv[])
     // string name = DIR_DATA_HDD + "../SIMULATED_DATA/05-18/32Arx0.0_y4.0_z3.0_CS0_CSP0_CV1_CVP1";
 
     // y and z from argv
-    string y = argv[1];
-    string z = argv[2];
-    string theta = argv[3];
+    // string y = argv[1];
+    // string z = argv[2];
+    // string theta = argv[3];
 
-    // string path = DIR_DATA_HDD + "../SIMULATED_DATA/05-18/";
-    string path = "/run/media/local1/DATANEX/Samuel-G4/new/";
-    string name = "32Ar_x0.0_y" + y + "_z" + z + "_theta" + theta + "_CS0_CSP0_CV1_CVP1";
+    // string e_str = argv[1];
+
+    string path = DIR_DATA_HDD + "../SIMULATED_DATA/06-09/";
+    // string path = "/run/media/local1/DATANEX/Samuel-G4/06-03/";
+    // string name = "proton_" + e_str + "MeV";
+    string name = "33Ar_ENSDF_CS0_CSP0_CV1_CVP1";
 
     
     // name = "241Am_700nm_width";
@@ -29,15 +32,14 @@ int main(int argc, char *argv[])
     }
 
     // if _analaysed already exists exit(O)
-    ANALYSIS_File = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/05-24/" + name + "_analysed.root").c_str(), "READ", "Q");
+    ANALYSIS_File = MyTFile((path + name + "_analysed.root").c_str(), "READ", "Q");
     if (ANALYSIS_File != nullptr)
     {
         Error("File already analysed");
     }
 
 
-    ANALYSIS_File = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/05-24/" +name + "_analysed.root").c_str(), "RECREATE");
-    std::this_thread::sleep_for(std::chrono::seconds(160));
+    ANALYSIS_File = MyTFile((path + name + "_analysed.root").c_str(), "RECREATE");
     TTree *tree = (TTree *)SIMULATED_File->Get("Tree");
 
     Reader = new TTreeReader(tree);
@@ -91,8 +93,6 @@ int main(int argc, char *argv[])
     Init();
     InitHistograms(0);
 
-    InitHistograms(2212);
-
     Info("Starting Loop");
     while (Reader->Next())
     {
@@ -107,8 +107,8 @@ int main(int argc, char *argv[])
             {
                 PDG = (PDG / 10) * 10;
             }
-            // if (H_E0.find(PDG) == H_E0.end())
-            //     InitHistograms(PDG);
+            if (H_E0.find(PDG) == H_E0.end())
+                InitHistograms(PDG);
 
             //// INITIAL ////
             if (Verbosee == 1) Info("Initial state", 2);
@@ -137,22 +137,22 @@ int main(int argc, char *argv[])
 
             //// PLASTIC SCINTILLATOR ////
             if (Verbosee == 1) Info("Plastic Scintillator", 2);
-            // if (Tree_PlasticScintillator_Energy_Deposit->At(part_i) != 0)
-            // {
-            //     H_PlasticScintillator_Energy_Deposit[PDG]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-            //     H_PlasticScintillator_Hit_Position_x[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x());
-            //     H_PlasticScintillator_Hit_Position_y[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).y());
-            //     H_PlasticScintillator_Hit_Position_z[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).z());
-            //     H_PlasticScintillator_Hit_Position_xy[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
-            //     H_PlasticScintillator_Hit_Angle[PDG]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
-            //     // H_PlasticScintillator_Hit_Time[PDG]->Fill(Tree_PlasticScintillator_Hit_Time->At(part_i));
-            //     time_e_IAS = Tree_PlasticScintillator_Hit_Time->At(part_i);
-            //     Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
-            //     Plastic_Full_energy_vec.push_back(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-            //     H_PlasticScintillator_Energy_Deposit[0]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
-            //     // SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
+            if (Tree_PlasticScintillator_Energy_Deposit->At(part_i) != 0)
+            {
+                H_PlasticScintillator_Energy_Deposit[PDG]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+                H_PlasticScintillator_Hit_Position_x[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x());
+                H_PlasticScintillator_Hit_Position_y[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).y());
+                H_PlasticScintillator_Hit_Position_z[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).z());
+                H_PlasticScintillator_Hit_Position_xy[PDG]->Fill(Tree_PlasticScintillator_Hit_Position->At(part_i).x(), Tree_PlasticScintillator_Hit_Position->At(part_i).y());
+                H_PlasticScintillator_Hit_Angle[PDG]->Fill(Tree_PlasticScintillator_Hit_Angle->At(part_i));
+                // H_PlasticScintillator_Hit_Time[PDG]->Fill(Tree_PlasticScintillator_Hit_Time->At(part_i));
+                time_e_IAS = Tree_PlasticScintillator_Hit_Time->At(part_i);
+                Plastic_Full_energy += Tree_PlasticScintillator_Energy_Deposit->At(part_i);
+                Plastic_Full_energy_vec.push_back(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+                H_PlasticScintillator_Energy_Deposit[0]->Fill(Tree_PlasticScintillator_Energy_Deposit->At(part_i));
+                // SiPM_e = Tree_PlasticScintillator_Energy_Deposit->At(part_i);
                 
-            // }
+            }
         
             //// LOOP ON HITTED SILICON DETECTORS ////
             if (Verbosee == 1) Info("Silicon Detector", 2);
@@ -229,30 +229,30 @@ int main(int argc, char *argv[])
         }
 
         // counting if x strips triggered
-        // int counter_strip_trigger = 0;
-        // for (int i = 0; i < SIGNAL_MAX; i++)
-        // {
-        //     if (IsDetectorSiliStrip(i))
-        //     {
-        //         if (Full_energy[i] > 400)
-        //         {
-        //             counter_strip_trigger++;
-        //         }
-        //     }
-        // }
+        int counter_strip_trigger = 0;
+        for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            if (IsDetectorSiliStrip(i))
+            {
+                if (Full_energy[i] > 400)
+                {
+                    counter_strip_trigger++;
+                }
+            }
+        }
 
     
         // filling energy deposit by all particle 
 
         // calculating "rear" energy
         
-        // for (int i = 0; i < SIGNAL_MAX; i++)
-        // {
-        //     if (IsDetectorSiliStrip(i))
-        //     {
-        //         RearEnergy[GetDetector(i)] += Full_energy[i];
-        //     }
-        // }
+        for (int i = 0; i < SIGNAL_MAX; i++)
+        {
+            if (IsDetectorSiliStrip(i))
+            {
+                RearEnergy[GetDetector(i)] += Full_energy[i];
+            }
+        }
 
         if (Verbosee == 1) Info("Silicon detectors filling", 2);
         for (int i = 0; i < SIGNAL_MAX; i++)
@@ -265,7 +265,7 @@ int main(int argc, char *argv[])
                     H_Silicon_Detector_Energy_Deposit_Det_without_interstrip[0][i]->Fill(Full_energy_without_interstrip[i]);   
                     H_Silicon_Detector_Energy_Deposit_Det_Rear[0][i]->Fill(RearEnergy[GetDetector(i)], Full_energy[i]);
                     e = Full_energy[i];
-                    // if (counter_strip_trigger == 1)
+                    if (counter_strip_trigger == 1)
                         OutTree[i]->Fill();
                     
 

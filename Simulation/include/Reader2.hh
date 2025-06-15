@@ -426,7 +426,8 @@ void InitHistograms(int PDG_code)
 
 void WriteHistograms()
 {
-
+    TH1D *Summed_Up = nullptr;
+    TH1D *Summed_Down = nullptr;
     Info("Writing Histograms");
     ANALYSIS_File->cd();
     for (auto &pair : H_E0)
@@ -506,11 +507,39 @@ void WriteHistograms()
                     int interstrip = GetDetector(det) * 1000 + ((GetDetectorChannel(det) * 2 + 1)) * 100 / 2;
                     H_Silicon_Detector_InterStrip_Energy_Deposit_Det[PDG][interstrip]->Write();
                 }
+
+                if (GetDetector(det) < 50)
+                {
+                    if (Summed_Up == nullptr)
+                    {
+                        Summed_Up = (TH1D *)H_Silicon_Detector_Energy_Deposit_Det[PDG][det]->Clone("Summed_Up");
+                        Summed_Up->SetTitle("Summed Up Energy Deposit");
+                        Summed_Up->SetName("Summed_Up");
+                    }
+                    else
+                    {
+                        Summed_Up->Add(H_Silicon_Detector_Energy_Deposit_Det[PDG][det]);
+                    }
+                }
+                else
+                {
+                    if (Summed_Down == nullptr)
+                    {
+                        Summed_Down = (TH1D *)H_Silicon_Detector_Energy_Deposit_Det[PDG][det]->Clone("Summed_Down");
+                        Summed_Down->SetTitle("Summed Down Energy Deposit");
+                        Summed_Down->SetName("Summed_Down");
+                    }
+                    else
+                    {
+                        Summed_Down->Add(H_Silicon_Detector_Energy_Deposit_Det[PDG][det]);
+                    }
+                }
             }
         }
     }
 
     ANALYSIS_File->cd();
+        
     for (int det = 0; det < SIGNAL_MAX; det++)
     {
         if (IsDetectorSiliStrip(det))
@@ -666,5 +695,7 @@ void WriteHistograms()
     c3->Write();
 
     H->Write();
+
+    
 
 }

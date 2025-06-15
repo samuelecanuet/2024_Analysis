@@ -87,6 +87,8 @@
         "codecvt": "cpp",
         "Eshift_Quick.C": "cpp",
         "*.hhh": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "CRADLE_like_reader.C": "cpp",
+        "bitset": "cpp"
     }
 }

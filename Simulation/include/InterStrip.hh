@@ -5,7 +5,6 @@ vector<pair<double, TFile *>> FILES;
 TH1D* H[20][SIGNAL_MAX];
 TCanvas *c[SIGNAL_MAX];
 TLegend *leg[SIGNAL_MAX];   
-map<string, pair<double, double>[100][SIGNAL_MAX]> WindowsMap;
 
 TF1 *Calibration_Function[SIGNAL_MAX];
 void InitCalib()
@@ -52,50 +51,4 @@ void InitElectronicResolution()
     }
 
     file.close();
-}
-
-void InitWindows()
-{
-    string direction[2] = {"Up", "Down"};
-    for (auto dir : direction)
-    {
-        for (int strip = 1; strip <= 5; strip++)
-        {
-            ifstream file("../Grouper/Config_Files/Detector_Window/" + dir + "_" + to_string(strip) + ".txt");
-            if (!file.is_open())
-            {
-                Error("Impossible to open " + dir + "_" + to_string(strip) + ".txt");
-            }
-
-            string line;
-            double energy_low;
-            double energy_high;
-            int number;
-            string nuclei;
-            while (getline(file, line))
-            {
-                energy_high = -1;
-                energy_low = -1;
-
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                if (line.find("#") != string::npos)
-                {
-                    nuclei = line.substr(1);
-                    continue;
-                }
-                stringstream ss(line);
-                ss >> number >> energy_low >> energy_high;
-
-                for (int i : Dir2Det(dir, strip))
-                {
-                    WindowsMap[nuclei][number][i] = make_pair(energy_low, energy_high);
-                    // cout << "Nuclei : " << nuclei << " Number : " << number << " Detector : " << detectorName[i] << " Energy Low : " << energy_low << " Energy High : " << energy_high << endl;
-                }
-            }
-        }
-    }
 }

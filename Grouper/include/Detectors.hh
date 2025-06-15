@@ -96,17 +96,30 @@ string DIR_DATA_HDD;
 ///////////////
 
 
-// 
+// YEARS
 bool FLAG2021 = false;
 bool FLAG2024 = false;
 bool FLAG2025 = false;
 int YEAR = -1;
 int REFERENCE_RUN = -1;
+int MATCHING_RUN = -1;
+map<string, vector<string>> Map_RunFiles;
 // 
 
 string detectorFileName; ///< Detectors definition file name
 size_t detectorNum = SIGNAL_MAX;      ///< Number of defined detectors channels
 string detectorName[SIGNAL_MAX];
+
+map<string, int> NucleusColor;
+
+// DATA
+map<string, double> IAS;
+map<string, map<double, vector<double>>> PeakData; ///< Peak data for each nucleus and peak type
+map<string, map<double, double>> WindowsBetaMap;
+map<string, double> Qbeta; ///< Beta energy for each nucleus
+map<string, vector<double>> PeakList; ///< List of peaks for each nucleus
+map<string, map<double, pair<double, double>[SIGNAL_MAX]>> WindowsMap; ///< Energy windows for each nucleus and peak type
+map<string, pair<int, int>> CanvasMap; ///< Canvas for each nucleus
 
 /// Group
 int mini = -500;
@@ -444,6 +457,175 @@ vector<int> Dir2Det(string dir, int strip)
     return detectors;
 }
 
+void InitPeakData(string NUCLEUS, string Source = "ENSDF")
+{
+    Qbeta["32Ar"] = 11134-1200;
+    Qbeta["33Ar"] = 11620-2200;
+    Qbeta["32Cl"] = 12680-8800;
+
+    string path = "/home/local1/Documents/2024_Analysis/Grouper/Config_Files/";
+    std::ifstream file;
+    if (NUCLEUS.find("32Ar") != string::npos)
+    {
+        file.open(path + "32Ar_protons_" + Source + ".txt");
+        if (!file.is_open())
+        {
+            Warning("Impossible to open 32Ar_protons_" + Source + ".txt");
+        }
+    }
+    else if (NUCLEUS.find("33Ar") != string::npos)
+    {
+        file.open(path + "33Ar_protons_" + Source + ".txt");
+        if (!file.is_open())
+        {
+            Warning("Impossible to open 33Ar_protons_" + Source + ".txt");
+        }
+    }
+    else if (NUCLEUS.find("18N") != string::npos)
+    {
+        file.open(path + "18N_protons_" + Source + ".txt");
+        if (!file.is_open())
+        {
+            Warning("Impossible to open 18N_protons_" + Source + ".txt");
+        }
+    }
+    else if (NUCLEUS.find("32Cl") != string::npos)
+    {
+        file.open(path + "32Cl_delayed_" + Source + ".txt");
+        if (!file.is_open())
+        {
+            Warning("Impossible to open 32Cl_delayed_" + Source + ".txt");
+        }
+    }
+    else
+    {
+        Warning("No energy error file for " + NUCLEUS);
+        return;
+    }
+
+    string line;
+    double error;
+    double energy, BR, BR_error;
+    double peak;
+    int counter = 0;
+    while (getline(file, line))
+    {
+        counter++;
+        stringstream ss(line);
+        ss >> peak >> energy >> error >> BR >> BR_error;
+        PeakData[NUCLEUS][peak] = vector<double>({energy, error, BR, BR_error});
+        WindowsBetaMap[NUCLEUS][peak] = Qbeta[NUCLEUS] - energy;    
+    }
+
+    file.close();
+}
+
+void InitRuns()
+{
+  string path = "/home/local1/Documents/2024_Analysis/Grouper/Config_Files/";
+  ifstream file((path + to_string(YEAR) + "/Runs_" + to_string(YEAR) + ".txt").c_str());
+  if (!file.is_open())
+  {
+    Error("Could not open the file Runs_" + to_string(YEAR) + ".txt");
+  }
+
+  string line;
+  string nucleus;
+  while (getline(file, line))
+  {
+    if (line.empty())
+      continue;
+
+    if (line[0] == '#')
+      nucleus = line.substr(1);
+
+    else
+    {
+      stringstream ss(line);
+      string number;
+      while (ss >> number)
+      {
+        Map_RunFiles[nucleus].push_back(number);
+      }
+    }
+  }
+
+  file.close();
+
+  Info("Runs loaded");
+  for (const auto &pair : Map_RunFiles)
+  {
+    string nucleus = pair.first;
+    vector<string> runs = pair.second;
+    Info("Nucleus : " + nucleus, 1);
+    string runstring = "";
+    for (const auto &run : runs)
+    {
+      runstring += run + " ";
+    }
+    Info(runstring, 2);
+  }
+}
+
+void InitWindows()
+{
+
+    CanvasMap["32Ar"] = make_pair(8, 5);
+    CanvasMap["32Ar_thick"] = make_pair(8, 5);
+    CanvasMap["33Ar"] = make_pair(10, 5);
+    CanvasMap["33Ar_thick"] = make_pair(10, 5);
+    CanvasMap["18N"] = make_pair(3, 3);
+    
+    string direction[2] = {"Up", "Down"};
+    string path = "/home/local1/Documents/2024_Analysis/Grouper/Config_Files/";
+    for (auto dir : direction)
+    {
+        for (int strip = 1; strip <= 5; strip++)
+        {
+            ifstream file(path + "Detector_Window/" + dir + "_" + to_string(strip) + ".txt");
+            if (!file.is_open())
+            {
+                Error("Impossible to open " + dir + "_" + to_string(strip) + ".txt");
+            }
+
+            string line;
+            double energy_low;
+            double energy_high;
+            double number;
+            string nuclei;
+            while (getline(file, line))
+            {
+                energy_high = -1;
+                energy_low = -1;
+
+                if (line.empty())
+                {
+                    continue;
+                }
+
+                if (line.find("#") != string::npos)
+                {
+                    nuclei = line.substr(1);
+                    continue;
+                }
+                stringstream ss(line);
+                ss >> number >> energy_low >> energy_high;
+
+                for (int i : Dir2Det(dir, strip))
+                {
+                    WindowsMap[nuclei][number][i] = make_pair(energy_low, energy_high);
+                    // cout << "Nuclei : " << nuclei << " Number : " << number << " Detector : " << detectorName[i] << " Energy Low : " << energy_low << " Energy High : " << energy_high << endl;
+                }
+
+                if (dir == "Up" && strip == 1)
+                {
+                    PeakList[nuclei].push_back(number);
+                }
+            }
+        }
+    }
+}
+
 
 inline void InitDetectors(const string &fname)
 {
@@ -501,6 +683,7 @@ inline void InitDetectors(const string &fname)
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2025_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2025_DATA/DETECTOR_DATA/";
     REFERENCE_RUN = 98;
+    MATCHING_RUN = 69;
   }
   else if (FLAG2024)
   {
@@ -518,6 +701,7 @@ inline void InitDetectors(const string &fname)
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
     REFERENCE_RUN = 114;
+    MATCHING_RUN = 77;
   }
   else if (FLAG2021)
   {
@@ -535,13 +719,21 @@ inline void InitDetectors(const string &fname)
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2021_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2021_DATA/DETECTOR_DATA/";
     REFERENCE_RUN = 16;
+    MATCHING_RUN = 36;
   }
 
-  // IAS["32Ar"] = 14;
-  // IAS["32Ar_thick"] = 14;
-  // IAS["33Ar"] = 21;
-  // IAS["33Ar_thick"] = 21;
+  IAS["32Ar"] = 14.;
+  IAS["32Ar_thick"] = 14.;
+  IAS["33Ar"] = 21.;
+  IAS["33Ar_thick"] = 21.;
 
+  // Nuclei
+  NucleusColor["32Ar"] = kCyan;
+  NucleusColor["32Ar_thick"] = kCyan + 2;
+  NucleusColor["33Ar"] = kGreen + 1;
+  NucleusColor["33Ar_thick"] = kGreen + 3;
+  NucleusColor["32Cl"] = kMagenta + 1;
+  NucleusColor["32Cl_thick"] = kMagenta + 3;
 
 }
 

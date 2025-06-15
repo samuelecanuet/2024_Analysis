@@ -24,7 +24,7 @@ int main(int argc, char **argv)
     vector<double> Par = {Offset_calibration, Coefficients1_calibration, 0, Coefficients1_resolution, Coefficients2_resolution, Threshold, 0};
 
     ///////////////////////////////  INITIALISATION ///////////////////////////////
-    InitWindows(0, "../");
+    InitWindowss(0, "../");
     InitSiliconCalibration("../");
     InitHistograms(0);
 

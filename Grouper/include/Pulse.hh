@@ -19,7 +19,6 @@ vector<string> NUCLEI_LIST = {"32Ar"};
 string run_number_str;
 
 TF1* Calibration[SIGNAL_MAX];
-map<string, pair<double, double>[100][SIGNAL_MAX]> WindowsMap;
 
 int start_gate = -10;
 int end_gate = 40;
@@ -441,52 +440,6 @@ void InitCalib()
       }
     }
   }
-}
-
-void InitWindows()
-{
-    string direction[2] = {"Up", "Down"};
-    for (auto dir : direction)
-    {
-        for (int strip = 1; strip <= 5; strip++)
-        {
-            ifstream file("Config_Files/Detector_Window/" + dir + "_" + to_string(strip) + ".txt");
-            if (!file.is_open())
-            {
-                Error("Impossible to open " + dir + "_" + to_string(strip) + ".txt");
-            }
-
-            string line;
-            double energy_low;
-            double energy_high;
-            int number;
-            string nuclei;
-            while (getline(file, line))
-            {
-                energy_high = -1;
-                energy_low = -1;
-
-                if (line.empty())
-                {
-                    continue;
-                }
-
-                if (line.find("#") != string::npos)
-                {
-                    nuclei = line.substr(1);
-                    continue;
-                }
-                stringstream ss(line);
-                ss >> number >> energy_low >> energy_high;
-
-                // init silicon detector window
-                for (int i : Dir2Det(dir, strip))
-                {
-                    WindowsMap[nuclei][number][i] = make_pair(energy_low, energy_high);
-                }
-            }
-        }
-    }
 }
 
 void ReadAllRunsDate()

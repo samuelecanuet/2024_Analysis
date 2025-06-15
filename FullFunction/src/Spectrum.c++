@@ -7,7 +7,7 @@ Spectrum::Spectrum(int Z, int A, string decay)
     Parent_filename = PATH+"z"+to_string(fZ)+".a"+to_string(fA);
     if (decay == "proton")
     {
-        Daughter_filename = PATH+"z"+to_string(fZ-1)+".a"+to_string(fA);
+        Daughter_filename = PATH+"z"+to_string(fZ-1)+".a"+to_string(fA)+"_ENSDF";
     }
     else
     {

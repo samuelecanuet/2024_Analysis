@@ -7,11 +7,10 @@ int Eshift_Quick()
 {
     FLAG2024 = true;
     NUCLEUS = "32Ar";
-    IAS = 14;
     InitDetectors("../../Grouper/Config_Files/sample.pid");
     TFile *f = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/05-16/32Ar_IAS_1mm_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
     
-    InitWindows("../../Grouper/");
+    InitWindows();
 
 
     TGraphErrors *G_Eshift = new TGraphErrors();

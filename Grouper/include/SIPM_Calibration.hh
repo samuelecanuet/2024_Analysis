@@ -29,10 +29,10 @@ TTree *Tree_MATCHED;
 vector<Signal> SiPM;
 
 /// WINDOWS ///
-map<string, pair<double, double>[100][SIGNAL_MAX]> WindowsMap;
-map<string, double> Qbeta; 
-map<string, double[50]> WindowsBetaMap; 
-map<string, pair<int, int>> CanvasMap;
+map<string, pair<double, double>[100][SIGNAL_MAX]> WindowssMap;
+// map<string, double> Qbeta; 
+// map<string, double[50]> WindowsBetaMap; 
+// map<string, pair<int, int>> CanvasMap;
 double SiPM_Window[10] = {0, 1500e3, 1500e3, 1500e3};
 bool FLAG_GAIN_CHANGED = false;
 
@@ -111,7 +111,7 @@ map<string, pair<double, double>> SiPM_Range;
 bool FLAGSAVINGCHI2 = false;
 map<string, double[50][SIGNAL_MAX]> CHI2;
 
-void InitWindows(int verbose = 0, string addpath = "")
+void InitWindowss(int verbose = 0, string addpath = "")
 {
     Info("Init Windows");
 
@@ -178,7 +178,7 @@ void InitWindows(int verbose = 0, string addpath = "")
                 // init silicon detector window
                 for (int i : Dir2Det(dir, strip))
                 {
-                    WindowsMap[nuclei][number][i] = make_pair(energy_low, energy_high);
+                    WindowssMap[nuclei][number][i] = make_pair(energy_low, energy_high);
                 }
 
                 WindowsBetaMap[nuclei][number] = Qbeta[nuclei] - (energy_low+energy_high)/2;
@@ -373,7 +373,7 @@ void ReadTree()
     {
         for (int det = 1; det <= 9; det++)
         {
-            if (WindowsMap["32Ar"][peak][11].first == -1 || !WindowsMap["32Ar"][peak][11].first)
+            if (WindowssMap["32Ar"][peak][11].first == -1 || !WindowssMap["32Ar"][peak][11].first)
                 continue;
             Tree_Peaks["32Ar"][peak][det] = (TTree *)f_tree->Get(("Tree_Peaks_32Ar_" + to_string(peak) + "_" + to_string(det)).c_str());
         }
@@ -393,7 +393,7 @@ void WriteTree()
     {
         for (int det = 1; det <= 9; det++)
         {
-            if (WindowsMap["32Ar"][peak][11].first == -1 || !WindowsMap["32Ar"][peak][11].first)
+            if (WindowssMap["32Ar"][peak][11].first == -1 || !WindowssMap["32Ar"][peak][11].first)
                 continue;
             Tree_Peaks["32Ar"][peak][det]->Write();
         }
@@ -457,10 +457,10 @@ void ExtractingTree()
                 for (int peak_number = 0; peak_number < 50; peak_number++)
                 {
                     SiPMi = Signal();
-                    if (WindowsMap[NUCLEUS][peak_number][sili_code].first == -1 || !WindowsMap[NUCLEUS][peak_number][sili_code].first)
+                    if (WindowssMap[NUCLEUS][peak_number][sili_code].first == -1 || !WindowssMap[NUCLEUS][peak_number][sili_code].first)
                         continue;
 
-                    if (energy > WindowsMap[NUCLEUS][peak_number][sili_code].first & energy < WindowsMap[NUCLEUS][peak_number][sili_code].second)
+                    if (energy > WindowssMap[NUCLEUS][peak_number][sili_code].first & energy < WindowssMap[NUCLEUS][peak_number][sili_code].second)
                     {
                         peak = peak_number;
                         break;
@@ -526,7 +526,7 @@ void InitTree(string option = "READ")
         for (int peak_number = 0; peak_number < 50; peak_number++)
         {
             SiPMi = Signal();
-            if (WindowsMap[NUCLEUS][peak_number][11].first == -1 || !WindowsMap[NUCLEUS][peak_number][11].first)
+            if (WindowssMap[NUCLEUS][peak_number][11].first == -1 || !WindowssMap[NUCLEUS][peak_number][11].first)
                 continue;
             for (int det = 1; det <= 9; det++)
             {
@@ -574,7 +574,7 @@ void ReadSimulatedTree()
     Info("Read Simulated Tree");
     for (int peak = 0; peak <= 50; peak++)
     {
-        if (WindowsMap["32Ar"][peak][11].first == -1 || !WindowsMap["32Ar"][peak][11].first)
+        if (WindowssMap["32Ar"][peak][11].first == -1 || !WindowssMap["32Ar"][peak][11].first)
             continue;
         Tree_Peaks_Simulated["32Ar"][peak] = (TTree *)f_simulated_tree->Get(("Tree_Peaks_Simulated_32Ar_" + to_string(peak)).c_str());
     }
@@ -591,7 +591,7 @@ void WriteSimulatedTree(vector<string> nucleus_to_recreate)
     {
         for (int peak = 0; peak <= 50; peak++)
         {
-            if (WindowsMap["32Ar"][peak][11].first == -1 || !WindowsMap["32Ar"][peak][11].first)
+            if (WindowssMap["32Ar"][peak][11].first == -1 || !WindowssMap["32Ar"][peak][11].first)
                 continue;
             Tree_Peaks_Simulated["32Ar"][peak]->Write();
         }
@@ -635,10 +635,10 @@ void ExtractingSimulatedTree(vector<string> nucleus_to_recreate)
             {
                 for (int peak_number = 0; peak_number < 50; peak_number++)
                 {
-                    if (WindowsMap[NUCLEUS][peak_number][sili_code].first == -1 || !WindowsMap[NUCLEUS][peak_number][sili_code].first)
+                    if (WindowssMap[NUCLEUS][peak_number][sili_code].first == -1 || !WindowssMap[NUCLEUS][peak_number][sili_code].first)
                         continue;
 
-                    if (sili_e > WindowsMap[NUCLEUS][peak_number][sili_code].first & sili_e < WindowsMap[NUCLEUS][peak_number][sili_code].second)
+                    if (sili_e > WindowssMap[NUCLEUS][peak_number][sili_code].first & sili_e < WindowssMap[NUCLEUS][peak_number][sili_code].second)
                     {
                         SiPMEnergy = SiPM_e;
                         Tree_Peaks_Simulated[NUCLEUS][peak_number]->Fill();
@@ -660,7 +660,7 @@ void DeletingSimulatedTree(vector<string> nucleus_to_recreate)
         Info("Deleting 32Ar");
         for (int peak = 0; peak <= 50; peak++)
         {
-            if (WindowsMap["32Ar"][peak][11].first == -1 || !WindowsMap["32Ar"][peak][11].first)
+            if (WindowssMap["32Ar"][peak][11].first == -1 || !WindowssMap["32Ar"][peak][11].first)
                 continue;
             f_simulated_tree->Delete(("Tree_Peaks_Simulated_32Ar_" + to_string(peak)).c_str());
         }
@@ -696,7 +696,7 @@ void InitSimulatedTree(vector<string> nucleus_to_recreate = {})
     {
         for (int peak_number = 0; peak_number < 50; peak_number++)
         {
-            if (WindowsMap[NUCLEUS][peak_number][11].first == -1 || !WindowsMap[NUCLEUS][peak_number][11].first)
+            if (WindowssMap[NUCLEUS][peak_number][11].first == -1 || !WindowssMap[NUCLEUS][peak_number][11].first)
                 continue;
             for (int det = 1; det <= 9; det++)
             {
@@ -771,7 +771,7 @@ void InitHistograms(int verbose = 0)
 
                 for (int peak = 0; peak <= 50; peak++)
                 {
-                    if ((WindowsMap[NUCLEUS][peak][11].first == -1 || !WindowsMap[NUCLEUS][peak][11].first))
+                    if ((WindowssMap[NUCLEUS][peak][11].first == -1 || !WindowssMap[NUCLEUS][peak][11].first))
                         continue;
 
                     if (i == 101)
@@ -832,7 +832,7 @@ void InitHistograms(int verbose = 0)
 
         for (int peak = 0; peak <= 50; peak++)
         {
-            if (WindowsMap[NUCLEUS][peak][11].first == -1 || !WindowsMap[NUCLEUS][peak][11].first)
+            if (WindowssMap[NUCLEUS][peak][11].first == -1 || !WindowssMap[NUCLEUS][peak][11].first)
                 continue;
 
             H_Sim[NUCLEUS][peak] = new TH1D(("H_Sim_" + NUCLEUS + "_Peak_" + to_string(peak)).c_str(), ("H_Sim_" + NUCLEUS + "_Peak_" + to_string(peak)).c_str(), eSiliN_cal / 10, eSiliMin_cal, eSiliMax_cal);
@@ -885,7 +885,7 @@ double Chi2TreeHist_conv(const double *par)
             Info("Init Histograms", 1);
         for (int peak_number = 0; peak_number <= 50; peak_number++)
         {
-            if ((WindowsMap[NUCLEUS][peak_number][11].first == -1 || !WindowsMap[NUCLEUS][peak_number][11].first) && NUCLEUS == "32Ar")
+            if ((WindowssMap[NUCLEUS][peak_number][11].first == -1 || !WindowssMap[NUCLEUS][peak_number][11].first) && NUCLEUS == "32Ar")
             {
                 continue;
             }
@@ -1099,7 +1099,7 @@ void WriteHistograms()
         TCanvas *cExp_Sim_SiPM_AllPeaks[10];
         for (int peak = 0; peak <= 50; peak++)
         {
-            if ((WindowsMap[NUCLEUS][peak][11].first == -1 || !WindowsMap[NUCLEUS][peak][11].first) && NUCLEUS == "32Ar")
+            if ((WindowssMap[NUCLEUS][peak][11].first == -1 || !WindowssMap[NUCLEUS][peak][11].first) && NUCLEUS == "32Ar")
                 continue;
             
             if (peak != 0 && (NUCLEUS == "207Bi" || NUCLEUS == "90Sr"))
@@ -1121,7 +1121,7 @@ void WriteHistograms()
             for (int peak = 0; peak <= 50; peak++)
             {
 
-                if ((WindowsMap[NUCLEUS][peak][11].first == -1 || !WindowsMap[NUCLEUS][peak][11].first) && NUCLEUS == "32Ar")
+                if ((WindowssMap[NUCLEUS][peak][11].first == -1 || !WindowssMap[NUCLEUS][peak][11].first) && NUCLEUS == "32Ar")
                     continue;
 
                 if (peak != 0 && (NUCLEUS == "207Bi" || NUCLEUS == "90Sr"))
@@ -1186,7 +1186,7 @@ void WriteHistograms()
 
         for (int peak = 0; peak <= 50; peak++)
         {
-            if ((WindowsMap[NUCLEUS][peak][11].first == -1 || !WindowsMap[NUCLEUS][peak][11].first) && NUCLEUS == "32Ar")
+            if ((WindowssMap[NUCLEUS][peak][11].first == -1 || !WindowssMap[NUCLEUS][peak][11].first) && NUCLEUS == "32Ar")
                 continue;
             if (peak != 0 && (NUCLEUS == "207Bi" || NUCLEUS == "90Sr"))
                 continue;
