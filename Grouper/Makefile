@@ -13,7 +13,7 @@ LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GSL_LIBS} -lboost_filesystem -lboo
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark SiPM_Time Analyser Source_Grouper BasicAnalyser Rate Pulse SIPM_PileUp Time_Pulse_Calibration Spectrum Efficiency
+EXE       = Grouper Matcher Merger Calibration Res_electronic LifeTime Defect SIPM_Calibration Bi207 SIPM_Matching SIPM_Dark SiPM_Time Analyser Analyser_Sim Source_Grouper BasicAnalyser Rate Pulse SIPM_PileUp Time_Pulse_Calibration Spectrum Efficiency Linearity_electronic
 
 all : $(EXE)
 
@@ -38,6 +38,8 @@ SIPM_PileUp: obj/SIPM_PileUp.o
 Time_Pulse_Calibration: obj/Time_Pulse_Calibration.o
 Spectrum: obj/Spectrum.o
 Efficiency: obj/Efficiency.o
+Linearity_electronic: obj/Linearity_electronic.o
+Analyser_Sim: obj/Analyser_Sim.o
 
 $(EXE): $(OBJS)
 	${CC} -std=c++17 obj/$@.o -o $@ ../../lib/SignalDict/SignalDict.so Dic/AutoDict_vector_vector_std__pair_Signal__Signal____cxx.so ${CFLAGS} ${LIBS}

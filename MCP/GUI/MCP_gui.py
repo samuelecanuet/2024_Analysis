@@ -356,7 +356,7 @@ if __name__ == '__main__':
             try : root_file = TFile(input_file); print(f"\n {bcolors.OKGREEN} Openning : {input_file} {bcolors.ENDC}")
             except OSError : print(f"\n {bcolors.FAIL} Wrong file name {bcolors.ENDC}\n"), exit(0)
             
-            try : HIST = DisplayTH2D(root_file.Get("h_Image"), ax, title = "MCP data", xlim='auto' , ylim='auto'); print(f" {bcolors.OKGREEN} Openning : h_Image {bcolors.ENDC}"); name = True
+            try : HIST = DisplayTH2D(root_file.Get("H_RAW_2D"), ax, title = "MCP data", xlim='auto' , ylim='auto'); print(f" {bcolors.OKGREEN} Openning : h_Image {bcolors.ENDC}"); name = True
             except AttributeError : name = None
            
             while name == None:
@@ -411,8 +411,8 @@ if __name__ == '__main__':
         axs[1,1].set_xlabel("Distance from (0,0)")
         axs[1,1].set_ylabel("Distance from real point")
 
-        HIST = DisplayTH2D(root_file.Get("h_Image"), axs[0,0], title = "MCP data", xlim='auto' , ylim='auto')
-        HIST_z = DisplayTH2D(root_file.Get("h_Image"), axs[1,0], title = "MCP data", xlim='auto' , ylim='auto')
+        HIST = DisplayTH2D(root_file.Get("H_RAW_2D"), axs[0,0], title = "MCP data", xlim='auto' , ylim='auto')
+        HIST_z = DisplayTH2D(root_file.Get("H_RAW_2D"), axs[1,0], title = "MCP data", xlim='auto' , ylim='auto')
 
         ### CONSTRUCT MCP SKETCH
         pitch = 2

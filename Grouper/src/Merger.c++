@@ -9,6 +9,7 @@ int main(int argc, char *argv[])
     InitProtonPulse();
 
     MATCHED_File = MyTFile((DIR_ROOT_DATA_MATCHED + "matched.root").c_str(), "READ");
+    MATCHED_SiPM_FILE = MyTFile((DIR_ROOT_DATA_MATCHED + "SiPM_Matching_Functions.root").c_str(), "READ");
 
     ////////////////////////////////////////////////////////////
     // using correction of run gaindrifting and correction from strip to strip and merge all the runs in a single file for each nucleus
@@ -17,7 +18,7 @@ int main(int argc, char *argv[])
     for (auto &pairr : Map_RunFiles)
     {
         string NUCLEUS = pairr.first;
-        if (NUCLEUS.find("32Ar") != string::npos && NUCLEUS.find("33Ar") != string::npos)
+        if (NUCLEUS.find("33Ar") == string::npos)
             continue;
         pair<string, vector<string>> NUCLEUS_Run = make_pair(NUCLEUS, Map_RunFiles[NUCLEUS]);
         Start("Merging " + NUCLEUS_Run.first);
@@ -43,6 +44,7 @@ int main(int argc, char *argv[])
         for (int i = 0; i < NUCLEUS_Run.second.size(); i++)
         {
             string Run = NUCLEUS_Run.second[i];
+            int Run_int = atoi(Run.c_str());
             Info("Current Run : " + Run);
             GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, Run);
             GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");
@@ -83,9 +85,6 @@ int main(int argc, char *argv[])
                 int CurrentEntry = Reader->GetCurrentEntry();
                 ProgressBar(CurrentEntry, Entries, start, Current, "");
 
-                double Silicon_Channel = (*Silicon)[1].Channel;
-                int Silicon_Label = (*Silicon)[1].Label;
-
                 MERGED_Tree_HRS = Signal();
                 MERGED_Tree_SiPMGroup = vector<vector<pair<Signal, Signal>>>();
                 MERGED_Tree_Silicon = vector<Signal>();
@@ -100,26 +99,73 @@ int main(int argc, char *argv[])
                         continue;
                     }
                 }
-                // including the offline proton pulse for 2024
-                else if (YEAR == 2024)
+                // including the offline proton pulse for 2024 and 2021
+                else if (YEAR == 2024 || YEAR == 2021)
                 {
                     InsertProtonPulse(Run, (*Silicon)[1].Time);
+                    // continue;
                 }
+
+                double Silicon_Channel = (*Silicon)[1].Channel;
+                int Silicon_Label = (*Silicon)[1].Label;
 
                 MERGED_Tree_Silicon.push_back((*Silicon)[0]);
 
-                // run matching correction
+                // ####### Matching correction ####### //
+                // - SILICON CORRECTION BY RUN
                 (*Silicon)[1].Channel = Matching_function[Silicon_Label]->Eval(Silicon_Channel);
-
                 MERGED_Tree_Silicon.push_back((*Silicon)[1]);
                 Channel = Silicon_Channel;
+                MERGED_Tree_Detector[Silicon_Label]->Fill();
+                
+                // - SiPM CORRECTION
+                // Matching runs < 80
+                // Matching Low High
+                // Matching SiPMs
+                for (int i_groups = 0; i_groups < (**SiPM_Groups).size(); i_groups++)
+                {
+                    vector<pair<Signal, Signal>> Group;
+                    for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_groups].size(); i_pair++)
+                    {
+                        pair<Signal, Signal> SiPM_Pair = (**SiPM_Groups)[i_groups][i_pair];
 
-                // !!! ADDING SIPM MATCHING !!! //
-                MERGED_Tree_SiPMGroup = **SiPM_Groups;
+                        // first SiPM
+                        if (SiPM_Pair.first.isValid && SiPM_Pair.first.Channel >= 0)
+                        {
+                            // Matching ONOFF
+                            SiPM_Pair.first.Channel = SiPM_ONOFF[SiPM_Pair.first.Label]->Eval(SiPM_Pair.first.Channel);
+                            // Matching SiPM
+                            SiPM_Pair.first.Channel = SiPM_Gain[SiPM_Pair.first.Label]->Eval(SiPM_Pair.first.Channel);
+                        }
+                        else
+                        {
+                            SiPM_Pair.first = Signal();
+                        }   
+
+                        // second SiPM
+                        if (SiPM_Pair.second.isValid && SiPM_Pair.second.Channel >= 0)
+                        {
+                            // Matching ONOFF
+                            SiPM_Pair.second.Channel = SiPM_ONOFF[SiPM_Pair.second.Label]->Eval(SiPM_Pair.second.Channel);
+                            // Matching Low High
+                            SiPM_Pair.second.Channel = SiPM_HighLow[SiPM_Pair.second.Label]->Eval(SiPM_Pair.second.Channel);
+                            // Matching SiPM
+                            SiPM_Pair.second.Channel = SiPM_Gain[SiPM_Pair.second.Label]->Eval(SiPM_Pair.second.Channel);
+                        }
+                        else
+                        {
+                            SiPM_Pair.second = Signal();
+                        }
+
+                        Group.push_back(SiPM_Pair);
+                    }
+                    MERGED_Tree_SiPMGroup.push_back(Group);
+                }
+                // no correction
+                // MERGED_Tree_SiPMGroup = **SiPM_Groups;
 
                 MERGED_Tree->Fill();
-                MERGED_Tree_Detector[Silicon_Label]->Fill();
-
+        
                 MERGED_Tree_Silicon.clear();
                 MERGED_Tree_SiPMGroup.clear();
                 Channel = 0;

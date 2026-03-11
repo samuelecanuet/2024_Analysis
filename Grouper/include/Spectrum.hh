@@ -43,7 +43,7 @@ int end_gate = 40;
 
 void InitCalibration()
 {
-    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "test.root").c_str(), "READ");
+    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "_new.root").c_str(), "READ");
     for (int det = 1;  det < SIGNAL_MAX; det++)
     {
         Calibration_Function[det] = (TF1*)f->Get(("Calibration_" + detectorName[det]).c_str());
@@ -54,7 +54,7 @@ void InitCalibration()
 
 void InitExperimentalSpectrum()
 {
-    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "test.root").c_str(), "READ");
+    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_new.root").c_str(), "READ");
     for (string Nucleus : Nuclei)
     {
         for (int det = 1; det < SIGNAL_MAX; det++)
@@ -69,6 +69,51 @@ void InitExperimentalSpectrum()
             }
         }
     }
+}
+
+double gaussBortelsCollaers(double *x, double *p)
+{
+    double A = p[0];
+    double mu = p[1];
+    double sigma = p[2]; 
+    double eta = p[3];
+    double tau1 = p[4];
+    double tau2 = p[5];
+
+    double first  = (1 - eta) / tau1    * exp((x[0]-mu)/tau1 + pow(sigma, 2)/(2*pow(tau1, 2))) * erfc(1/sqrt(2) * (x[0] - mu)/sigma + sigma/tau1);
+    double second =      eta  / tau2    * exp((x[0]-mu)/tau2 + pow(sigma, 2)/(2*pow(tau2, 2))) * erfc(1/sqrt(2) * (x[0] - mu)/sigma + sigma/tau2);
+    // double second = 0;
+
+    return A/2 * (first+second);
+}
+
+double gauss(double *x, double *p)
+{
+    double A = p[0];
+    double mu = p[1];
+    double sigma = p[2];
+
+    return A * exp(-pow(x[0] - mu, 2) / (2 * pow(sigma, 2))) / (sigma * sqrt(2 * M_PI));
+}
+
+double gauss_gaussBortelsCollaers(double *x, double *p)
+{
+    double A1 = p[0];
+    double mu1 = p[1];
+    double sigma1 = p[2]; 
+    double eta1 = p[3];
+    double tau11 = p[4];
+    double tau21 = p[5];
+
+    double params[6] = {A1, mu1, sigma1, eta1, tau11, tau21};
+
+    double A2 = p[6];
+    double mu2 = p[7] + mu1;
+    double sigma2 = p[8]; 
+
+    double params_2[3] = {A2, mu2, sigma2};
+
+    return gaussBortelsCollaers(x, params) + gauss(x, params_2);
 }
 
 void InitDirectionDeltaEnergy(bool Analysing_Data)
@@ -91,17 +136,27 @@ void InitDirectionDeltaEnergy(bool Analysing_Data)
     }
     else
     {
-        
-        for (double e = 0.1; e <= 7.0; e+=0.1)
+        TFile *f_res = MyTFile((DIR_ROOT_DATA_SIMULATED + "DeltaE.root").c_str(), "RECREATE");
+
+        TGraphErrors *G_Sim_ELoss_Proton_Up = new TGraphErrors();
+        TGraphErrors *G_Sim_ELoss_Proton_Down = new TGraphErrors();
+        TGraphErrors *G_Sim_ELoss_Alpha_Up = new TGraphErrors();
+        TGraphErrors *G_Sim_ELoss_Alpha_Down = new TGraphErrors();
+        TGraphErrors *G_Sim_Eff_Proton_Down = new TGraphErrors();
+        TGraphErrors *G_Sim_Eff_Proton_Up = new TGraphErrors();
+        TGraphErrors *G_Sim_Eff_Alpha_Down = new TGraphErrors();
+        TGraphErrors *G_Sim_Eff_Alpha_Up = new TGraphErrors();
+        for (double e = 0.1; e <= 7.0; e+=0.05)
         {
+            cout << "Processing energy: " << e << " MeV" << endl;
             // sstream with 1 digit
             stringstream ss;
-            ss << fixed << setprecision(1) << e;
+            ss << fixed << setprecision(2) << e;
             string e_str = ss.str();
 
             double energy = e * 1000; // Convert MeV to keV
 
-            string path = "/run/media/local1/DATANEX/Samuel-G4/06-03/";//DIR_ROOT_DATA_SIMULATED
+            string path = "/run/media/local1/DATANEX/Samuel-G4/eloss/";//DIR_ROOT_DATA_SIMULATED
             //Protons
             TFile *f = MyTFile((path + "proton_" + e_str + "MeV.root").c_str(), "READ");
             if (f == nullptr)
@@ -109,6 +164,7 @@ void InitDirectionDeltaEnergy(bool Analysing_Data)
             
             TH1D *hUp = nullptr;
             TH1D *hDown = nullptr;
+
             for (int det = 1; det <= SIGNAL_MAX; det++)
             {
                 if (IsDetectorSiliStrip(det))
@@ -136,14 +192,74 @@ void InitDirectionDeltaEnergy(bool Analysing_Data)
                         }
                     }
                 }
-
             }
-            hUp->GetXaxis()->SetRangeUser(energy - 100, energy + 100);
 
-            hDown->GetXaxis()->SetRangeUser(energy - 100, energy + 100);
+            hUp->GetXaxis()->SetRangeUser(energy - 25, energy + 25);
+            hDown->GetXaxis()->SetRangeUser(energy - 25, energy + 25);
 
-            G_Sim_DeltaE_Proton->AddPoint(energy, abs(hUp->GetMean() - hDown->GetMean()));
+            double peak_position_Down = hDown->GetBinCenter(hDown->GetMaximumBin());
+            double peak_position_Up = hUp->GetBinCenter(hUp->GetMaximumBin());
+
+            /// deltaE
+            G_Sim_DeltaE_Proton->AddPoint(energy, abs(peak_position_Up - peak_position_Down));
             G_Sim_DeltaE_Proton->SetPointError(G_Sim_DeltaE_Proton->GetN() - 1, 0, sqrt(pow(hUp->GetMeanError(), 2) + pow(hDown->GetMeanError(), 2)));
+
+            // eloss
+            G_Sim_ELoss_Proton_Down->AddPoint(peak_position_Down, energy - peak_position_Down);
+            G_Sim_ELoss_Proton_Down->SetPointError(G_Sim_ELoss_Proton_Down->GetN() - 1, hDown->GetMeanError(), hDown->GetMeanError());
+            G_Sim_ELoss_Proton_Up->AddPoint(peak_position_Up, energy - peak_position_Up);
+            G_Sim_ELoss_Proton_Up->SetPointError(G_Sim_ELoss_Proton_Up->GetN() - 1, hUp->GetMeanError(), hUp->GetMeanError());
+
+            
+
+            // efficiency
+            double N_event = 10e6;
+            G_Sim_Eff_Proton_Down->AddPoint(energy, hDown->Integral() / N_event);
+            G_Sim_Eff_Proton_Down->SetPointError(G_Sim_Eff_Proton_Down->GetN() - 1, 0, sqrt(pow(sqrt(hDown->Integral()) / N_event, 2) + pow(hDown->Integral() * sqrt(N_event) / (N_event * N_event), 2)));
+            G_Sim_Eff_Proton_Up->AddPoint(energy, hUp->Integral() / N_event);
+            G_Sim_Eff_Proton_Up->SetPointError(G_Sim_Eff_Proton_Up->GetN() - 1, 0, sqrt(pow(sqrt(hUp->Integral()) / N_event, 2) + pow(hUp->Integral() * sqrt(N_event) / (N_event * N_event), 2)));
+
+
+            // // fitting eloss
+            // f_res->cd();
+            // hDown->GetXaxis()->SetRangeUser(-1111, -1111);
+            // TF1 *f_FitPeak = new TF1("f", gauss_gaussBortelsCollaers, 0, 7000, 9);
+
+            // //increasing call limit 
+            // ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(100000);
+
+            // f_FitPeak->SetParameter(0, 1);    // Amplitude
+            // f_FitPeak->SetParLimits(0, 0, 100000); // Amplitude
+            // f_FitPeak->SetParameter(1, hDown->GetBinCenter(hDown->GetMaximumBin())); // Mean
+            // f_FitPeak->SetParameter(2, 10);  // Sigma
+            // f_FitPeak->SetParLimits(2, 0, 15); // Sigma
+            // f_FitPeak->FixParameter(3, 0.);  // Eta
+            // // f_FitPeak->SetParLimits(3, 0, 1); // Eta
+            // f_FitPeak->SetParameter(4, 100);  // Tau1
+            // f_FitPeak->FixParameter(5, 1);  // Tau2
+            // f_FitPeak->SetParameter(6, 1);    // Amplitude gauss
+            // f_FitPeak->SetParLimits(6, 0, 100000); // Amplitude gauss
+            // f_FitPeak->SetParameter(7, -50); // Mean shift gauss
+            // f_FitPeak->SetParLimits(7, -1000, 5); // Mean shift gauss
+            // f_FitPeak->SetParameter(8, 10);   // Sigma gauss
+            // f_FitPeak->SetParLimits(8, 0, 50); // Sigma gauss
+
+            // TFitResultPtr r = hDown->Fit(f_FitPeak, "S MULTITHREAD", "");
+            // if (r != 0)
+            // {
+            //     Warning("Fitting failed for energy: " + to_string(energy) + " keV");
+            //     continue;
+            // }
+
+            // hDown->SetName(("hDown_" + e_str + "MeV").c_str());
+            // TCanvas *c = new TCanvas(("c_" + e_str + "MeV").c_str(), ("c_" + e_str + "MeV").c_str(), 800, 600);
+            // TH1D *clone = (TH1D *)hDown->Clone(("clone_" + e_str + "MeV").c_str());
+            // clone->SetTitle(("Eloss Down " + e_str + " MeV").c_str());
+            // clone->Draw("HIST");    
+            // f_FitPeak->SetLineColor(kRed);
+            // f_FitPeak->Draw("same");
+            // c->Write();
+
 
             f->Close();
 
@@ -191,15 +307,60 @@ void InitDirectionDeltaEnergy(bool Analysing_Data)
             G_Sim_DeltaE_Alpha->AddPoint(energy, abs(hUp->GetMean() - hDown->GetMean()));
             G_Sim_DeltaE_Alpha->SetPointError(G_Sim_DeltaE_Alpha->GetN() - 1, 0, sqrt(pow(hUp->GetMeanError(), 2) + pow(hDown->GetMeanError(), 2)));
 
+            G_Sim_ELoss_Alpha_Down->AddPoint(hDown->GetMean(), energy - hDown->GetMean());
+            G_Sim_ELoss_Alpha_Down->SetPointError(G_Sim_ELoss_Alpha_Down->GetN() - 1, hDown->GetMeanError(), hDown->GetMeanError());
+            G_Sim_ELoss_Alpha_Up->AddPoint(hUp->GetMean(), energy - hUp->GetMean());
+            G_Sim_ELoss_Alpha_Up->SetPointError(G_Sim_ELoss_Alpha_Up->GetN() - 1, hUp->GetMeanError(), hUp->GetMeanError());
+
             f->Close();
         }
 
-        TFile *f = MyTFile((DIR_ROOT_DATA_SIMULATED + "DeltaE.root").c_str(), "RECREATE");
+        f_res->cd();
         G_Sim_DeltaE_Proton->SetName("G_Sim_DeltaE_Proton");
         G_Sim_DeltaE_Proton->Write();
         G_Sim_DeltaE_Alpha->SetName("G_Sim_DeltaE_Alpha");
         G_Sim_DeltaE_Alpha->Write();
-        f->Close();
+        // Eloss
+        G_Sim_ELoss_Proton_Up->SetName("G_Sim_ELoss_Proton_Up");
+        G_Sim_ELoss_Proton_Up->Write();
+        G_Sim_ELoss_Proton_Down->SetName("G_Sim_ELoss_Proton_Down");
+        G_Sim_ELoss_Proton_Down->Write();
+        G_Sim_ELoss_Alpha_Up->SetName("G_Sim_ELoss_Alpha_Up");
+        G_Sim_ELoss_Alpha_Up->Write();
+        G_Sim_ELoss_Alpha_Down->SetName("G_Sim_ELoss_Alpha_Down");
+        G_Sim_ELoss_Alpha_Down->Write();
+        
+        //Efficiency
+        G_Sim_Eff_Proton_Down->SetName("G_Sim_Eff_Proton_Down");
+        G_Sim_Eff_Proton_Down->Write();
+        G_Sim_Eff_Proton_Up->SetName("G_Sim_Eff_Proton_Up");
+        G_Sim_Eff_Proton_Up->Write();
+        // Ratio Efficiency with 3350keV
+        TGraphErrors *G_Sim_Coef_Proton_Down = new TGraphErrors();
+        TGraphErrors *G_Sim_Coef_Proton_Up = new TGraphErrors();
+        for (int i = 0; i < G_Sim_Eff_Proton_Down->GetN(); i++)
+        {
+            double x, y, ex, ey;
+            G_Sim_Eff_Proton_Down->GetPoint(i, x, y);
+            ex = G_Sim_Eff_Proton_Down->GetErrorX(i);
+            ey = G_Sim_Eff_Proton_Down->GetErrorY(i);
+            G_Sim_Coef_Proton_Down->AddPoint(x, y / G_Sim_Eff_Proton_Down->Eval(3350));
+            G_Sim_Coef_Proton_Down->SetPointError(G_Sim_Coef_Proton_Down->GetN() - 1, ex, sqrt(pow(ey / G_Sim_Eff_Proton_Down->Eval(3350), 2) + pow(ey * y / pow(G_Sim_Eff_Proton_Down->Eval(3350), 2), 2)));   
+        }
+        for (int i = 0; i < G_Sim_Eff_Proton_Up->GetN(); i++)
+        {
+            double x, y, ex, ey;
+            G_Sim_Eff_Proton_Up->GetPoint(i, x, y);
+            ex = G_Sim_Eff_Proton_Up->GetErrorX(i);
+            ey = G_Sim_Eff_Proton_Up->GetErrorY(i);
+            G_Sim_Coef_Proton_Up->AddPoint(x, y / G_Sim_Eff_Proton_Up->Eval(3350));
+            G_Sim_Coef_Proton_Up->SetPointError(G_Sim_Coef_Proton_Up->GetN() - 1, ex, sqrt(pow(ey / G_Sim_Eff_Proton_Up->Eval(3350), 2) + pow(ey * y / pow(G_Sim_Eff_Proton_Up->Eval(3350), 2), 2)));   
+        }
+        G_Sim_Coef_Proton_Down->SetName("G_Sim_Coef_Proton_Down");
+        G_Sim_Coef_Proton_Down->Write();
+        G_Sim_Coef_Proton_Up->SetName("G_Sim_Coef_Proton_Up");
+        G_Sim_Coef_Proton_Up->Write();
+        f_res->Close();
         Info("ΔE Simulation data loaded");
     }
 }
@@ -221,13 +382,13 @@ void InitHistograms(string Nucleus)
         H_Release_Coinc[Nucleus][0][dir]->GetXaxis()->CenterTitle();
         H_Release_Coinc[Nucleus][0][dir]->GetYaxis()->CenterTitle();
 
-        H_Exp[Nucleus][dir] = new TH1D(("Spectrum_" + Nucleus + "_" + dir).c_str(), ("Spectrum_" + Nucleus + "_" + dir).c_str(), eSiliN_cal*10, eSiliMin_cal, eSiliMax_cal);
+        H_Exp[Nucleus][dir] = new TH1D(("Spectrum_" + Nucleus + "_" + dir).c_str(), ("Spectrum_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
         H_Exp[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
         H_Exp[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
         H_Exp[Nucleus][dir]->GetXaxis()->CenterTitle();
         H_Exp[Nucleus][dir]->GetYaxis()->CenterTitle();
 
-        H_Exp_Coinc[Nucleus][dir] = new TH1D(("Spectrum_Coinc_" + Nucleus + "_" + dir).c_str(), ("Spectrum_Coinc_" + Nucleus + "_" + dir).c_str(), eSiliN_cal*10, eSiliMin_cal, eSiliMax_cal);
+        H_Exp_Coinc[Nucleus][dir] = new TH1D(("Spectrum_Coinc_" + Nucleus + "_" + dir).c_str(), ("Spectrum_Coinc_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
         H_Exp_Coinc[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
         H_Exp_Coinc[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
         H_Exp_Coinc[Nucleus][dir]->GetXaxis()->CenterTitle();
@@ -343,7 +504,7 @@ void ReadingExperimentalData(string Nucleus)
 
     double Proton_Pulse = 0;
 
-    while (Reader->Next())
+    while (Reader->Next() && Reader->GetCurrentEntry() < 1e6)
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
 
@@ -355,7 +516,7 @@ void ReadingExperimentalData(string Nucleus)
 
         int Silicon_Label = (*Silicon)[1].Label;
         string dir = Silicon_Label < 50 ? "Up" : "Down";
-        double Silicon_Energy = Calibration_Function[Silicon_Label]->Eval((*Silicon)[1].Channel / 1000);
+        double Silicon_Energy = Calibration_Function[Silicon_Label]->Eval((*Silicon)[1].Channel / 1000.);
         double Silicon_Time = (*Silicon)[1].Time * 1e-9;
 
         // cout << "Proton Pulse: " << Proton_Pulse << "    Silicon Time: " << Silicon_Time << "    Diff: " << Silicon_Time - Proton_Pulse << endl;
@@ -421,6 +582,7 @@ void ComputeDeltaEHist()
 
     for (string Nucleus : Nuclei)
     {
+        Info(Nucleus, 1);
         dir_nuclei[Nucleus] = FINAL_FILE->mkdir(Nucleus.c_str());
         dir_nuclei[Nucleus]->cd();
         G_DeltaE_Nuclei[Nucleus] = new TGraphErrors();
@@ -433,6 +595,7 @@ void ComputeDeltaEHist()
             {
                 Error("H_Exp[" + Nucleus + "][Up] is nullptr, skipping peak " + to_string(peak));
             }
+            Info("Peak " + to_string(peak), 2);
             H_Exp[Nucleus]["Up"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][peak][15].first, WindowsMap[Nucleus][peak][11].second);
             H_Exp[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][peak][55].first, WindowsMap[Nucleus][peak][51].second);
             
@@ -596,6 +759,9 @@ void PlottingPeak(string Nucleus, double peak)
     legend_release->AddEntry(H_Release[Nucleus][peak]["Down"], "In Coincidence", "l");
 
     TH1D *HIAS = (TH1D *)H_Release[Nucleus][IAS[Nucleus]]["Down"]->Clone(("H_Release_IAS_" + Nucleus + "_" + to_string(peak)).c_str());
+    if (HIAS->Integral() == 0 || H_Release_Coinc[Nucleus][peak]["Down"]->Integral() == 0)
+        return;
+    
     HIAS->Scale(H_Release_Coinc[Nucleus][peak]["Down"]->Integral() / HIAS->Integral());
     HIAS->SetLineColor(kBlack);
     HIAS->Draw("HIST SAME");

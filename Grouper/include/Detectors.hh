@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <gsl/gsl_statistics.h>
 #include <filesystem>
+#include <regex>
 
 //  ROOT includes
 //// files ////
@@ -33,6 +34,8 @@
 #include "TGraph.h"	
 #include "TGraph2D.h"
 #include "TGraphErrors.h"
+#include "TGraph2DErrors.h"
+#include "TGraphAsymmErrors.h"
 #include "TMultiGraph.h"
 //// plotting ////
 #include "TLegend.h"
@@ -89,6 +92,9 @@ string DIR_ROOT_DATA_MERGED;
 string DIR_ROOT_DATA_ANALYSED;
 string DIR_ROOT_DATA_CALIBRATED;
 string DIR_ROOT_DATA_MCP;
+string DIR_ROOT_DATA_MCP_ROOT;
+string DIR_ROOT_DATA_MCP_GROUPED;
+string DIR_ROOT_DATA_MCP_CALIBRATED;
 string DIR_ROOT_DATA_RATE;
 string DIR_ROOT_DATA_SIMULATED;
 string DIR_DATA_ISOLDE;
@@ -162,11 +168,11 @@ double winLowMin = 0;
 double winLowMax = 250;
 int winLowN = (abs(winLowMin) + winLowMax) / 2;
 double eLowMin = 0;
-double eLowMax = 1200000;
+double eLowMax = 1200e3;
 int eLowN = 3000;
 
 // limit
-double eHighLowLimit = 2.e6;
+double eHighLowLimit = 20.e6;
 
 /// TOTAL WINDOW ///
 double tabMIN[3] = {winSiliMin, winHighMin, winLowMin};
@@ -176,7 +182,8 @@ double winTotalMax = gsl_stats_max(tabMAX, 1, 3);
 
 int YearConverter(int det)
 {
-
+  if (YEAR != 2021) return det;
+  
   // SiPM LOW
   if (det == 1) return 111;
   if (det == 2) return 112;
@@ -402,6 +409,7 @@ inline int HighLowLabelConversion(int det)
   if (!IsDetectorBeta(det))
   {
     Error("Using HighLowLabelConversion for non-beta detector");
+    return 0;
   }
   if (IsDetectorBetaLow(det))
   {
@@ -411,6 +419,7 @@ inline int HighLowLabelConversion(int det)
   {
     return (det + 10);
   }
+  return -1;
 }
 
 inline bool IsDetectorSiliInterStrip(int det1, int det2)
@@ -425,6 +434,28 @@ inline bool IsDetectorSiliInterStrip(int det1, int det2)
       }
     }
   }
+  return false;
+}
+
+inline bool Is180degEvents(int det1, int det2)
+{
+  if ((det1 == 1 && det2 == 6) || (det1 == 6 && det2 == 1))
+  {
+    return true;
+  }
+  if ((det1 == 2 && det2 == 7) || (det1 == 7 && det2 == 2))
+  {
+    return true;
+  }
+  if ((det1 == 3 && det2 == 5) || (det1 == 5 && det2 == 3))
+  {
+    return true;
+  }
+  if ((det1 == 4 && det2 == 8) || (det1 == 8 && det2 == 4))
+  {
+    return true;
+  }
+
   return false;
 }
 
@@ -537,7 +568,14 @@ void InitRuns()
       continue;
 
     if (line[0] == '#')
+    {
       nucleus = line.substr(1);
+      // if nucleus ends by " " remove it 
+      if (nucleus.back() == ' ')
+      {
+        nucleus.pop_back();
+      }
+    }
 
     else
     {
@@ -678,8 +716,11 @@ inline void InitDetectors(const string &fname)
     DIR_ROOT_DATA_ANALYSED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/ANALYSED/";
     DIR_ROOT_DATA_CALIBRATED = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/CALIBRATED/";
     DIR_ROOT_DATA_MCP = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/";
+    DIR_ROOT_DATA_MCP_GROUPED = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/GROUPED/";
+    DIR_ROOT_DATA_MCP_ROOT = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/ROOT/";
+    DIR_ROOT_DATA_MCP_CALIBRATED = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/CALIBRATED/";
     DIR_ROOT_DATA_RATE = "/mnt/hgfs/shared-2/2025_DATA/DETECTOR_DATA/RATE/";
-    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
+    DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2025_DATA/SIMULATED_DATA/";
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2025_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2025_DATA/DETECTOR_DATA/";
     REFERENCE_RUN = 98;

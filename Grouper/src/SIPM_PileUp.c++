@@ -2,12 +2,26 @@
 
 int main()
 {
-
+    FLAG2025 = true;
     InitDetectors("Config_Files/sample.pid");
 
-    string RUN = "077";
-     ///////////////////////////////////  FILES //////////////////////////////////
-    MERGED_File = MyTFile((DIR_ROOT_DATA + "run_"+RUN+"_multifast_32Ar.root").c_str(), "READ");
+    string RUN;
+    if (YEAR == 2024)
+    {
+        RUN = "077";
+    }
+    else if (YEAR == 2025)
+    {
+        RUN = "122";
+    }
+    else
+    {
+        Error("Year not recognized or selected 2021");
+    }
+    
+    ///////////////////////////////////  FILES //////////////////////////////////
+    string filename = SearchFiles(DIR_ROOT_DATA, RUN);
+    MERGED_File = MyTFile(DIR_ROOT_DATA + filename, "READ");
     
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
@@ -21,7 +35,8 @@ int main()
 
     clock_t start = clock(), Current;
     int Entries = Reader->GetEntries();
-    while (Reader->Next())
+    int Entry_MAX = 1e7;
+    while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading : ");
         for (int i = 0; i < (*signals).GetSize(); i++)
@@ -47,7 +62,7 @@ int main()
 
     Reader->Restart();
 
-    while (Reader->Next())
+    while (Reader->Next() && Reader->GetCurrentEntry() < Entry_MAX)
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading : ");
         for (int i = 0; i < (*signals).GetSize(); i++)

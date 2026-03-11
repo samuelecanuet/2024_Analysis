@@ -57,7 +57,7 @@ void VerifyPDG(int PDG)
         ParticleName[PDG] = SearchName(PDG);
 
         dir_Particle[PDG] = ANALYSIS_File->mkdir(ParticleName[PDG].c_str());
-        H_E0[PDG] = new TH1D(("H_E0_" + to_string(PDG)).c_str(), ("H_E0_" + to_string(PDG)).c_str(), 10000, 0, 10000);
+        H_E0[PDG] = new TH1D(("H_E0_" + to_string(PDG)).c_str(), ("H_E0_" + to_string(PDG)).c_str(), 100000, 0, 10000);
         H_Ex[PDG] = new TH1D(("H_Ex_" + to_string(PDG)).c_str(), ("H_Ex_" + to_string(PDG)).c_str(), 10000, 0, 10000);
         H_Time[PDG] = new TH1D(("H_Time_" + to_string(PDG)).c_str(), ("H_Time_" + to_string(PDG)).c_str(), 1000, 0, 10000);
         H_px[PDG] = new TH1D(("H_px_" + to_string(PDG)).c_str(), ("H_px_" + to_string(PDG)).c_str(), 100, 0, 100);

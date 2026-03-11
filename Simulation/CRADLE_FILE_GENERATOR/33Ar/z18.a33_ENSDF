@@ -1,10 +1,9 @@
 # 33AR ( 173 MS     )
 #  Excitation  flag   Halflife  Mode    Daughter Ex flag   Intensity          Q
 P            0  -        0.173
-                               BetaPlus            0  -       37.90517
+                               BetaPlus            0  -       nan
                                BetaPlus            3971.16  -       0.401     7647.84
                                BetaPlus            4112.28  -       0.453     7506.72
-                               BetaPlus            4118.0  -       0.453     7501.0
                                BetaPlus            4439.02  -       2.59     7179.98
                                BetaPlus            4835.0  -       0.348     6784.0
                                BetaPlus            5106.0  -       0.043     6513.0
@@ -19,7 +18,7 @@ P            0  -        0.173
                                BetaPlus            7142.0  -       0.00079     4477.0
                                BetaPlus            7289.0  -       0.0229     4330.0
                                BetaPlus            7404.0  -       0.00141     4215.0
-                               BetaPlus            7449.0  -       0.26     4170.0
+                               BetaPlus            7471.0  -       0.26     4148.0
                                BetaPlus            7482.0  -       0.046     4137.0
                                BetaPlus            7540.0  -       0.072     4079.0
                                BetaPlus            7551.0  -       0.04     4068.0
@@ -39,3 +38,7 @@ P            0  -        0.173
                                BetaPlus            9154.0  -       0.01219     2465.0
                                BetaPlus            9193.0  -       0.00102     2426.0
                                BetaPlus            9583.0  -       0.00066     2036.0
+                               BetaPlus            nan  -       37.45217     nan
+                               BetaPlus            nan  -       nan     0.0
+                               BetaPlus            nan  -       nan     1.0
+                               BetaPlus            nan  -       nan     1.5

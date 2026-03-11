@@ -2,7 +2,7 @@
 
 int main()
 {
-    string name = "../../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/fe/fe/test";
+    string name = "../../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/fe/fe/32Ar_CS0_CSP0_CV1_CVP1_1";
     // name = "241Am_700nm_width";
     TFile *SIMULATED_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + ".root").c_str(), "READ");
     ANALYSIS_File = new TFile((DIR_ROOT_DATA_SIMULATED + name + "_analysed.root").c_str(), "RECREATE");
@@ -35,7 +35,6 @@ int main()
         {
             VerifyPDG(Tree_PDG->At(part_i));
             int PDG = Tree_PDG->At(part_i);
-            //cout << "Particle: " << **Tree_PDG << " Energy: " << **Tree_E0 << " Ex: " << **Tree_Ex << " Time: " << **Tree_time << " px: " << **Tree_px << " py: " << **Tree_py << " pz: " << **Tree_pz << endl;
             H_E0[PDG]->Fill(Tree_E0->At(part_i));
             H_Ex[PDG]->Fill(Tree_Ex->At(part_i));
             H_Time[PDG]->Fill(Tree_time->At(part_i));

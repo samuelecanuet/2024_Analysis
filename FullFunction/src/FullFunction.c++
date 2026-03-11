@@ -208,7 +208,11 @@ int main()
 
 
     //Plot
+    vector<TPad*> Pad_Peaks;
     TCanvas *c3 = new TCanvas("c3", "Recoil Broadening", 800, 600);
+    TPad *padSpectrm = new TPad("padSpectrm", "padSpectrm", 0, 0.2, 1, 1);
+    padSpectrm->Draw();
+    padSpectrm->cd();
     TLegend *legend = new TLegend(0.7, 0.7, 0.9, 0.9);
     h->GetXaxis()->SetRangeUser(fTotal->GetXmin(), fTotal->GetXmax());
     h->Draw("HIST");
@@ -251,6 +255,14 @@ int main()
             PeakAndBkg->Draw("SAME");
 
             legend->AddEntry(PeakAndBkg, ("Peak " + to_string(ipeak + 1)).c_str(), "l");
+
+            TLatex *latex2 = new TLatex();
+            latex2->SetNDC();
+            latex2->SetTextSize(0.04);
+            ostringstream oss2;
+            oss2 << setprecision(2) << fixed << convolution2->GetParameter(ipeak * fPeaks[ipeak]->GetNpar() + 1);
+
+            
         }
     }
     bkg->SetParameter(0, convolution2->GetParameter(convolution2->GetNpar() - 2));
@@ -268,6 +280,10 @@ int main()
     string chi2_str = oss.str();
     latex->DrawLatex(0.1, 0.92, ("#chi^{2}_{#nu}: " + chi2_str).c_str());
     latex->Draw("SAME");
+    TPad *padFitParameters = new TPad("padFitParameters", "padFitParameters", 0, 0, 1, 0.2);
+    padFitParameters->Draw();
+    padFitParameters->cd();
+    
 
     c3->Write();
 

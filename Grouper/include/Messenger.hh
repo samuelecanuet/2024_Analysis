@@ -159,7 +159,7 @@ void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepp
                 cout << " ";
             cout << "├─";
         }
-        cout << Form(("\r" + Prefix + " : ").c_str())
+        cout << ("\r" + Prefix + " : ").c_str()
         << cEntry
         << " / "
         << TotalEntries
@@ -175,7 +175,7 @@ void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepp
                 cout << " ";
             cout << "├─";
         }
-        cout << Form(("\r" + Prefix + " : ").c_str())
+        cout << ("\r" + Prefix + " : ").c_str()
              << "Completed "
              << RESET
              << endl;

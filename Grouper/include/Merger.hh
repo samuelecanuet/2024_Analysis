@@ -55,9 +55,13 @@ mt19937 gen(rd());
 TFile *MERGED_File;
 TTree *MERGED_Tree;
 TFile *MATCHED_File;
+TFile *MATCHED_SiPM_FILE;
 string GROUPED_filename;
 TFile *GROUPED_File;
 TF1* Matching_function[SIGNAL_MAX];
+TF1* SiPM_ONOFF[SIGNAL_MAX];
+TF1* SiPM_HighLow[SIGNAL_MAX];
+TF1* SiPM_Gain[SIGNAL_MAX];
 TDirectory *dir_det[SIGNAL_MAX];
 TH1D *H[SIGNAL_MAX];
 TGraph *G_RearStrip[SIGNAL_MAX];
@@ -224,6 +228,8 @@ void InitProtonPulse()
 
 void LoadMatchingFunction(int Run)
 {
+  // Info("Loading matching functions for run " + to_string(Run));
+  // MATCHING SILICON
   for (int i = 0; i <= SIGNAL_MAX; i++)
   {
     if (IsDetectorSiliStrip(i))
@@ -232,10 +238,73 @@ void LoadMatchingFunction(int Run)
 
       if (Matching_function[i] == NULL)
       {
-        Matching_function[i] = new TF1(("poll1" + to_string(Run) + to_string(i)).c_str(), "x", 0, 10000); 
+        int run_past = Run;
+        // int run_future = Run;
+        TF1 *fpast = NULL;
+        // TF1 *future = NULL;
+        // looking for past run 
+        while (fpast == NULL)
+        {
+          run_past--;
+          fpast = (TF1*)MATCHED_File->Get(("poll1" + to_string(run_past) + to_string(i)).c_str());
+        } 
+        // looking for future run
+        // while (future == NULL)
+        // {
+        //   run_future++;
+        //   future = (TF1*)MATCHED_File->Get(("poll1" + to_string(run_future) + to_string(i)).c_str());
+        // }
+        // average the two functions
+        // double a1 = fpast->GetParameter(1);
+        // double b1 = fpast->GetParameter(0);
+        // double a2 = future->GetParameter(1);
+        // double b2 = future->GetParameter(0);
+        // double a = (a1 + a2) / 2;
+        // double b = (b1 + b2) / 2;
+        Matching_function[i] = (TF1*)fpast->Clone(("poll1" + to_string(Run) + to_string(i)).c_str());
+        // Matching_function[i]->SetParameter(0, b);
+        // Matching_function[i]->SetParameter(1, a);
+        Warning("Matching function for detector " + detectorName[i] + " not found for run " + to_string(Run) + ", using averaged function from run " + to_string(run_past));
+
+        // Matching_function[i] = new TF1(("poll1" + to_string(Run) + to_string(i)).c_str(), "x", 0, 10000); 
+        // Warning("Matching function for detector " + detectorName[i] + " not found for run " + to_string(Run) + ", using default function");
       }
     }
   }
+
+  // MATCHING SIPMs
+  for (int det = 0; det < SIGNAL_MAX; det++)
+  {
+    if (IsDetectorBeta(det))
+    {
+      if (Run < 80)
+        SiPM_ONOFF[det] = ((TF1 *)MATCHED_SiPM_FILE->Get(("SiPM_ONOFF_" + detectorName[det]).c_str()));
+      else
+        SiPM_ONOFF[det] = new TF1(("SiPM_ONOFF_" + detectorName[det]).c_str(), "x", 0, 100e6);
+      if (SiPM_ONOFF[det] == nullptr)
+      {
+        Error("SiPM ONOFF Function not found for detector: " + detectorName[det]);
+      }
+    }
+    if (IsDetectorBetaLow(det))
+    {
+      SiPM_HighLow[det] = ((TF1 *)MATCHED_SiPM_FILE->Get(("SiPM_HighLow_" + to_string(GetDetectorChannel(det))).c_str()));
+      if (SiPM_HighLow[det] == nullptr)
+      {
+        Error("SiPM HighLow Function not found for detector: " + detectorName[det]);
+      }
+    }
+    if (IsDetectorBeta(det))
+    {
+      SiPM_Gain[det] = InvertFunction((TF1 *)MATCHED_SiPM_FILE->Get(("SiPM_Gain_" + detectorName[det]).c_str()));
+      if (SiPM_Gain[det] == nullptr)
+      {
+        Error("SiPM Gain Function not found for detector: " + detectorName[det]);
+      }
+    }
+  }
+
+  // Info("Matching functions loaded");
 }
 
 void InsertProtonPulse(string Run, double Time)

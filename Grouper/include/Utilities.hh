@@ -173,7 +173,7 @@ double Diff_Date(string datestring, string refstring, bool FLAG2021=false)
 	return Convert_DatetoTimeSec(datestring, FLAG2021) - Convert_DatetoTimeSec(refstring, FLAG2021);
 }
 
-int Freedman_Diaconis(TH1 *hist)
+int Freedman_Diaconis(TH1 *hist, int factor = 1)
 {
 	int nEntries = hist->GetEntries();
 	int nBins = hist->GetNbinsX();
@@ -187,7 +187,7 @@ int Freedman_Diaconis(TH1 *hist)
 	double binWidth = 2 * IQR / pow(nEntries, 1.0 / 3.0);
 	int nBins_corrected = (xmax - xmin) / binWidth;
 
-	int Rebin_factor = nBins / nBins_corrected;
+	int Rebin_factor = nBins / nBins_corrected / factor;
 
 	while (nBins % Rebin_factor != 0 && Rebin_factor > 1)
 	{
@@ -195,6 +195,203 @@ int Freedman_Diaconis(TH1 *hist)
 	}
 
 	return Rebin_factor;
+}
+
+TF1 *InvertFunction(TF1 *f)
+{
+	if (f->GetNpar() == 1)
+    {
+        // bijective of linear fucntion with only slope
+        double a = f->GetParameter(0);
+        TF1 *f = new TF1("f", Form("(x)/%f", a), 0, 100e6);
+        return f;
+    }
+
+
+    if (f->GetNpar() == 2)
+    {
+        // bijective of linear fucntion
+        double a = f->GetParameter(1);
+        double b = f->GetParameter(0);
+
+        TF1 *f = new TF1("f", Form("(x - %f)/%f", b, a), 0, 100e6);
+
+        // same WHTHOUT Form but takng values of a and b
+
+        return f;
+    }
+
+    if (f->GetNpar() == 3)
+    {
+        // bijective of quadratic function
+        double a = f->GetParameter(2);
+        double b = f->GetParameter(1);
+        double c = f->GetParameter(0);
+
+        TF1 *f_plus = new TF1("f_plus", Form("(-%f + sqrt(%f^2 - 4*%f*(%f-x)))/(2*%f)", b, b, a, c, a), 0, 10000);
+        TF1 *f_minus = new TF1("f_minus", Form("(-%f - sqrt(%f^2 - 4*%f*(%f-x)))/(2*%f)", b, b, a, c, a), 0, 10000);
+
+        return f_plus;
+    }
+    else
+    {
+        Error("Function not implemented : Degree = " + to_string(f->GetNpar() - 1));
+        return nullptr;
+    }
+}
+
+// double AsymetricPol2(double *xx, double *par)
+// {
+// 	double x = xx[0];
+
+// 	// pol2 A : a*x*x + b*x + c
+// 	double a = par[0];
+// 	double b = par[1];
+// 	double c = par[2];
+
+// 	// Minimum
+// 	double x0 = -b/(2*a);
+	
+// 	// pol2 B : alpha*x*x + beta*x + gamma
+// 	double gamma = par[3];	
+// 	double alpha = 1 / ( 1 + b / (a*x0) ) * 1 / (x0*x0) * (a*x0*x0 + b*x0 + c - gamma);
+// 	double beta = b * alpha / a;
+
+// 	if (x < x0)
+// 	{
+// 		return a*x*x + b*x + c;
+// 	}
+// 	else
+// 	{
+// 		return alpha*x*x + beta*x + gamma;
+// 	}
+// }
+
+double AsymetricPol2(double *xx, double *par)
+{
+	double x = xx[0];
+
+	
+	double x0 = par[0];
+	double a  = par[1];
+	double alpha = par[2];
+	double gamma = par[3];
+
+	if (x < x0)
+	{
+		return a*(x - x0)*(x - x0) + gamma;
+	}
+	else
+	{
+		return alpha*(x - x0)*(x - x0) + gamma;
+	}	
+}
+
+double AsymetricPol2_2D(double *xx, double *par)
+{
+	double x = xx[0];
+	double y = xx[1];
+
+	// minimuim
+	double x0 = par[0];
+	double y0 = par[1];
+
+	// parameters
+	double ax1 = par[2];
+	double ax2 = par[3];
+	double ay1 = par[4];
+	double ay2 = par[5];
+	double gamma = par[6];	
+
+	double res = gamma;
+
+	if (x < x0)
+		res += ax1*(x - x0)*(x - x0);
+	else
+		res += ax2*(x - x0)*(x - x0);
+	
+	if (y < y0)
+		res += ay1*(y - y0)*(y - y0);
+	else
+		res += ay2*(y - y0)*(y - y0);
+
+	return res;
+}
+
+double AsymetricPol2_3D(double *xx, double *par)
+{
+	double x = xx[0];
+	double y = xx[1];
+	double z = xx[2];
+
+	// minimuim
+	double x0 = par[0];
+	double y0 = par[1];
+	double z0 = par[2];
+
+	// parameters
+	double ax1 = par[3];
+	double ax2 = par[4];
+	double ay1 = par[5];
+	double ay2 = par[6];
+	double az1 = par[7];
+	double az2 = par[8];
+	double gamma = par[9];	
+
+	double res = gamma;
+
+	if (x < x0)
+		res += ax1*(x - x0)*(x - x0);
+	else
+		res += ax2*(x - x0)*(x - x0);
+	
+	if (y < y0)
+		res += ay1*(y - y0)*(y - y0);
+	else
+		res += ay2*(y - y0)*(y - y0);
+
+	if (z < z0)
+		res += az1*(z - z0)*(z - z0);
+	else
+		res += az2*(z - z0)*(z - z0);
+		
+	return res;
+}
+
+double AsymetricPol2_Circle2D(double *xx, double *par)
+{
+    double x = xx[0];
+    double y = xx[1];
+
+    double a = par[0];
+    double alpha = par[1];
+    double gamma = par[2];
+
+    double X0 = par[3];
+    double Y0 = par[4];
+    double R = par[5];
+
+    double r = sqrt((x - X0)*(x - X0) + (y - Y0)*(y - Y0));
+
+    double parr[4] = {R, a, alpha, gamma};
+
+    return AsymetricPol2(&r, parr);
+}
+
+TGraphErrors *GetResiduals(TH1D *h1, TH1D* h2)
+{
+	TGraphErrors *g = new TGraphErrors();
+	for (int i = 1; i <= h1->GetNbinsX(); i++)
+	{
+		double x = h1->GetBinCenter(i);
+		if (h1->GetBinContent(i) == 0)
+			continue;
+		double y = (h1->GetBinContent(i) - h2->GetBinContent(i))/h1->GetBinContent(i);
+		double err = sqrt(pow(1/h1->GetBinContent(i), 3) + h2->GetBinContent(i)/pow(h1->GetBinContent(i), 2));
+		g->AddPoint(x, y);
+		g->SetPointError(g->GetN() - 1, 0, err);
+	}
+	return g;
 }
 
 const map<string, int> NametoCode_map = {

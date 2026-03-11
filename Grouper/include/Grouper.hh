@@ -9,6 +9,7 @@ using namespace std;
 
 int VERBOSE = 0;
 int Run;
+string NUCLEUS;
 bool FULL = false;
 
 /// FILE ///
@@ -29,6 +30,7 @@ vector<Signal> CUTTED_Tree_SiPMLow;
 
 TTree *CLEANED_Tree;
 TTree *CLEANED_Tree_detector[SIGNAL_MAX];
+TTree *CLEANED_Tree_18N;
 vector<Signal> CLEANED_Tree_Silicon;
 vector<vector<pair<Signal, Signal>>> CLEANED_Tree_SiPMGroup;
 Signal CLEANED_Tree_HRS;
@@ -59,7 +61,7 @@ TH1D *H_Channel_PileUp[SIGNAL_MAX];
 TH1D *H_Channel_Cutted[SIGNAL_MAX];
 TH2D *H_RearStrip_ChannelTime_Cutted[SIGNAL_MAX];
 TH1D *H_RearSiPM_Time_Cutted[SIGNAL_MAX];
-TH2D *H_RearSiPM_ChannelTime_Cutted[SIGNAL_MAX];
+TH2D *H_SiliconSiPM_ChannelTime_Cutted[SIGNAL_MAX];
 TH2D *H_SiPM_ChannelTime_Cutted[SIGNAL_MAX];
 TH2D *H_RearSiPM_MulitplicityTime_Cutted[SIGNAL_MAX];
 TH2D *H_SiPM_MultiplicityTime_Cutted[SIGNAL_MAX];
@@ -75,20 +77,20 @@ TCanvas *C_Strip_Channel_DiffRear[SIGNAL_MAX];
 TGraphErrors *G_RearStrip_Spread[SIGNAL_MAX];
 
 // Walk_Silicon
-TCanvas *C_RearSiPM_ChannelTime_Walk_Silicon[SIGNAL_MAX];
-TH2D *H_RearSiPM_ChannelTime_Walk_Silicon[SIGNAL_MAX];
-TGraphErrors *G_Rear_Mean_Walk_Silicon[SIGNAL_MAX];
+TCanvas *C_SiPM_ChannelTime_Walk_Silicon[SIGNAL_MAX];
+TH2D *H_SiPM_ChannelTime_Walk_Silicon[SIGNAL_MAX];
+TGraphErrors *G_Mean_Walk_Silicon[SIGNAL_MAX];
 
 // Walk_SiPM
 TCanvas *C_SiPM_ChannelTime_Walk_SiPM[SIGNAL_MAX];
 TH2D *H_SiPM_ChannelTime_Walk_SiPM[SIGNAL_MAX];
 
 // Walk Corrected
-TH2D *H_RearSiPM_ChannelTime_Walk_Corrected[SIGNAL_MAX];
 TH2D *H_SiPM_ChannelTime_Walk_Corrected[SIGNAL_MAX];
 
 // Cleaned
 TH1D *H_Channel_Cleaned[SIGNAL_MAX];
+TH1D *H_Channel_Cleaned_18N[SIGNAL_MAX];
 TH1D *H_RearMatched_Channel_Cleaned[SIGNAL_MAX];
 TH1D *H_RearMatchedMean_Channel_Cleaned[SIGNAL_MAX];
 TH2D *H_RearSiPM_ChannelTime_Cleaned[SIGNAL_MAX];
@@ -97,8 +99,8 @@ TH1D *H_SiPMHigh_Mulitplicity_Cleaned;
 TH1D *H_SiPMLow_Mulitplicity_Cleaned;
 pair<int, int> Rear_IAS[9] = {make_pair(0, 0), make_pair(40000, 44500), make_pair(36000, 39500), make_pair(36000, 39500), make_pair(33000, 36500), make_pair(36000, 39000), make_pair(33000, 36500), make_pair(35500, 38500), make_pair(35000, 38500)};
 pair<int, int> peaks_window_F[SIGNAL_MAX];
-TH1D *H_Rear_Channel_IAS_Cleaned[SIGNAL_MAX];
-TH1D *H_Rear_Channel_IAScoinc_Cleaned[SIGNAL_MAX];
+// TH1D *H_Rear_Channel_IAS_Cleaned[SIGNAL_MAX];
+// TH1D *H_Rear_Channel_IAScoinc_Cleaned[SIGNAL_MAX];
 TCanvas *C_IAS_Channel_Cleaned;
 TH1D *H_SiPMLowHigh_Time_One[SIGNAL_MAX];
 TH1D *H_SiPMLowHigh_Time_Multiple[SIGNAL_MAX];
@@ -117,17 +119,16 @@ TH2D *H_2SiPM_Channel_Couple[SIGNAL_MAX];
 TH1D *H_Multiplicity_Groups;
 TH1D *H_Multiplicity_SubGroups;
 TH1D *H_Multiplicity_Groups_IAS;
-TH1D* H_Multiplicity_SubGroups_IAS;
-TH1D* H_Time_SubGroups[SIGNAL_MAX];
+TH1D *H_Multiplicity_SubGroups_IAS;
+TH1D *H_Time_SubGroups[SIGNAL_MAX];
 
 // DT
 TH2D *H_RearSiPM_ChannelTime_dt[SIGNAL_MAX];
 TH2D *H_RearSiPM_ChannelTime_dt_det[SIGNAL_MAX][SIGNAL_MAX];
 
-
 // FITS
 TCanvas *C_Strip_Cutting_Fits;
-TCanvas *C_Rear_Walk_Silicon_Fits;
+TCanvas *C_Walk_Silicon_Fits;
 TCanvas *C_SiPM_Walk_SiPM_Fits;
 
 // CASES
@@ -141,8 +142,10 @@ TH1D *H_RearStrip_Time_A[SIGNAL_MAX];
 // B
 TH1D *H_Channel_B[SIGNAL_MAX];
 TH2D *H_RearStrip_Channel_B[SIGNAL_MAX];
+TH2D *H_RearStrip_ChannelTime_B[SIGNAL_MAX]; 
 TH2D *H_Rear2Strip_Channel_B[SIGNAL_MAX];
 TH2D *H_2Strip_Channel_B[SIGNAL_MAX];
+TH1D *H_2Strip_Time_B[SIGNAL_MAX];
 TH1D *H_RearStrip_Time_B[SIGNAL_MAX];
 // C
 TH1D *H_Channel_C[SIGNAL_MAX];
@@ -161,17 +164,9 @@ TH1D *H_Channel_E[SIGNAL_MAX];
 TH2D *H_2Strip_Channel_E[SIGNAL_MAX];
 TH1D *H_2Strip_Time_E[SIGNAL_MAX];
 TH2D *H_2Strip_Label_E;
-// F
-TH1D *H_Channel_F[SIGNAL_MAX];
-// G
-TH1D *H_Channel_G[SIGNAL_MAX];
-TH2D *H_RearStrip_Channel_G;
-TH1D *H_RearStrip_Time_G;
-TH2D *H_RearStrip_Label_G;
-// H
-TH1D *H_Channel_H[SIGNAL_MAX];
 // check
 TH2D *H_2Strip_Label_Check;
+TGraphErrors *G_IAS_LossesAfterCut;
 //////////////////////////////////////
 
 TGraphErrors *spread_up[SIGNAL_MAX];
@@ -246,11 +241,11 @@ TF1 *MeanAcceptance_Walk_SiPM[SIGNAL_MAX];
 
 //////// calibration from Calibration.cc  ////////
 double ManualCalibFitted[SIGNAL_MAX][3];
+TF1 *F_Calibration[SIGNAL_MAX];
 
 // COUNTER //
 int counter_all_IAS = 0;
 int counter_condition = 0;
-
 
 ///////// FITS FUNCTIONS /////////////
 double skewedgauss(double *x, double *p)
@@ -308,7 +303,7 @@ void InitPeakWindow(string nuclei)
       string DetName;
       iss >> DetName >> min >> max;
 
-      for (size_t i = 0; i < detectorNum; ++i)
+      for (size_t i = 0; i < detectorNum; i++)
       {
         if (DetName == detectorName[i])
         {
@@ -326,42 +321,23 @@ void InitPeakWindow(string nuclei)
 
 void InitCalibration()
 {
-  string CalibFileName;
-
-  CalibFileName = "Config_Files/Calibration_" + to_string(YEAR) + ".txt";
-
-  ifstream file(CalibFileName);
-
-  if (file.is_open())
-  {
-    Info("Calibration file found");
-
-    string line;
-    while (getline(file, line))
+    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + ".root").c_str(), "READ");
+    for (int det = 1;  det < SIGNAL_MAX; det++)
     {
-      istringstream iss(line);
-      int det;
-      double a;
-      double b;
-      double c;
-      iss >> det >> a >> b >> c;
-      ManualCalibFitted[det][0] = a;
-      ManualCalibFitted[det][1] = b;
-      ManualCalibFitted[det][2] = c;
+        F_Calibration[det] = (TF1*)f->Get(("Calibration_" + detectorName[det]).c_str());
+        // Calibration_Result[det] = (TFitResult*)f->Get(("Calibration_R_" + detectorName[det]).c_str());
     }
-  }
-  else
-  {
-    Error("No Calibration file found");
-  }
+    f->Close();
 }
 
 void SaveFitParameters()
-{ 
+{
   string add = "_2024";
-  if (FLAG2021) add = "_2021";
-  if (FLAG2025) add = "_2025";
-  TFile *file = MyTFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters"+add+".root").c_str(), "RECREATE");
+  if (FLAG2021)
+    add = "_2021";
+  if (FLAG2025)
+    add = "_2025";
+  TFile *file = MyTFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters" + add + ".root").c_str(), "RECREATE");
 
   TGraph *MeanAcceptance_Graph = new TGraph();
   for (int i = 0; i < detectorNum; i++)
@@ -378,21 +354,32 @@ void SaveFitParameters()
     }
     else if (IsDetectorSiliStrip(i))
     {
+
+      //cut
       SpreadAcceptance[i]->SetName(("SpreadAcceptance_" + detectorName[i]).c_str());
       SpreadAcceptance[i]->Write();
 
       MeanAcceptance_Graph->SetPoint(i, i, MeanAcceptance[i]);
+
+      //walk
+      MeanAcceptance_Walk_Silicon[i]->SetName(("MeanAcceptance_Walk_Silicon_" + detectorName[i]).c_str());
+      MeanAcceptance_Walk_Silicon[i]->Write();
     }
   }
   MeanAcceptance_Graph->SetName("MeanAcceptance");
   MeanAcceptance_Graph->Write();
 
   file->Close();
+
+  Success("Fit parameters saved");
 }
 
 void LoadFitParameters()
 {
-  TFile *file = MyTFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters_"+ to_string(YEAR) +".root").c_str(), "READ");
+  string add = "_2024";
+  if (FLAG2021) add = "_2021";
+  if (FLAG2025) add = "_2025";
+  TFile *file = MyTFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters"+add+".root").c_str(), "READ");
   for (int i = 0; i < detectorNum; i++)
   {
     if (IsDetectorBeta(i))
@@ -413,6 +400,8 @@ void LoadFitParameters()
     }
     else if (IsDetectorSiliStrip(i))
     {
+
+      //cut
       SpreadAcceptance[i] = (TF1 *)file->Get(("SpreadAcceptance_" + detectorName[i]).c_str());
       MeanAcceptance[i] = ((TGraph *)file->Get("MeanAcceptance"))->GetY()[i];
       if (SpreadAcceptance[i] == nullptr)
@@ -423,11 +412,25 @@ void LoadFitParameters()
       {
         Warning(("MeanAcceptance_" + detectorName[i]).c_str());
       }
+
+      //walk
+      MeanAcceptance_Walk_Silicon[i] = (TF1 *)file->Get(("MeanAcceptance_Walk_Silicon_" + detectorName[i]).c_str());
+      if (MeanAcceptance_Walk_Silicon[i] == nullptr)
+      {
+        Error(("MeanAcceptance_Walk_Silicon_" + detectorName[i]));
+      }
+
     }
   }
   file->Close();
   GROUPED_File->cd();
   Success("Fit parameters loaded");
+}
+
+double WalkSilicon_Interpolate(double *x, double *p)
+{
+  int det = (int)p[0];
+  return G_Mean_Walk_Silicon[det]->Eval(x[0]);
 }
 
 //////////////////////////////////////
@@ -482,22 +485,20 @@ inline int InitHistograms_Grouped()
   // Cleaned
   dir_Cleaned = GROUPED_File->mkdir("Cleaned");
   dir_Matching_Cleaned = dir_Cleaned->mkdir("Matching");
-  C_IAS_Channel_Cleaned = new TCanvas("C_IAS_Channel_Cleaned", "C_IAS_Channel_Cleaned", 800, 800);
-  C_IAS_Channel_Cleaned->Divide(4, 2);
 
   // FIT RESULTS
   dir_Fits = GROUPED_File->mkdir("Fits");
   C_Strip_Cutting_Fits = new TCanvas("C_Strip_Cutting_Fits", "C_Strip_Cutting_Fits", 800, 800);
   C_Strip_Cutting_Fits->Divide(SILI_SIZE - 1, SILI_NUM);
-  C_Rear_Walk_Silicon_Fits = new TCanvas("C_Rear_Walk_Silicon_Fits", "C_Rear_Walk_Silicon_Fits", 800, 800);
-  C_Rear_Walk_Silicon_Fits->Divide(4, 2);
+  C_Walk_Silicon_Fits = new TCanvas("C_Walk_Silicon_Fits", "C_Walk_Silicon_Fits", 800, 800);
+  C_Walk_Silicon_Fits->Divide(SILI_SIZE - 1, SILI_NUM);
   C_SiPM_Walk_SiPM_Fits = new TCanvas("C_SiPM_Walk_SiPM_Fits", "C_SiPM_Walk_SiPM_Fits", 800, 800);
   C_SiPM_Walk_SiPM_Fits->Divide(4, 2);
 
   // Coincidences
   dirCoincidences = GROUPED_File->mkdir("Coincidences");
 
-  for (size_t i = 0; i < detectorNum; ++i)
+  for (size_t i = 0; i < detectorNum; i++)
   {
     if (IsDetectorSiliStrip(i))
     {
@@ -564,23 +565,17 @@ inline int InitHistograms_Grouped()
       H_Channel_E[i]->GetXaxis()->CenterTitle();
       H_Channel_E[i]->GetYaxis()->CenterTitle();
 
-      H_Channel_G[i] = new TH1D(("Channel_G_" + detectorName[i]).c_str(), ("Channel_G_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
-      H_Channel_G[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel_G[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel_G[i]->GetXaxis()->CenterTitle();
-      H_Channel_G[i]->GetYaxis()->CenterTitle();
-
-      H_Channel_H[i] = new TH1D(("Channel_H_" + detectorName[i]).c_str(), ("Channel_H_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
-      H_Channel_H[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel_H[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel_H[i]->GetXaxis()->CenterTitle();
-      H_Channel_H[i]->GetYaxis()->CenterTitle();
-
       H_Channel_Cleaned[i] = new TH1D(("Channel_Cleaned_" + detectorName[i]).c_str(), ("Channel_Cleaned_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
       H_Channel_Cleaned[i]->GetXaxis()->SetTitle("Channel");
       H_Channel_Cleaned[i]->GetYaxis()->SetTitle("Counts");
       H_Channel_Cleaned[i]->GetXaxis()->CenterTitle();
       H_Channel_Cleaned[i]->GetYaxis()->CenterTitle();
+
+      H_Channel_Cleaned_18N[i] = new TH1D(("Channel_Cleaned_18N_" + detectorName[i]).c_str(), ("Channel_Cleaned_18N_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
+      H_Channel_Cleaned_18N[i]->GetXaxis()->SetTitle("Channel");
+      H_Channel_Cleaned_18N[i]->GetYaxis()->SetTitle("Counts");
+      H_Channel_Cleaned_18N[i]->GetXaxis()->CenterTitle();
+      H_Channel_Cleaned_18N[i]->GetYaxis()->CenterTitle();
 
       H_Channel_Cutted[i] = new TH1D(("Channel_Cutted_" + detectorName[i]).c_str(), ("Channel_Cutted_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
       H_Channel_Cutted[i]->GetXaxis()->SetTitle("Channel");
@@ -660,6 +655,12 @@ inline int InitHistograms_Grouped()
       H_RearStrip_Time_C[i]->GetXaxis()->CenterTitle();
       H_RearStrip_Time_C[i]->GetYaxis()->CenterTitle();
 
+      H_2Strip_Time_B[i] = new TH1D(("2Strip_Time_B_" + detectorName[i]).c_str(), ("2Strip_Time_B_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili);
+      H_2Strip_Time_B[i]->GetXaxis()->SetTitle("Time between 2 strips (ns)");
+      H_2Strip_Time_B[i]->GetYaxis()->SetTitle("Counts");
+      H_2Strip_Time_B[i]->GetXaxis()->CenterTitle();
+      H_2Strip_Time_B[i]->GetYaxis()->CenterTitle();
+
       H_2Strip_Time_C[i] = new TH1D(("2Strip_Time_C_" + detectorName[i]).c_str(), ("2Strip_Time_C_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili);
       H_2Strip_Time_C[i]->GetXaxis()->SetTitle("Time between 2 strips (ns)");
       H_2Strip_Time_C[i]->GetYaxis()->SetTitle("Counts");
@@ -696,6 +697,18 @@ inline int InitHistograms_Grouped()
       H_2Strip_Channel_E[i]->GetXaxis()->CenterTitle();
       H_2Strip_Channel_E[i]->GetYaxis()->CenterTitle();
 
+      H_RearStrip_ChannelTime_A[i] = new TH2D(("RearStrip_ChannelTime_A_" + detectorName[i]).c_str(), ("RearStrip_ChannelTime_A_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili, eSiliN / 10, eSiliMin, eSiliMax);
+      H_RearStrip_ChannelTime_A[i]->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
+      H_RearStrip_ChannelTime_A[i]->GetYaxis()->SetTitle("Strip Channel");
+      H_RearStrip_ChannelTime_A[i]->GetXaxis()->CenterTitle();
+      H_RearStrip_ChannelTime_A[i]->GetYaxis()->CenterTitle();
+
+      H_RearStrip_ChannelTime_B[i] = new TH2D(("RearStrip_ChannelTime_B_" + detectorName[i]).c_str(), ("RearStrip_ChannelTime_B_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili, eSiliN / 10, eSiliMin, eSiliMax);
+      H_RearStrip_ChannelTime_B[i]->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
+      H_RearStrip_ChannelTime_B[i]->GetYaxis()->SetTitle("Strip Channel");
+      H_RearStrip_ChannelTime_B[i]->GetXaxis()->CenterTitle();
+      H_RearStrip_ChannelTime_B[i]->GetYaxis()->CenterTitle();
+
       H_RearStrip_Time_Cutted[i] = new TH1D(("RearStrip_Time_Cutted_" + detectorName[i]).c_str(), ("RearStrip_Time_Cutted_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili);
       H_RearStrip_Time_Cutted[i]->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
       H_RearStrip_Time_Cutted[i]->GetYaxis()->SetTitle("Counts");
@@ -726,23 +739,35 @@ inline int InitHistograms_Grouped()
       H_Strip_Channel_DiffRearvsStrip_Cutted[i]->GetXaxis()->CenterTitle();
       H_Strip_Channel_DiffRearvsStrip_Cutted[i]->GetYaxis()->CenterTitle();
 
-      H_RearStrip_ChannelTime_A[i] = new TH2D(("RearStrip_ChannelTime_A_" + detectorName[i]).c_str(), ("RearStrip_ChannelTime_A_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili, eSiliN / 10, eSiliMin, eSiliMax);
-      H_RearStrip_ChannelTime_A[i]->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
-      H_RearStrip_ChannelTime_A[i]->GetYaxis()->SetTitle("Strip Channel");
-      H_RearStrip_ChannelTime_A[i]->GetXaxis()->CenterTitle();
-      H_RearStrip_ChannelTime_A[i]->GetYaxis()->CenterTitle();
-
       H_RearStrip_ChannelTime_Cutted[i] = new TH2D(("RearStrip_ChannelTime_Cutted_" + detectorName[i]).c_str(), ("RearStrip_ChannelTime_Cutted_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili, eSiliN / 10, eSiliMin, eSiliMax);
       H_RearStrip_ChannelTime_Cutted[i]->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
       H_RearStrip_ChannelTime_Cutted[i]->GetYaxis()->SetTitle("Strip Channel");
       H_RearStrip_ChannelTime_Cutted[i]->GetXaxis()->CenterTitle();
       H_RearStrip_ChannelTime_Cutted[i]->GetYaxis()->CenterTitle();
 
+      H_SiliconSiPM_ChannelTime_Cutted[i] = new TH2D(("SiliconSiPM_ChannelTime_Cutted_" + detectorName[i]).c_str(), ("SiliconSiPM_ChannelTime_Cutted_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetXaxis()->SetTitle("Strip SiPM Time (ns)");
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetYaxis()->SetTitle("Strip Channel");
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetXaxis()->CenterTitle();
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetYaxis()->CenterTitle();
+
       H_RearSiPM_ChannelTime_dt[i] = new TH2D(("StripSiPM_ChannelTime_dt_" + detectorName[i]).c_str(), ("StripSiPM_ChannelTime_dt_" + detectorName[i]).c_str(), 2e3, 6e3, 10e3, eSiliN / 10, eSiliMin, eSiliMax);
       H_RearSiPM_ChannelTime_dt[i]->GetXaxis()->SetTitle("Strip SiPM Time (ns)");
       H_RearSiPM_ChannelTime_dt[i]->GetYaxis()->SetTitle("Strip Channel");
       H_RearSiPM_ChannelTime_dt[i]->GetXaxis()->CenterTitle();
       H_RearSiPM_ChannelTime_dt[i]->GetYaxis()->CenterTitle();
+
+      H_SiPM_ChannelTime_Walk_Silicon[i] = new TH2D(("StripSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), ("StripSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetXaxis()->SetTitle("Strip SiPM Time (ns)");
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetYaxis()->SetTitle("Strip Channel");
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetXaxis()->CenterTitle();
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetYaxis()->CenterTitle();
+
+      H_SiPM_ChannelTime_Walk_Corrected[i] = new TH2D(("StripSiPM_ChannelTime_Walk_Corrected_" + detectorName[i]).c_str(), ("StripSiPM_ChannelTime_Walk_Corrected_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetXaxis()->SetTitle("Strip SiPM Time (ns)");
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetYaxis()->SetTitle("Strip Channel");
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetXaxis()->CenterTitle();
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetYaxis()->CenterTitle();
     }
 
     if (IsDetectorSiliBack(i))
@@ -810,24 +835,6 @@ inline int InitHistograms_Grouped()
       H_Channel_E[i]->GetXaxis()->CenterTitle();
       H_Channel_E[i]->GetYaxis()->CenterTitle();
 
-      H_Channel_F[i] = new TH1D(("Channel_F_" + detectorName[i]).c_str(), ("Channel_F_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
-      H_Channel_F[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel_F[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel_F[i]->GetXaxis()->CenterTitle();
-      H_Channel_F[i]->GetYaxis()->CenterTitle();
-
-      H_Channel_G[i] = new TH1D(("Channel_G_" + detectorName[i]).c_str(), ("Channel_G_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
-      H_Channel_G[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel_G[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel_G[i]->GetXaxis()->CenterTitle();
-      H_Channel_G[i]->GetYaxis()->CenterTitle();
-
-      H_Channel_H[i] = new TH1D(("Channel_H_" + detectorName[i]).c_str(), ("Channel_H_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
-      H_Channel_H[i]->GetXaxis()->SetTitle("Channel");
-      H_Channel_H[i]->GetYaxis()->SetTitle("Counts");
-      H_Channel_H[i]->GetXaxis()->CenterTitle();
-      H_Channel_H[i]->GetYaxis()->CenterTitle();
-
       H_Channel_Cutted[i] = new TH1D(("Channel_Cutted_" + detectorName[i]).c_str(), ("Channel_Cutted_" + detectorName[i]).c_str(), eSiliN, eSiliMin, eSiliMax);
       H_Channel_Cutted[i]->GetXaxis()->SetTitle("Channel");
       H_Channel_Cutted[i]->GetYaxis()->SetTitle("Counts");
@@ -846,7 +853,7 @@ inline int InitHistograms_Grouped()
       H_RearStrip_Channel_RAW[i]->GetXaxis()->CenterTitle();
       H_RearStrip_Channel_RAW[i]->GetYaxis()->CenterTitle();
 
-      H_RearStrip_Channel_A[i] = new TH2D(("RearStrip_Channel_A_" + detectorName[i]).c_str(), ("RearStrip_Channel_A_" + detectorName[i]).c_str(), eSiliN / 10, 30e3, 40e3, eSiliN / 10, 30e3, 50e3);
+      H_RearStrip_Channel_A[i] = new TH2D(("RearStrip_Channel_A_" + detectorName[i]).c_str(), ("RearStrip_Channel_A_" + detectorName[i]).c_str(), eSiliN / 10, eSiliMin, eSiliMax, eSiliN / 10, eSiliMin, eSiliMax);
       H_RearStrip_Channel_A[i]->GetXaxis()->SetTitle("Rear Channel");
       H_RearStrip_Channel_A[i]->GetYaxis()->SetTitle("Strip Channel");
       H_RearStrip_Channel_A[i]->GetXaxis()->CenterTitle();
@@ -924,17 +931,29 @@ inline int InitHistograms_Grouped()
       H_2Strip_Time_E[i]->GetXaxis()->CenterTitle();
       H_2Strip_Time_E[i]->GetYaxis()->CenterTitle();
 
+      H_RearStrip_ChannelTime_A[i] = new TH2D(("RearStrip_ChannelTime_A_" + detectorName[i]).c_str(), ("RearStrip_ChannelTime_A_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili, eSiliN / 10, eSiliMin, eSiliMax);
+      H_RearStrip_ChannelTime_A[i]->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
+      H_RearStrip_ChannelTime_A[i]->GetYaxis()->SetTitle("Rear Channel");
+      H_RearStrip_ChannelTime_A[i]->GetXaxis()->CenterTitle();
+      H_RearStrip_ChannelTime_A[i]->GetYaxis()->CenterTitle();
+
+      H_RearStrip_ChannelTime_B[i] = new TH2D(("RearStrip_ChannelTime_B_" + detectorName[i]).c_str(), ("RearStrip_ChannelTime_B_" + detectorName[i]).c_str(), winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili, eSiliN / 10, eSiliMin, eSiliMax);
+      H_RearStrip_ChannelTime_B[i]->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
+      H_RearStrip_ChannelTime_B[i]->GetYaxis()->SetTitle("Rear Channel");
+      H_RearStrip_ChannelTime_B[i]->GetXaxis()->CenterTitle();
+      H_RearStrip_ChannelTime_B[i]->GetYaxis()->CenterTitle();
+
       H_RearSiPM_Time_Cutted[i] = new TH1D(("RearSiPM_Time_Cutted_" + detectorName[i]).c_str(), ("RearSiPM_Time_Cutted_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
       H_RearSiPM_Time_Cutted[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
       H_RearSiPM_Time_Cutted[i]->GetYaxis()->SetTitle("Counts");
       H_RearSiPM_Time_Cutted[i]->GetXaxis()->CenterTitle();
       H_RearSiPM_Time_Cutted[i]->GetYaxis()->CenterTitle();
 
-      H_RearSiPM_ChannelTime_Cutted[i] = new TH2D(("RearSiPM_ChannelTime_Cutted_" + detectorName[i]).c_str(), ("RearSiPM_ChannelTime_Cutted_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
-      H_RearSiPM_ChannelTime_Cutted[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_ChannelTime_Cutted[i]->GetYaxis()->SetTitle("Rear Channel");
-      H_RearSiPM_ChannelTime_Cutted[i]->GetXaxis()->CenterTitle();
-      H_RearSiPM_ChannelTime_Cutted[i]->GetYaxis()->CenterTitle();
+      H_SiliconSiPM_ChannelTime_Cutted[i] = new TH2D(("RearSiPM_ChannelTime_Cutted_" + detectorName[i]).c_str(), ("RearSiPM_ChannelTime_Cutted_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetYaxis()->SetTitle("Rear Channel");
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetXaxis()->CenterTitle();
+      H_SiliconSiPM_ChannelTime_Cutted[i]->GetYaxis()->CenterTitle();
 
       H_RearSiPM_MulitplicityTime_Cutted[i] = new TH2D(("RearSiPM_MulitplicityTime_Cutted_" + detectorName[i]).c_str(), ("RearSiPM_MulitplicityTime_Cutted_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, 20, 0, 20);
       H_RearSiPM_MulitplicityTime_Cutted[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
@@ -948,35 +967,23 @@ inline int InitHistograms_Grouped()
       H_SiPM_MultiplicityTime_Cutted[i]->GetXaxis()->CenterTitle();
       H_SiPM_MultiplicityTime_Cutted[i]->GetYaxis()->CenterTitle();
 
-      H_RearSiPM_ChannelTime_Walk_Silicon[i] = new TH2D(("RearSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), ("RearSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
-      H_RearSiPM_ChannelTime_Walk_Silicon[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_ChannelTime_Walk_Silicon[i]->GetYaxis()->SetTitle("Rear Channel");
-      H_RearSiPM_ChannelTime_Walk_Silicon[i]->GetXaxis()->CenterTitle();
-      H_RearSiPM_ChannelTime_Walk_Silicon[i]->GetYaxis()->CenterTitle();
+      H_SiPM_ChannelTime_Walk_Silicon[i] = new TH2D(("RearSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), ("RearSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetYaxis()->SetTitle("Rear Channel");
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetXaxis()->CenterTitle();
+      H_SiPM_ChannelTime_Walk_Silicon[i]->GetYaxis()->CenterTitle();
 
-      H_RearSiPM_ChannelTime_Walk_Corrected[i] = new TH2D(("RearSiPM_ChannelTime_Walk_Corrected_" + detectorName[i]).c_str(), ("RearSiPM_ChannelTime_Walk_Corrected_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
-      H_RearSiPM_ChannelTime_Walk_Corrected[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
-      H_RearSiPM_ChannelTime_Walk_Corrected[i]->GetYaxis()->SetTitle("Rear Channel");
-      H_RearSiPM_ChannelTime_Walk_Corrected[i]->GetXaxis()->CenterTitle();
-      H_RearSiPM_ChannelTime_Walk_Corrected[i]->GetYaxis()->CenterTitle();
+      H_SiPM_ChannelTime_Walk_Corrected[i] = new TH2D(("RearSiPM_ChannelTime_Walk_Corrected_" + detectorName[i]).c_str(), ("RearSiPM_ChannelTime_Walk_Corrected_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetYaxis()->SetTitle("Rear Channel");
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetXaxis()->CenterTitle();
+      H_SiPM_ChannelTime_Walk_Corrected[i]->GetYaxis()->CenterTitle();
 
       H_RearSiPM_ChannelTime_Cleaned[i] = new TH2D(("RearSiPM_ChannelTime_Cleaned_" + detectorName[i]).c_str(), ("RearSiPM_ChannelTime_Cleaned_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta, eSiliN / 10, eSiliMin, eSiliMax);
       H_RearSiPM_ChannelTime_Cleaned[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
       H_RearSiPM_ChannelTime_Cleaned[i]->GetYaxis()->SetTitle("Rear Channel");
       H_RearSiPM_ChannelTime_Cleaned[i]->GetXaxis()->CenterTitle();
       H_RearSiPM_ChannelTime_Cleaned[i]->GetYaxis()->CenterTitle();
-
-      H_Rear_Channel_IAS_Cleaned[i] = new TH1D(("Rear_Channel_IAS_Cleaned_" + detectorName[i]).c_str(), ("Rear_Channel_IAS_Cleaned_" + detectorName[i]).c_str(), (Rear_IAS[GetDetector(i)].first + Rear_IAS[GetDetector(i)].second) / 10, Rear_IAS[GetDetector(i)].first, Rear_IAS[GetDetector(i)].second);
-      H_Rear_Channel_IAS_Cleaned[i]->GetXaxis()->SetTitle("Rear Channel");
-      H_Rear_Channel_IAS_Cleaned[i]->GetYaxis()->SetTitle("Counts");
-      H_Rear_Channel_IAS_Cleaned[i]->GetXaxis()->CenterTitle();
-      H_Rear_Channel_IAS_Cleaned[i]->GetYaxis()->CenterTitle();
-
-      H_Rear_Channel_IAScoinc_Cleaned[i] = new TH1D(("Rear_Channel_IAScoinc_Cleaned_" + detectorName[i]).c_str(), ("Rear_Channel_IAScoinc_Cleaned_" + detectorName[i]).c_str(), (Rear_IAS[GetDetector(i)].first + Rear_IAS[GetDetector(i)].second) / 10, Rear_IAS[GetDetector(i)].first, Rear_IAS[GetDetector(i)].second);
-      H_Rear_Channel_IAScoinc_Cleaned[i]->GetXaxis()->SetTitle("Rear Channel");
-      H_Rear_Channel_IAScoinc_Cleaned[i]->GetYaxis()->SetTitle("Counts");
-      H_Rear_Channel_IAScoinc_Cleaned[i]->GetXaxis()->CenterTitle();
-      H_Rear_Channel_IAScoinc_Cleaned[i]->GetYaxis()->CenterTitle();
 
       H_RearSiPM_Time_Nearest[i] = new TH1D(("RearSiPM_Time_Nearest_" + detectorName[i]).c_str(), ("RearSiPM_Time_Nearest_" + detectorName[i]).c_str(), winGroupN_Beta, winGroupMin_Beta, winGroupMax_Beta);
       H_RearSiPM_Time_Nearest[i]->GetXaxis()->SetTitle("Rear-SiPM Time (ns)");
@@ -989,7 +996,6 @@ inline int InitHistograms_Grouped()
       H_RearSiPM_ChannelTime_dt[i]->GetYaxis()->SetTitle("Rear Channel");
       H_RearSiPM_ChannelTime_dt[i]->GetXaxis()->CenterTitle();
       H_RearSiPM_ChannelTime_dt[i]->GetYaxis()->CenterTitle();
-
     }
 
     if (IsDetectorBetaHigh(i))
@@ -1122,8 +1128,6 @@ inline int InitHistograms_Grouped()
           H_RearSiPM_ChannelTime_dt_det[det][i]->GetYaxis()->CenterTitle();
         }
       }
-
-      
     }
 
     if (IsDetectorBetaLow(i))
@@ -1279,28 +1283,6 @@ inline int InitHistograms_Grouped()
   H_2Strip_Label_E->GetXaxis()->CenterTitle();
   H_2Strip_Label_E->GetYaxis()->CenterTitle();
 
-  /////////////////////////////////////////////////////
-  /////// FOR CASE G : MULTIPLE DETECTOR DETECTION /////
-  /////////////////////////////////////////////////////
-
-  H_RearStrip_Channel_G = new TH2D("RearStrip_Channel_G", "RearStrip_Channel_G", eSiliN / 10, eSiliMin, eSiliMax, eSiliN / 10, eSiliMin, eSiliMax);
-  H_RearStrip_Channel_G->GetXaxis()->SetTitle("Rear Channel");
-  H_RearStrip_Channel_G->GetYaxis()->SetTitle("Strip Channel");
-  H_RearStrip_Channel_G->GetXaxis()->CenterTitle();
-  H_RearStrip_Channel_G->GetYaxis()->CenterTitle();
-
-  H_RearStrip_Time_G = new TH1D("RearStrip_Time_G", "RearStrip_Time_G", winGroupN_Sili, winGroupMin_Sili, winGroupMax_Sili);
-  H_RearStrip_Time_G->GetXaxis()->SetTitle("Rear-Strip Time (ns)");
-  H_RearStrip_Time_G->GetYaxis()->SetTitle("Counts");
-  H_RearStrip_Time_G->GetXaxis()->CenterTitle();
-  H_RearStrip_Time_G->GetYaxis()->CenterTitle();
-
-  H_RearStrip_Label_G = new TH2D("RearStrip_Label_G", "RearStrip_Label_G", 80, 10, 90, 80, 10, 90);
-  H_RearStrip_Label_G->GetXaxis()->SetTitle("Strip Label");
-  H_RearStrip_Label_G->GetYaxis()->SetTitle("Rear Label");
-  H_RearStrip_Label_G->GetXaxis()->CenterTitle();
-  H_RearStrip_Label_G->GetYaxis()->CenterTitle();
-
   ///////////////////////////////////////////
   /////// checking faster configuration /////
   ///////////////////////////////////////////
@@ -1360,18 +1342,27 @@ inline int InitHistograms_Grouped()
   H_Multiplicity_SubGroups->GetYaxis()->CenterTitle();
 
   H_Multiplicity_Groups_IAS = new TH1D(("Multiplicity_Groups_IAS"), ("Multiplicity_Groups_IAS"), 20, 0, 20);
-  H_Multiplicity_Groups_IAS->GetXaxis()->SetTitle("# of SubGroups");
+  H_Multiplicity_Groups_IAS->GetXaxis()->SetTitle("# of SubGroups (IAS)");
   H_Multiplicity_Groups_IAS->GetYaxis()->SetTitle("Counts");
   H_Multiplicity_Groups_IAS->GetXaxis()->CenterTitle();
   H_Multiplicity_Groups_IAS->GetYaxis()->CenterTitle();
 
   H_Multiplicity_SubGroups_IAS = new TH1D(("Multiplicity_SubGroups_IAS"), ("Multiplicity_SubGroups_IAS"), 20, 0, 20);
-  H_Multiplicity_SubGroups_IAS->GetXaxis()->SetTitle("Multiplicity");
+  H_Multiplicity_SubGroups_IAS->GetXaxis()->SetTitle("Multiplicity (IAS)");
   H_Multiplicity_SubGroups_IAS->GetYaxis()->SetTitle("Counts");
   H_Multiplicity_SubGroups_IAS->GetXaxis()->CenterTitle();
   H_Multiplicity_SubGroups_IAS->GetYaxis()->CenterTitle();
 
   //////////////////////////////////////////////////////
+  //////// IAS LOSSES /////////////////////
+  //////////////////////////////////////////////////////
+
+  G_IAS_LossesAfterCut = new TGraphErrors();
+  G_IAS_LossesAfterCut->SetTitle("IAS_LossesAfterCut");
+  G_IAS_LossesAfterCut->GetXaxis()->SetTitle("Detector Label");
+  G_IAS_LossesAfterCut->GetYaxis()->SetTitle("Ratio (%)");
+  G_IAS_LossesAfterCut->GetXaxis()->CenterTitle();
+  G_IAS_LossesAfterCut->GetYaxis()->CenterTitle();
 
   return 0;
 }
@@ -1379,7 +1370,7 @@ inline int InitHistograms_Grouped()
 inline int WriteHistograms_Grouped()
 {
   GROUPED_File->cd();
-  for (size_t i = 0; i < detectorNum; ++i)
+  for (size_t i = 0; i < detectorNum; i++)
   {
     ProgressCounter(i, detectorNum, " <INFO>  Writing Histograms");
     GROUPED_File->cd();
@@ -1398,8 +1389,6 @@ inline int WriteHistograms_Grouped()
       H_Channel_C[i]->Write();
       H_Channel_D[i]->Write();
       H_Channel_E[i]->Write();
-      H_Channel_G[i]->Write();
-      H_Channel_H[i]->Write();
       H_RearStrip_Channel_RAW[i]->Write();
       H_RearStrip_Channel_A[i]->Write();
       H_RearStrip_Channel_B[i]->Write();
@@ -1442,7 +1431,10 @@ inline int WriteHistograms_Grouped()
       // WRTTING //
       dir_Strip_Time_Detector[i]->cd();
       H_RearStrip_Time_A[i]->Write();
+      H_RearStrip_ChannelTime_A[i]->Write();
       H_RearStrip_Time_B[i]->Write();
+      H_RearStrip_ChannelTime_B[i]->Write();
+      H_2Strip_Time_B[i]->Write();
       H_RearStrip_Time_C[i]->Write();
       H_2Strip_Time_C[i]->Write();
       H_2Strip_Time_D[i]->Write();
@@ -1530,11 +1522,15 @@ inline int WriteHistograms_Grouped()
       int status = 0;
       if (G_RearStrip_Spread[i]->GetN() > 5)
       {
-        if (SpreadAcceptance[i] == nullptr)
-          status = G_RearStrip_Spread[i]->Fit(SpreadAcceptance[i], "QR");
+        // if (SpreadAcceptance[i] == nullptr)
+          status = G_RearStrip_Spread[i]->Fit(SpreadAcceptance[i], "Q");
 
         if (status != 0)
           Warning("Fit failed for " + detectorName[i] + " during Rear/Strip spread correction.");
+      }
+      else
+      {
+        Warning("Not enough points to fit for " + detectorName[i] + " during Rear/Strip spread correction.");
       }
 
       double yfullrange = G_RearStrip_Spread[i]->GetYaxis()->GetXmax() - G_RearStrip_Spread[i]->GetYaxis()->GetXmin();
@@ -1568,14 +1564,18 @@ inline int WriteHistograms_Grouped()
       C_Strip_Channel_DiffRear[i]->cd();
 
       ///////deleting
-      delete H_Channel_RAW[i];
+      // delete H_Channel_RAW[i];
+      delete H_Channel_PileUp[i];
       delete H_Channel_A[i];
-      // delete H_Channel_B[i];
-      // delete H_Channel_C[i];
-      // delete H_Channel_D[i];
-      // delete H_Channel_E[i];
-      // delete H_Channel_G[i];
-      // delete C_RAW_CASE_A;
+      delete H_Channel_B[i];
+      delete H_Channel_C[i];
+      delete H_Channel_D[i];
+      delete H_Channel_E[i];
+      delete H_2Strip_Channel_B[i];
+      delete H_2Strip_Channel_C[i];
+      delete H_2Strip_Channel_D[i];
+      delete H_2Strip_Channel_E[i];
+      
     }
 
     if (IsDetectorSiliBack(i))
@@ -1591,9 +1591,6 @@ inline int WriteHistograms_Grouped()
       H_Channel_C[i]->Write();
       H_Channel_D[i]->Write();
       H_Channel_E[i]->Write();
-      H_Channel_F[i]->Write();
-      H_Channel_G[i]->Write();
-      H_Channel_H[i]->Write();
       H_RearStrip_Channel_RAW[i]->Write();
       H_RearStrip_Channel_A[i]->Write();
       H_RearStrip_Channel_B[i]->Write();
@@ -1631,7 +1628,9 @@ inline int WriteHistograms_Grouped()
       // Writing
       dir_Rear_Time_Detector[i]->cd();
       H_RearStrip_Time_A[i]->Write();
+      H_RearStrip_ChannelTime_A[i]->Write();
       H_RearStrip_Time_B[i]->Write();
+      H_RearStrip_ChannelTime_B[i]->Write();
       H_RearStrip_Time_C[i]->Write();
       H_2Strip_Time_D[i]->Write();
       H_2Strip_Time_E[i]->Write();
@@ -1660,11 +1659,9 @@ inline int WriteHistograms_Grouped()
   H_2Strip_Label_C->Write();
   H_2Strip_Label_D->Write();
   H_2Strip_Label_E->Write();
-  H_RearStrip_Label_G->Write();
   H_2Strip_Label_Check->Write();
 
   dir_Strip_Time->cd();
-  H_RearStrip_Time_G->Write();
 
   // deleting
   delete H_Strip_Mulitplicity_RAW;
@@ -1705,6 +1702,7 @@ inline void WriteHistograms_Cutted()
       dir_Strip_Time_Detector[i]->cd();
       H_RearStrip_Time_Cutted[i]->Write();
       H_RearStrip_ChannelTime_Cutted[i]->Write();
+      H_SiliconSiPM_ChannelTime_Cutted[i]->Write();
 
       // UPDATE CANVAS
       TPad *P_DiffRearStrip = (TPad *)C_Strip_Channel_DiffRear[i]->GetPrimitive("DiffRearStrip");
@@ -1762,97 +1760,114 @@ inline void WriteHistograms_Cutted()
       dir_Rear_Time_Detector[i]->cd();
       H_RearStrip_Time_Cutted[i]->Write();
       H_RearSiPM_Time_Cutted[i]->Write();
-      H_RearSiPM_ChannelTime_Cutted[i]->Write();
+      H_SiliconSiPM_ChannelTime_Cutted[i]->Write();
       H_RearSiPM_MulitplicityTime_Cutted[i]->Write();
-      H_SiPM_MultiplicityTime_Cutted[i]->Write();
+      H_SiPM_MultiplicityTime_Cutted[i]->Write();      
+    }
 
-      /////// CLEANING SIPMs ON REAR ///////
+    /////// Fiiting Walk Correction for Silicon Detectors /////
+    if (IsDetectorSiliBack(i) || IsDetectorSiliStrip(i))
+    {
       dir_Walk_Silicon->cd();
 
       int counter = 0;
       // graph mean
-      G_Rear_Mean_Walk_Silicon[i] = new TGraphErrors();
-      G_Rear_Mean_Walk_Silicon[i]->SetTitle(("Mean_#Deltat_" + detectorName[i]).c_str());
-      G_Rear_Mean_Walk_Silicon[i]->GetXaxis()->SetTitle("Rear Channel");
-      G_Rear_Mean_Walk_Silicon[i]->GetYaxis()->SetTitle("Mean Rear-SiPM Time (ns)");
-      G_Rear_Mean_Walk_Silicon[i]->GetXaxis()->CenterTitle();
-      G_Rear_Mean_Walk_Silicon[i]->GetYaxis()->CenterTitle();
+      G_Mean_Walk_Silicon[i] = new TGraphErrors();
+      G_Mean_Walk_Silicon[i]->SetTitle(("Mean_#Deltat_" + detectorName[i]).c_str());
+      G_Mean_Walk_Silicon[i]->GetXaxis()->SetTitle("Silicon Channel");
+      G_Mean_Walk_Silicon[i]->GetYaxis()->SetTitle("Mean Silicon-SiPM Time (ns)");
+      G_Mean_Walk_Silicon[i]->GetXaxis()->CenterTitle();
+      G_Mean_Walk_Silicon[i]->GetYaxis()->CenterTitle();
 
-      int step = 10;
-      TH1D *H_RearSiPM_ChannelTime_Cutted_YProjection = H_RearSiPM_ChannelTime_Cutted[i]->ProjectionY(("H_RearSiPM_ChannelTime_Cutted_YProjection_" + detectorName[i]).c_str());
-      for (int bin = 0; bin < H_RearSiPM_ChannelTime_Cutted[i]->GetNbinsY(); bin += step)
+      int step = 5;
+      TH1D *H_SiliconSiPM_ChannelTime_Cutted_YProjection = H_SiliconSiPM_ChannelTime_Cutted[i]->ProjectionY(("H_SiliconSiPM_ChannelTime_Cutted_YProjection_" + detectorName[i]).c_str());
+      for (int bin = 0; bin < H_SiliconSiPM_ChannelTime_Cutted[i]->GetNbinsY(); bin += step)
       {
-        TH1D *H_RearSiPM_ChannelTime_Cutted_XProjection = H_RearSiPM_ChannelTime_Cutted[i]->ProjectionX(("H_RearSiPM_ChannelTime_Cutted_XProjection_" + detectorName[i] + "_" + to_string(bin)).c_str(), bin, bin + step);
-        double x_center = H_RearSiPM_ChannelTime_Cutted_XProjection->GetBinCenter(H_RearSiPM_ChannelTime_Cutted_XProjection->GetMaximumBin());
-        H_RearSiPM_ChannelTime_Cutted_XProjection->GetXaxis()->SetRangeUser(x_center - 100, x_center + 100);
+        TH1D *H_SiliconSiPM_ChannelTime_Cutted_XProjection = H_SiliconSiPM_ChannelTime_Cutted[i]->ProjectionX(("H_SiliconSiPM_ChannelTime_Cutted_XProjection_" + detectorName[i] + "_" + to_string(bin)).c_str(), bin, bin + step);
+        double x_center = H_SiliconSiPM_ChannelTime_Cutted_XProjection->GetBinCenter(H_SiliconSiPM_ChannelTime_Cutted_XProjection->GetMaximumBin());
+        H_SiliconSiPM_ChannelTime_Cutted_XProjection->GetXaxis()->SetRangeUser(x_center - 100, x_center + 100);
         TF1 *gauss = new TF1(("skewgauss_" + detectorName[i] + "_" + to_string(bin)).c_str(), skewedgauss, x_center - 100, x_center + 100, 5);
-        gauss->SetParameter(3, H_RearSiPM_ChannelTime_Cutted_XProjection->GetBinContent(H_RearSiPM_ChannelTime_Cutted_XProjection->GetMaximumBin()));
+        gauss->SetParameter(3, H_SiliconSiPM_ChannelTime_Cutted_XProjection->GetBinContent(H_SiliconSiPM_ChannelTime_Cutted_XProjection->GetMaximumBin()));
         gauss->SetParameter(0, x_center);
         gauss->SetParameter(1, 10);
         gauss->SetParLimits(2, -100, 0);
-        if (H_RearSiPM_ChannelTime_Cutted_XProjection->Integral() < 100)
+        if (H_SiliconSiPM_ChannelTime_Cutted_XProjection->Integral() < 50)
           continue; /// avoid empty data for fit
 
-        H_RearSiPM_ChannelTime_Cutted_XProjection->Fit(gauss, "QRN");
+        H_SiliconSiPM_ChannelTime_Cutted_XProjection->Fit(gauss, "QRN");
 
-        if (gauss->GetParError(0) / gauss->GetParameter(0) > 0.2)
+        if (gauss->GetParError(0) / gauss->GetParameter(0) > 0.1)
+          continue; /// avoid weird data points due to low statistics
+
+        if (gauss->GetParError(0) > 20)
+          continue; /// avoid weird data points due to low statistics
+
+        if (abs(gauss->GetMaximumX()) > 170)
           continue; /// avoid weird data points due to low statistics
 
         if ((x_center - gauss->GetMaximumX()) / gauss->GetMaximumX() > 0.2)
           continue; /// avoid weird data points due fit failling
 
-        G_Rear_Mean_Walk_Silicon[i]->SetPoint(counter, H_RearSiPM_ChannelTime_Cutted_YProjection->GetBinCenter(bin + step / 2), abs(gauss->GetMaximumX()));
-        G_Rear_Mean_Walk_Silicon[i]->SetPointError(counter, H_RearSiPM_ChannelTime_Cutted_YProjection->GetBinCenter(bin + step / 2) - H_RearSiPM_ChannelTime_Cutted_YProjection->GetBinCenter(bin), gauss->GetParError(0));
+        G_Mean_Walk_Silicon[i]->SetPoint(counter, H_SiliconSiPM_ChannelTime_Cutted_YProjection->GetBinCenter(bin + step / 2), abs(gauss->GetMaximumX()));
+        G_Mean_Walk_Silicon[i]->SetPointError(counter, H_SiliconSiPM_ChannelTime_Cutted_YProjection->GetBinCenter(bin + step / 2) - H_SiliconSiPM_ChannelTime_Cutted_YProjection->GetBinCenter(bin), gauss->GetParError(0));
         counter++;
 
-        TCanvas *c = new TCanvas(("C_RearSiPM_ChannelTime_Cutted_" + detectorName[i] + "_" + to_string(bin)).c_str(), ("C_RearSiPM_ChannelTime_Cutted_" + detectorName[i] + "_" + to_string(bin)).c_str(), 800, 400);
-        H_RearSiPM_ChannelTime_Cutted_XProjection->Draw("HIST");
+        TCanvas *c = new TCanvas(("C_SiliconSiPM_ChannelTime_Cutted_" + detectorName[i] + "_" + to_string(bin)).c_str(), ("C_SiliconSiPM_ChannelTime_Cutted_" + detectorName[i] + "_" + to_string(bin)).c_str(), 800, 400);
+        H_SiliconSiPM_ChannelTime_Cutted_XProjection->Draw("HIST");
         gauss->Draw("SAME");
         // c->Write();
       }
 
-      C_RearSiPM_ChannelTime_Walk_Silicon[i] = new TCanvas(("C_RearSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), ("C_RearSiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), 800, 400);
+      if (G_Mean_Walk_Silicon[i]->GetN() < 5)
+        Warning("Not enough points to fit for " + detectorName[i] + " during walk Silicon correction.");
+
+      C_SiPM_ChannelTime_Walk_Silicon[i] = new TCanvas(("C_SiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), ("C_SiPM_ChannelTime_Walk_Silicon_" + detectorName[i]).c_str(), 800, 400);
 
       ////3rd
-      C_RearSiPM_ChannelTime_Walk_Silicon[i]->cd();
-      TPad *P_DiffRearStripvsStrip = new TPad("MeanRearSiPMvsT", "MeanRearSiPMvsT", 0.05, 0.05, 0.5, 0.5);
-      P_DiffRearStripvsStrip->Draw();
-      P_DiffRearStripvsStrip->cd();
-      G_Rear_Mean_Walk_Silicon[i]->SetMarkerStyle(20);
-      G_Rear_Mean_Walk_Silicon[i]->SetMarkerSize(0.5);
-      G_Rear_Mean_Walk_Silicon[i]->Draw("AP");
-      MeanAcceptance_Walk_Silicon[i] = new TF1("inverse", "[0] + [1]/(x+[2])");
-      MeanAcceptance_Walk_Silicon[i]->SetParameters(150, -1e6, 2000);
-      MeanAcceptance_Walk_Silicon[i]->SetParLimits(0, 20, 150);
-      MeanAcceptance_Walk_Silicon[i]->SetParLimits(1, -1e7, -1e5);
-      MeanAcceptance_Walk_Silicon[i]->SetParLimits(2, -150000, 10000);
+      C_SiPM_ChannelTime_Walk_Silicon[i]->cd();
+      TPad *P_DiffSiliconStripvsStrip = new TPad("MeanSiliconSiPMvsT", "MeanSiliconSiPMvsT", 0.05, 0.05, 0.5, 0.5);
+      P_DiffSiliconStripvsStrip->Draw();
+      P_DiffSiliconStripvsStrip->cd();
+      G_Mean_Walk_Silicon[i]->SetMarkerStyle(20);
+      G_Mean_Walk_Silicon[i]->SetMarkerSize(0.5);
+      G_Mean_Walk_Silicon[i]->Draw("AP");
 
-      int status = 1;
-      if (G_Rear_Mean_Walk_Silicon[i]->GetN() != 0)
-      {
-        status = G_Rear_Mean_Walk_Silicon[i]->Fit(MeanAcceptance_Walk_Silicon[i], "QW");
-        if (status != 0)
-          Warning("Fit failed for " + detectorName[i] + " during walk Silicon correction.");
-      }
-      // cout << "     " << MeanAcceptance_Walk_Silicon[i]->GetChisquare () << endl;
+      MeanAcceptance_Walk_Silicon[i] = new TF1("inverse", WalkSilicon_Interpolate, 0, 1e6, 1);
+      MeanAcceptance_Walk_Silicon[i]->FixParameter(0, i);
+      // MeanAcceptance_Walk_Silicon[i] = new TF1("inverse", "[0] + [1]/sqrt(x+[2])");
+      // MeanAcceptance_Walk_Silicon[i]->SetParameters(150, -1e6, 2000);
+      // MeanAcceptance_Walk_Silicon[i]->SetParLimits(0, 20, 150);
+      // MeanAcceptance_Walk_Silicon[i]->SetParLimits(1, -1e7, 0);
+      // MeanAcceptance_Walk_Silicon[i]->SetParLimits(2, -150000, 10000);
+
+      // int status = 1;
+      // if (G_Mean_Walk_Silicon[i]->GetN() != 0)
+      // {
+      //   status = G_Mean_Walk_Silicon[i]->Fit(MeanAcceptance_Walk_Silicon[i], "Q");
+      //   if (status != 0)
+      //     Warning("Fit failed for " + detectorName[i] + " during walk Silicon correction.");
+      // }
+
+      // cout << "     " << MeanAcceptance_Walk_Silicon[i]->GetChisquare() / MeanAcceptance_Walk_Silicon[i]->GetNDF() << endl;
 
       ////1st
-      C_RearSiPM_ChannelTime_Walk_Silicon[i]->cd();
-      TPad *P_RearStrip = new TPad("RearSiPM_ChannelTime", "RearSiPM_ChannelTime", 0.05, 0.5, 0.5, 1.0);
-      P_RearStrip->Draw();
-      P_RearStrip->cd();
-      P_RearStrip->SetLogz();
-      H_RearSiPM_ChannelTime_Cutted[i]->Draw("COLZ");
+      C_SiPM_ChannelTime_Walk_Silicon[i]->cd();
+      TPad *P_SiliconStrip = new TPad("SiliconSiPM_ChannelTime", "SiliconSiPM_ChannelTime", 0.05, 0.5, 0.5, 1.0);
+      P_SiliconStrip->Draw();
+      P_SiliconStrip->cd();
+      P_SiliconStrip->SetLogz();
+      H_SiliconSiPM_ChannelTime_Cutted[i]->Draw("COLZ");
 
       maximum[i] = new TGraphErrors();
-      for (int bin = 0; bin < H_RearSiPM_ChannelTime_Cutted[i]->GetNbinsY(); bin++)
+      for (int bin = 0; bin < H_SiliconSiPM_ChannelTime_Cutted[i]->GetNbinsY(); bin++)
       {
-
-        double x_mean = -MeanAcceptance_Walk_Silicon[i]->Eval(H_RearSiPM_ChannelTime_Cutted[i]->GetYaxis()->GetBinCenter(bin));
-        maximum[i]->SetPoint(bin, x_mean, H_RearSiPM_ChannelTime_Cutted[i]->GetYaxis()->GetBinCenter(bin));
+        double x_mean = -MeanAcceptance_Walk_Silicon[i]->Eval(H_SiliconSiPM_ChannelTime_Cutted[i]->GetYaxis()->GetBinCenter(bin));
+        maximum[i]->SetPoint(bin, x_mean, H_SiliconSiPM_ChannelTime_Cutted[i]->GetYaxis()->GetBinCenter(bin));
       }
       maximum[i]->SetLineColor(kRed);
       maximum[i]->Draw("SAME");
+    
+      // delete H_SiliconSiPM_ChannelTime_Cutted[i];
     }
 
     if (IsDetectorBetaHigh(i))
@@ -1911,30 +1926,57 @@ inline void WriteHistograms_SiliconWalk()
   for (int i = 0; i < detectorNum; i++)
   {
     ProgressCounter(i, detectorNum, " <INFO>  Writing Histograms");
+
+    if (IsDetectorSiliStrip(i))
+    {
+      dir_Walk_Silicon->cd();
+      C_SiPM_ChannelTime_Walk_Silicon[i]->cd();
+      TPad *P_Strip_ChannelTime_Walk_Silicon = new TPad("Strip_ChannelTime_Walk_Silicon", "Strip_ChannelTime_Walk_Silicon", 0.55, 0.50, 1.0, 1.0);
+      P_Strip_ChannelTime_Walk_Silicon->Draw();
+      P_Strip_ChannelTime_Walk_Silicon->cd();
+      P_Strip_ChannelTime_Walk_Silicon->SetLogz();
+      H_SiPM_ChannelTime_Walk_Silicon[i]->Draw("COLZ");
+
+      C_SiPM_ChannelTime_Walk_Silicon[i]->cd();
+      TPad *P_DiffStrip = new TPad("Strip_ChannelTime_Walk_Silicon_proj", "Strip_ChannelTime_Walk_Silicon_proj", 0.55, 0.05, 1.0, 0.5);
+      P_DiffStrip->Draw();
+      P_DiffStrip->cd();
+      P_DiffStrip->SetLogy();
+      TH1D *proj = (TH1D *)H_SiPM_ChannelTime_Walk_Silicon[i]->ProjectionX(("H_SiPM_ChannelTime_Walk_Silicon_projx" + detectorName[i]).c_str());
+      proj->Draw("HIST");
+
+      C_SiPM_ChannelTime_Walk_Silicon[i]->Write();
+
+      C_Walk_Silicon_Fits->cd(ConvertBase5ToBase10(i) - 5);
+      G_Mean_Walk_Silicon[i]->Draw("AP");
+      MeanAcceptance_Walk_Silicon[i]->Draw("SAME");
+    }
+
+
     if (IsDetectorSiliBack(i))
     {
       dir_Walk_Silicon->cd();
 
-      C_RearSiPM_ChannelTime_Walk_Silicon[i]->cd();
+      C_SiPM_ChannelTime_Walk_Silicon[i]->cd();
       TPad *P_RearSiPM_ChannelTime_Walk_Silicon = new TPad("RearSiPM_ChannelTime_Walk_Silicon", "RearSiPM_ChannelTime_Walk_Silicon", 0.55, 0.50, 1.0, 1.0);
       P_RearSiPM_ChannelTime_Walk_Silicon->Draw();
       P_RearSiPM_ChannelTime_Walk_Silicon->cd();
       P_RearSiPM_ChannelTime_Walk_Silicon->SetLogz();
-      H_RearSiPM_ChannelTime_Walk_Silicon[i]->Draw("COLZ");
+      H_SiPM_ChannelTime_Walk_Silicon[i]->Draw("COLZ");
 
-      C_RearSiPM_ChannelTime_Walk_Silicon[i]->cd();
+      C_SiPM_ChannelTime_Walk_Silicon[i]->cd();
       TPad *P_DiffRearStrip = new TPad("RearSiPM_ChannelTime_Walk_Silicon_proj", "RearSiPM_ChannelTime_Walk_Silicon_proj", 0.55, 0.05, 1.0, 0.5);
       P_DiffRearStrip->Draw();
       P_DiffRearStrip->cd();
       P_DiffRearStrip->SetLogy();
-      TH1D *proj = (TH1D *)H_RearSiPM_ChannelTime_Walk_Silicon[i]->ProjectionX(("H_RearSiPM_ChannelTime_Walk_Silicon_projx" + detectorName[i]).c_str());
+      TH1D *proj = (TH1D *)H_SiPM_ChannelTime_Walk_Silicon[i]->ProjectionX(("H_SiPM_ChannelTime_Walk_Silicon_projx" + detectorName[i]).c_str());
       proj->Draw("HIST");
 
-      C_RearSiPM_ChannelTime_Walk_Silicon[i]->Write();
+      C_SiPM_ChannelTime_Walk_Silicon[i]->Write();
 
-      C_Rear_Walk_Silicon_Fits->cd(GetDetector(i));
-      G_Rear_Mean_Walk_Silicon[i]->Draw("AP");
-      MeanAcceptance_Walk_Silicon[i]->Draw("SAME");
+      // C_Walk_Silicon_Fits->cd(GetDetector(i));
+      // G_Mean_Walk_Silicon[i]->Draw("AP");
+      // MeanAcceptance_Walk_Silicon[i]->Draw("SAME");
     }
 
     if (IsDetectorBeta(i))
@@ -1957,9 +1999,16 @@ inline void WriteHistograms_SiliconWalk()
       else
       {
         step = 1;
-        mini = 4e4;
+        mini = 0;
         maxi = 4e5;
         suppar2 = 0;
+
+        vector<double> maxi_list2024 = {0, 4e5, 5e5, 8e5, 8e5, 8e5, 8e5, 8e5, 5e5, 4e5};
+
+        if (YEAR == 2024)
+        {
+          maxi = maxi_list2024[GetDetectorChannel(i)];
+        }
 
         dir_SiPMLow_Time_Detector[i]->cd();
         H_SiPM_ChannelTime_Walk_SiPM[i]->Write();
@@ -2077,6 +2126,15 @@ inline void WriteHistograms_SiPMWalk()
       P_SiPM_ChannelTime_Walk_SiPM->cd();
       P_SiPM_ChannelTime_Walk_SiPM->SetLogz();
       H_SiPM_ChannelTime_Walk_Corrected[i]->Draw("COLZ");
+
+      C_SiPM_ChannelTime_Walk_SiPM[i]->cd();
+      TPad *P_SiPM_ChannelTime_Walk_SiPM_proj = new TPad("SiPM_ChannelTime_Walk_SiPM_proj", "SiPM_ChannelTime_Walk_SiPM_proj", 0.55, 0.05, 1.0, 0.5);
+      P_SiPM_ChannelTime_Walk_SiPM_proj->Draw();
+      P_SiPM_ChannelTime_Walk_SiPM_proj->cd();
+      P_SiPM_ChannelTime_Walk_SiPM_proj->SetLogy();
+      TH1D *proj = (TH1D *)H_SiPM_ChannelTime_Walk_Corrected[i]->ProjectionX(("H_SiPM_ChannelTime_Walk_SiPM_projx" + detectorName[i]).c_str());
+      proj->Draw("HIST");
+      
       C_SiPM_ChannelTime_Walk_SiPM[i]->Write();
     }
   }
@@ -2105,15 +2163,20 @@ inline void WriteHistograms_Cleaned()
       // }
 
       dir_Strip_Channel_Detector[i]->cd();
+      if (!FULL) H_Channel_RAW[i]->Write();
+      H_SiPM_ChannelTime_Walk_Corrected[i]->Write();
       H_Channel_Cleaned[i]->Write();
+      H_Channel_Cleaned_18N[i]->Write();
       H_RearMatched_Channel_Cleaned[i]->Write();
       H_RearMatchedMean_Channel_Cleaned[i]->Write();
-
+      
       dir_Cleaned->cd();
       TCanvas *C_Strip_Cleaned = new TCanvas(("C_Strip_Cleaned_" + detectorName[i]).c_str(), ("C_Strip_Cleaned_" + detectorName[i]).c_str(), 800, 400);
       H_Channel_RAW[i]->Draw("HIST");
       H_Channel_Cleaned[i]->SetLineColor(kRed);
       H_Channel_Cleaned[i]->Draw("SAME");
+      H_Channel_Cleaned_18N[i]->SetLineColor(kGreen);
+      H_Channel_Cleaned_18N[i]->Draw("SAME");
       C_Strip_Cleaned->Write();
 
       dir_Strip_Time_Detector[i]->cd();
@@ -2148,29 +2211,14 @@ inline void WriteHistograms_Cleaned()
       c->Write();
       // }
       dir_Rear_Channel_Detector[i]->cd();
+      if (!FULL) H_Channel_RAW[i]->Write();
       H_Channel_Cleaned[i]->Write();
-      H_Rear_Channel_IAS_Cleaned[i]->Write();
-      H_Rear_Channel_IAScoinc_Cleaned[i]->Write();
       dir_Rear_Time_Detector[i]->cd();
-      H_RearSiPM_ChannelTime_Walk_Corrected[i]->Write();
+      H_SiPM_ChannelTime_Walk_Corrected[i]->Write();
       H_RearSiPM_ChannelTime_Cleaned[i]->Write();
       H_RearSiPM_Time_Nearest[i]->Write();
       H_RearSiPM_ChannelTime_dt[i]->Write();
 
-      C_IAS_Channel_Cleaned->cd(GetDetector(i));
-      H_Rear_Channel_IAS_Cleaned[i]->SetFillColor(0);
-      H_Rear_Channel_IAS_Cleaned[i]->SetLineColor(kBlack);
-      H_Rear_Channel_IAS_Cleaned[i]->Rebin(10);
-      H_Rear_Channel_IAS_Cleaned[i]->Draw("HIST");
-      H_Rear_Channel_IAScoinc_Cleaned[i]->SetFillColor(0);
-      H_Rear_Channel_IAScoinc_Cleaned[i]->SetLineColor(kRed);
-      H_Rear_Channel_IAScoinc_Cleaned[i]->Rebin(10);
-      H_Rear_Channel_IAScoinc_Cleaned[i]->Draw("SAME");
-      TH1D *H_Rear_Channel_IASnocoinc_Cleaned_Clone = (TH1D *)H_Rear_Channel_IAS_Cleaned[i]->Clone(("H_Rear_Channel_IASnocoinc_Cleaned_Clone_" + detectorName[i]).c_str());
-      H_Rear_Channel_IASnocoinc_Cleaned_Clone->Add(H_Rear_Channel_IAScoinc_Cleaned[i], -1);
-      H_Rear_Channel_IASnocoinc_Cleaned_Clone->SetFillColor(0);
-      H_Rear_Channel_IASnocoinc_Cleaned_Clone->SetLineColor(kBlue);
-      H_Rear_Channel_IASnocoinc_Cleaned_Clone->Draw("SAME");
     }
 
     if (IsDetectorBetaHigh(i))
@@ -2273,19 +2321,19 @@ inline void WriteHistograms_Cleaned()
   dir_Cleaned->cd();
   TCanvas *C_Multiplicity_Groups = new TCanvas("C_Multiplicity_Groups", "C_Multiplicity_Groups", 800, 400);
   H_Multiplicity_Groups->Draw("HIST");
-  H_Multiplicity_Groups_IAS->SetLineColor(kRed);
-  H_Multiplicity_Groups_IAS->Draw("SAME");
+  // H_Multiplicity_Groups_IAS->SetLineColor(kRed);
+  // H_Multiplicity_Groups_IAS->Draw("SAME");
   C_Multiplicity_Groups->Write();
 
   TCanvas *C_Multiplicity_SubGroups = new TCanvas("C_Multiplicity_SubGroups", "C_Multiplicity_SubGroups", 800, 400);
   H_Multiplicity_SubGroups->Draw("HIST");
-  H_Multiplicity_SubGroups_IAS->SetLineColor(kRed);
-  H_Multiplicity_SubGroups_IAS->Draw("SAME");
+  // H_Multiplicity_SubGroups_IAS->SetLineColor(kRed);
+  // H_Multiplicity_SubGroups_IAS->Draw("SAME");
   C_Multiplicity_SubGroups->Write();
 
-  TCanvas *C_Time_SubGroups = new TCanvas("C_Time_SubGroups", "C_Time_SubGroups", 800, 400);  
+  TCanvas *C_Time_SubGroups = new TCanvas("C_Time_SubGroups", "C_Time_SubGroups", 800, 400);
   TLegend *legend = new TLegend(0.1, 0.7, 0.48, 0.9);
-  for (int mul = 2; mul < BETA_SIZE+1; mul++)
+  for (int mul = 2; mul < BETA_SIZE + 1; mul++)
   {
     H_Time_SubGroups[mul]->SetLineColor(mul);
     H_Time_SubGroups[mul]->Draw("HIST SAME");
@@ -2297,21 +2345,24 @@ inline void WriteHistograms_Cleaned()
   /// GENERAL FITS CANVAS ///
   dir_Fits->cd();
   C_Strip_Cutting_Fits->Write();
-  C_Rear_Walk_Silicon_Fits->Write();
+  C_Walk_Silicon_Fits->Write();
   C_SiPM_Walk_SiPM_Fits->Write();
 }
 
 inline int WriteTree_Grouped()
 {
+  Info("Writing Trees");
   GROUPED_File->cd();
   CLEANED_Tree->Write();
-  for (int i = 0; i < detectorNum; i++)
+  CLEANED_Tree_18N->Write();
+  for (int i = 0; i < SIGNAL_MAX; i++)
   {
     if (IsDetectorSiliStrip(i))
       CLEANED_Tree_detector[i]->Write();
   }
 
   delete CLEANED_Tree;
+  Info("Trees written");
   return 0;
 }
 
@@ -2329,13 +2380,17 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
 
   for (int index = 0; index < signals.GetSize(); index++)
   {
-    if (FLAG2021) signals[index].Label = YearConverter(signals[index].Label);
+    // cout << signals[index] << endl;
+    if (FLAG2021)
+      signals[index].Label = YearConverter(signals[index].Label);
     int current_label = signals[index].Label;
     if (IsDetectorSiliBack(current_label))
     {
+      H_Channel_RAW[current_label]->Fill(signals[index].Channel);
+      if (signals[index].Channel < 600) continue;
       Rear_Position.push_back(index);
       Rear_Multiplicity_RAW++;
-      H_Channel_RAW[current_label]->Fill(signals[index].Channel);
+      
       if (signals[index].Pileup == 1)
       {
         H_Channel_PileUp[current_label]->Fill(signals[index].Channel);
@@ -2343,9 +2398,10 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
     }
     else if (IsDetectorSiliStrip(current_label))
     {
+      H_Channel_RAW[current_label]->Fill(signals[index].Channel);
+      if (signals[index].Channel < 600) continue;
       Strip_Position.push_back(index);
       Strip_Multiplicity_RAW++;
-      H_Channel_RAW[current_label]->Fill(signals[index].Channel);
       if (signals[index].Pileup == 1)
       {
         H_Channel_PileUp[current_label]->Fill(signals[index].Channel);
@@ -2397,48 +2453,53 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
 
   Signal THIRD_ALPHA_PEAK_FLAG = Signal();
 
-  bool IAS = false;
-  if (Rear_Position.size() != 0)
-  {
-    int Rear_Channel = signals[Rear_Position[0]].Channel;
-    int Rear_Label = signals[Rear_Position[0]].Label;
+  // bool IAS = false;
+  // if (Rear_Position.size() != 0)
+  // {
+  //   int Rear_Channel = signals[Rear_Position[0]].Channel;
+  //   int Rear_Label = signals[Rear_Position[0]].Label;
 
-    if (Rear_Channel > Rear_IAS[GetDetector(Rear_Label)].first && Rear_Channel < Rear_IAS[GetDetector(Rear_Label)].second)
-    {
-      IAS = true;
-    }
-  }
+  //   if (Rear_Channel > Rear_IAS[GetDetector(Rear_Label)].first && Rear_Channel < Rear_IAS[GetDetector(Rear_Label)].second)
+  //   {
+  //     IAS = true;
+  //   }
+  // }
 
-  // SAVING ALL THE PAIRS
-  for (auto it : RearStrip_ASSOCIATED)
+  // SAVING PAIR if ONLY ONE
+  if (RearStrip_ASSOCIATED.size() == 1)
   {
-    //////////////////////// TREE ////////////////////////
-    GROUPED_Tree_Silicon.push_back(it.first);
-    GROUPED_Tree_Silicon.push_back(it.second);
-    for (int index_h = 0; index_h < SiPM_High_Position.size(); index_h++)
+    for (auto it : RearStrip_ASSOCIATED)
     {
-      GROUPED_Tree_SiPMHigh.push_back(signals[SiPM_High_Position[index_h]]);
+      //////////////////////// TREE ////////////////////////
+      GROUPED_Tree_Silicon.push_back(it.first);
+      GROUPED_Tree_Silicon.push_back(it.second);
+      for (int index_h = 0; index_h < SiPM_High_Position.size(); index_h++)
+      {
+        GROUPED_Tree_SiPMHigh.push_back(signals[SiPM_High_Position[index_h]]);
+      }
+      for (int index_l = 0; index_l < SiPM_Low_Position.size(); index_l++)
+      {
+        GROUPED_Tree_SiPMLow.push_back(signals[SiPM_Low_Position[index_l]]);
+      }
+      GROUPED_Tree->Fill();
+      GROUPED_Tree_Silicon.clear();
+      GROUPED_Tree_SiPMHigh.clear();
+      GROUPED_Tree_SiPMLow.clear();
+      ///////////////////////////////////////////////////////
     }
-    for (int index_l = 0; index_l < SiPM_Low_Position.size(); index_l++)
-    {
-      GROUPED_Tree_SiPMLow.push_back(signals[SiPM_Low_Position[index_l]]);
-    }
-    GROUPED_Tree->Fill();
-    GROUPED_Tree_Silicon.clear();
-    GROUPED_Tree_SiPMHigh.clear();
-    GROUPED_Tree_SiPMLow.clear();
-    ///////////////////////////////////////////////////////
   }
 
   ///////////////////////////////////////
   ///////// CASES A B C D E F G /////////
   ///////////////////////////////////////
 
-  for (auto it : RearStrip_ASSOCIATED)
+  // Case A : Rear and Strip associated (most common case)
+  if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 1)
   {
-    // Case A : SINGLE Rear and Strip associated (most common case)
-    // if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 1)
-    // {
+    for (auto it : RearStrip_ASSOCIATED)
+    {
+      // Case A : SINGLE Rear and Strip associated (most common case)
+      //
       // cout << "CASE A" << endl;
       H_Channel_A[it.first.Label]->Fill(it.first.Channel);   // REAR
       H_Channel_A[it.second.Label]->Fill(it.second.Channel); // STRIP
@@ -2446,142 +2507,204 @@ void SearchForCoincidence(TTreeReaderArray<Signal> &signals)
       H_RearStrip_Channel_A[it.first.Label]->Fill(it.first.Channel, it.second.Channel);  // REAR-STRIP for rear plot
       H_RearStrip_Channel_A[it.second.Label]->Fill(it.first.Channel, it.second.Channel); // REAR-STRIP for strip plot
 
-      H_Strip_Channel_DiffRear_A[it.second.Label]->Fill((it.first.Channel - it.second.Channel) / it.second.Channel);                                                // STRIP/REAR
+      H_Strip_Channel_DiffRear_A[it.second.Label]->Fill((it.first.Channel - it.second.Channel) / it.second.Channel);                           // STRIP/REAR
       H_Strip_Channel_DiffRearvsStrip_A[it.second.Label]->Fill((it.first.Channel - it.second.Channel) / it.second.Channel, it.second.Channel); // STRIP/REAR vs Strip channel
 
       H_RearStrip_Time_A[it.first.Label]->Fill(it.first.Time - it.second.Time);
       H_RearStrip_Time_A[it.second.Label]->Fill(it.first.Time - it.second.Time);
-    // }
+
+      H_RearStrip_ChannelTime_A[it.first.Label]->Fill(it.first.Time - it.second.Time, it.first.Channel);   // REAR Channel vs Time diff
+      H_RearStrip_ChannelTime_A[it.second.Label]->Fill(it.first.Time - it.second.Time, it.second.Channel); // STRIP Channel vs Time diff
+    }
   }
 
-    // Case B : SAME Rear and DIFFERENT NEIGHBOURG Strip associated (intertrip)
-   if (RearStrip_ASSOCIATED.size() == 2 && IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
+  // Case B : SAME Rear and DIFFERENT NEIGHBOURG Strip associated (intertrip)
+  //  if (RearStrip_ASSOCIATED.size() == 2 && IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
+  //   {
+  // cout << "CASE B" << endl;
+  //     H_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
+  //     H_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
+  //     H_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel); // STRIP
+
+  //     H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                           // REAR-STRIP for strip
+  //     H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                           // REAR-STRIP for strip
+  //     H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                          // REAR-STRIP for rear
+  //     H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                          // REAR-STRIP for rear
+  //     H_Rear2Strip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[0].second.Channel + RearStrip_ASSOCIATED[1].second.Channel); // REAR-STRIP+STRIP
+  //     H_2Strip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                            // STRIP-STRIP
+  //     H_2Strip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                            // STRIP-STRIP
+
+  //     H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+  //     H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
+  //     H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
+  //     H_RearStrip_Time_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
+  //   }
+
+  // cout << "CASE B" << endl;
+  // INTERSTRIP EVENTS
+        // - label: same detector; diff == 1
+        // - 
+  if (RearStrip_ASSOCIATED.size() >= 2)
+  {
+    for (int i_ch = 0; i_ch < RearStrip_ASSOCIATED.size(); i_ch++)
     {
-      // cout << "CASE B" << endl;
-      H_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
-      H_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
-      H_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel); // STRIP
-
-      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                           // REAR-STRIP for strip
-      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                           // REAR-STRIP for strip
-      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                          // REAR-STRIP for rear
-      H_RearStrip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                          // REAR-STRIP for rear
-      H_Rear2Strip_Channel_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[0].second.Channel + RearStrip_ASSOCIATED[1].second.Channel); // REAR-STRIP+STRIP
-      H_2Strip_Channel_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[1].second.Channel);                                            // STRIP-STRIP
-      H_2Strip_Channel_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel, RearStrip_ASSOCIATED[0].second.Channel);                                            // STRIP-STRIP
-
-      H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-      H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
-      H_RearStrip_Time_B[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-      H_RearStrip_Time_B[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
-    }
-
-    // Case C : DIFFERENT Rear and DIFFERENT Strip associated (NOT intertrip)
-
-    else if (RearStrip_ASSOCIATED.size() == 2 && !IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label))
-    {
-      // cout << "CASE C" << endl;
-      H_Channel_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);   // REAR
-      H_Channel_C[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel);   // REAR
-      H_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel); // STRIP
-      H_Channel_C[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].second.Channel); // STRIP
-
-      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel);  // REAR-STRIP for strip
-      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[1].first.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel);  // REAR-STRIP for strip
-      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel, RearStrip_ASSOCIATED[0].second.Channel); // REAR-STRIP for rear
-      H_RearStrip_Channel_C[RearStrip_ASSOCIATED[1].second.Label]->Fill(RearStrip_ASSOCIATED[1].first.Channel, RearStrip_ASSOCIATED[1].second.Channel); // REAR-STRIP for rear
-      H_2Strip_Channel_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, RearStrip_ASSOCIATED[1].second.Channel);   // STRIP-STRIP
-
-      H_RearStrip_Time_C[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[0].second.Time);
-      H_RearStrip_Time_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].second.Time);
-      H_2Strip_Time_C[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].first.Time - RearStrip_ASSOCIATED[1].first.Time);
-
-      H_2Strip_Label_C->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
-    }
-
-    // Case D : SINGLE Rear and Strip + other strip
-
-    else if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 2 && GetDetector(signals[Strip_Position[0]].Label) != GetDetector(signals[Strip_Position[1]].Label))
-    {
-      // cout << "CASE D" << endl;
-      int index_other_strip = -1;
-      if (signals[Strip_Position[0]].Label != RearStrip_ASSOCIATED[0].second.Label)
+      for (int j_ch = i_ch; j_ch < RearStrip_ASSOCIATED.size(); j_ch++)
       {
-        index_other_strip = Strip_Position[0];
-      }
-      else
-      {
-        index_other_strip = Strip_Position[1];
-      }
-      if (index_other_strip != -1)
-      {
-        if (RearStrip_ASSOCIATED[0].second.Channel > 20000 && RearStrip_ASSOCIATED[0].second.Channel < 36000)
+        if (IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[i_ch].second.Label, RearStrip_ASSOCIATED[j_ch].second.Label)) 
         {
-          THIRD_ALPHA_PEAK_FLAG = signals[index_other_strip];
-          H_Channel_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
-          H_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
-          H_2Strip_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
-          H_2Strip_Time_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
-          H_2Strip_Time_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
-          H_2Strip_Label_D->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
-        }
-        else
-        {
-          H_Channel_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
-          H_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
-          H_2Strip_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
-          H_2Strip_Time_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
-          H_2Strip_Time_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
-          H_2Strip_Label_E->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
+          H_Channel_B[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel);           // REAR
+          H_Channel_B[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel);         // STRIP
+          H_Channel_B[RearStrip_ASSOCIATED[j_ch].second.Label]->Fill(RearStrip_ASSOCIATED[j_ch].second.Channel);         // STRIP
+
+          H_RearStrip_Channel_B[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel, RearStrip_ASSOCIATED[i_ch].second.Channel);                                                      // REAR-STRIP for strip
+          H_RearStrip_Channel_B[RearStrip_ASSOCIATED[j_ch].first.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Channel, RearStrip_ASSOCIATED[j_ch].second.Channel);                                          // REAR-STRIP for strip
+          H_RearStrip_Channel_B[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel, RearStrip_ASSOCIATED[i_ch].second.Channel);                                                     // REAR-STRIP for rear
+          H_RearStrip_Channel_B[RearStrip_ASSOCIATED[j_ch].second.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Channel, RearStrip_ASSOCIATED[j_ch].second.Channel);                                         // REAR-STRIP for rear
+          H_Rear2Strip_Channel_B[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Channel, RearStrip_ASSOCIATED[i_ch].second.Channel + RearStrip_ASSOCIATED[j_ch].second.Channel); // REAR-STRIP+STRIP
+          H_2Strip_Channel_B[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel, RearStrip_ASSOCIATED[j_ch].second.Channel);                                                   // STRIP-STRIP
+          H_2Strip_Channel_B[RearStrip_ASSOCIATED[j_ch].second.Label]->Fill(RearStrip_ASSOCIATED[j_ch].second.Channel, RearStrip_ASSOCIATED[i_ch].second.Channel);                                               // STRIP-STRIP
+
+          H_2Strip_Time_B[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Time - RearStrip_ASSOCIATED[j_ch].second.Time);
+
+          H_RearStrip_Time_B[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Time - RearStrip_ASSOCIATED[i_ch].second.Time);
+          H_RearStrip_Time_B[RearStrip_ASSOCIATED[j_ch].first.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Time - RearStrip_ASSOCIATED[j_ch].second.Time);
+          H_RearStrip_Time_B[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Time - RearStrip_ASSOCIATED[i_ch].second.Time);
+          H_RearStrip_Time_B[RearStrip_ASSOCIATED[j_ch].second.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Time - RearStrip_ASSOCIATED[j_ch].second.Time);
+
+          H_RearStrip_ChannelTime_B[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Time - RearStrip_ASSOCIATED[i_ch].second.Time, RearStrip_ASSOCIATED[i_ch].first.Channel);   // REAR Channel vs Time diff
+          H_RearStrip_ChannelTime_B[RearStrip_ASSOCIATED[j_ch].first.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Time - RearStrip_ASSOCIATED[j_ch].second.Time, RearStrip_ASSOCIATED[j_ch].first.Channel);   // REAR Channel vs Time diff
+          H_RearStrip_ChannelTime_B[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Time - RearStrip_ASSOCIATED[i_ch].second.Time, RearStrip_ASSOCIATED[i_ch].second.Channel); // STRIP Channel vs Time diff
+          H_RearStrip_ChannelTime_B[RearStrip_ASSOCIATED[j_ch].second.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Time - RearStrip_ASSOCIATED[j_ch].second.Time, RearStrip_ASSOCIATED[j_ch].second.Channel); // STRIP Channel vs Time diff
         }
       }
     }
+  }
 
-    // Case F : SINGLE Rear
-    else if (RearStrip_ASSOCIATED.size() == 0 && Rear_Position.size() == 1 && Strip_Position.size() == 0)
+  // Case C : DIFFERENT Rear and DIFFERENT Strip associated (Different detectors)
+  // Multiple events
+  // to see face to face pattern 
+  if (RearStrip_ASSOCIATED.size() >= 2)
+  {
+    for (int i_ch = 0; i_ch < RearStrip_ASSOCIATED.size(); i_ch++)
     {
-      H_Channel_F[signals[Rear_Position[0]].Label]->Fill(signals[Rear_Position[0]].Channel); // REAR
-    }
-
-    // Case G : Not associated REAR and STRIP
-
-    else if (RearStrip_ASSOCIATED.size() == 0 && Rear_Position.size() >= 1 && Strip_Position.size() >= 1)
-    {
-      // cout << "CASE G" << endl;
-      for (int index_rear : Rear_Position)
+      for (int j_ch = i_ch; j_ch < RearStrip_ASSOCIATED.size(); j_ch++)
       {
-        for (int index_strip : Strip_Position)
+        if (GetDetector(RearStrip_ASSOCIATED[i_ch].second.Label) != GetDetector(RearStrip_ASSOCIATED[j_ch].second.Label))
         {
-          H_Channel_G[signals[index_rear].Label]->Fill(signals[index_rear].Channel);              // REAR
-          H_Channel_G[signals[index_strip].Label]->Fill(signals[index_strip].Channel);            // STRIP
-          H_RearStrip_Channel_G->Fill(signals[index_rear].Channel, signals[index_strip].Channel); // REAR-STRIP
-          H_RearStrip_Label_G->Fill(signals[index_strip].Label, signals[index_rear].Label);       // REAR-STRIP
-          H_RearStrip_Time_G->Fill(signals[index_rear].Time - signals[index_strip].Time);
+          // cout << "CASE C" << endl;
+          H_Channel_C[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel);   // REAR
+          H_Channel_C[RearStrip_ASSOCIATED[j_ch].first.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Channel);   // REAR
+          H_Channel_C[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel); // STRIP
+          H_Channel_C[RearStrip_ASSOCIATED[j_ch].second.Label]->Fill(RearStrip_ASSOCIATED[j_ch].second.Channel); // STRIP
+
+          H_RearStrip_Channel_C[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel, RearStrip_ASSOCIATED[i_ch].second.Channel);  // REAR-STRIP for strip
+          H_RearStrip_Channel_C[RearStrip_ASSOCIATED[j_ch].first.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Channel, RearStrip_ASSOCIATED[j_ch].second.Channel);  // REAR-STRIP for strip
+          H_RearStrip_Channel_C[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel, RearStrip_ASSOCIATED[i_ch].second.Channel); // REAR-STRIP for rear
+          H_RearStrip_Channel_C[RearStrip_ASSOCIATED[j_ch].second.Label]->Fill(RearStrip_ASSOCIATED[j_ch].first.Channel, RearStrip_ASSOCIATED[j_ch].second.Channel); // REAR-STRIP for rear
+          H_2Strip_Channel_C[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel, RearStrip_ASSOCIATED[j_ch].second.Channel);   // STRIP-STRIP
+
+          H_RearStrip_Time_C[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Time - RearStrip_ASSOCIATED[i_ch].second.Time);
+          H_RearStrip_Time_C[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Time - RearStrip_ASSOCIATED[j_ch].second.Time);
+          H_2Strip_Time_C[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Time - RearStrip_ASSOCIATED[j_ch].first.Time);
+
+          H_2Strip_Label_C->Fill(RearStrip_ASSOCIATED[i_ch].second.Label, RearStrip_ASSOCIATED[j_ch].second.Label);
         }
       }
     }
+  }
 
+  // Case D : SINGLE ASSOCIATED (Rear and Strip) + other strip
+  // == 180° pattern / 18N
+  // else if (RearStrip_ASSOCIATED.size() == 1 && Rear_Position.size() == 1 && Strip_Position.size() == 2 && GetDetector(signals[Strip_Position[0]].Label) != GetDetector(signals[Strip_Position[1]].Label))
+  // {
+  //   // cout << "CASE D" << endl;
+  //   int index_other_strip = -1;
+  //   if (signals[Strip_Position[0]].Label != RearStrip_ASSOCIATED[0].second.Label)
+  //   {
+  //     index_other_strip = Strip_Position[0];
+  //   }
+  //   else
+  //   {
+  //     index_other_strip = Strip_Position[1];
+  //   }
+  //   if (index_other_strip != -1)
+  //   {
+  //     // if (RearStrip_ASSOCIATED[0].second.Channel > 20000 && RearStrip_ASSOCIATED[0].second.Channel < 36000)
+  //     // {
+  //       THIRD_ALPHA_PEAK_FLAG = signals[index_other_strip];
+  //       H_Channel_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
+  //       H_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
+  //       H_2Strip_Channel_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
+  //       H_2Strip_Time_D[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
+  //       H_2Strip_Time_D[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
+  //       H_2Strip_Label_D->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
+  //     // }
+  //     // else
+  //     // {
+  //       H_Channel_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel);                                           // STRIP
+  //       H_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].first.Channel);                                             // Rear
+  //       H_2Strip_Channel_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Channel, signals[index_other_strip].Channel); // STRIP-STRIP
+  //       H_2Strip_Time_E[RearStrip_ASSOCIATED[0].first.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);         // STRIP-STRIP
+  //       H_2Strip_Time_E[RearStrip_ASSOCIATED[0].second.Label]->Fill(RearStrip_ASSOCIATED[0].second.Time - signals[index_other_strip].Time);        // STRIP-STRIP
+  //       H_2Strip_Label_E->Fill(RearStrip_ASSOCIATED[0].second.Label, signals[index_other_strip].Label);                                            // STRIP-STRIP
+  //     // }
+  //   }
+  // }
+
+
+  // Case D : ASSOCIATED (Rear and Strip) + other strip (Different detector)
+  if (RearStrip_ASSOCIATED.size() >= 1)
+  {
+    for (int i_ch = 0; i_ch < RearStrip_ASSOCIATED.size(); i_ch++)
+    {
+      for (int j_ch = 0; j_ch < Strip_Position.size(); j_ch++)
+      {
+        if (GetDetector(RearStrip_ASSOCIATED[i_ch].first.Label) == GetDetector(signals[Strip_Position[j_ch]].Label))
+          continue;
+        bool isAssociated = false;
+        for (int k_ch = 0; k_ch < RearStrip_ASSOCIATED.size(); k_ch++)
+        {
+          if (signals[Strip_Position[j_ch]].Label == RearStrip_ASSOCIATED[k_ch].second.Label)
+          {
+            isAssociated = true;
+            break;
+          }
+        }
+
+        if (!isAssociated)
+        {
+          if (RearStrip_ASSOCIATED[i_ch].second.Channel > 20000 && RearStrip_ASSOCIATED[i_ch].second.Channel < 36000)
+          {
+            THIRD_ALPHA_PEAK_FLAG = signals[Strip_Position[j_ch]];
+            H_Channel_D[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel);                                              // STRIP
+            H_Channel_D[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel);                                                // Rear
+            H_2Strip_Channel_D[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel, signals[Strip_Position[j_ch]].Channel); // STRIP-STRIP
+            H_2Strip_Time_D[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Time - signals[Strip_Position[j_ch]].Time);         // STRIP-STRIP
+            H_2Strip_Time_D[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Time - signals[Strip_Position[j_ch]].Time);        // STRIP-STRIP
+            H_2Strip_Label_D->Fill(RearStrip_ASSOCIATED[i_ch].second.Label, signals[Strip_Position[j_ch]].Label);                                               // STRIP-STRIP
+          }
+          else
+          {
+            H_Channel_E[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel);                                              // STRIP
+            H_Channel_E[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].first.Channel);                                                // Rear
+            H_2Strip_Channel_E[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Channel, signals[Strip_Position[j_ch]].Channel); // STRIP-STRIP
+            H_2Strip_Time_E[RearStrip_ASSOCIATED[i_ch].first.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Time - signals[Strip_Position[j_ch]].Time);         // STRIP-STRIP
+            H_2Strip_Time_E[RearStrip_ASSOCIATED[i_ch].second.Label]->Fill(RearStrip_ASSOCIATED[i_ch].second.Time - signals[Strip_Position[j_ch]].Time);        // STRIP-STRIP
+            H_2Strip_Label_E->Fill(RearStrip_ASSOCIATED[i_ch].second.Label, signals[Strip_Position[j_ch]].Label);                                             // STRIP-STRIP
+          } 
+        }
+      }
+    }
+  }
+
+  // checking if strip are well defined in faster
+  if (RearStrip_ASSOCIATED.size() == 2 && GetDetector(RearStrip_ASSOCIATED[0].second.Label) == GetDetector(RearStrip_ASSOCIATED[1].second.Label))
+  {
+    if (RearStrip_ASSOCIATED[0].second.Label < RearStrip_ASSOCIATED[1].second.Label)
+      H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
     else
-    {
-      for (int index_strip : Strip_Position)
-      {
-        H_Channel_H[signals[index_strip].Label]->Fill(signals[index_strip].Channel); // STRIP
-      }
-      for (int index_rear : Rear_Position)
-      {
-        H_Channel_H[signals[index_rear].Label]->Fill(signals[index_rear].Channel); // REAR
-      }
-    }
-
-    // checking if strip are well defined in faster
-    if (RearStrip_ASSOCIATED.size() == 2 && GetDetector(RearStrip_ASSOCIATED[0].second.Label) == GetDetector(RearStrip_ASSOCIATED[1].second.Label))
-    {
-      if (RearStrip_ASSOCIATED[0].second.Label < RearStrip_ASSOCIATED[1].second.Label)
-        H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label);
-      else
-        H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[1].second.Label, RearStrip_ASSOCIATED[0].second.Label);
-    }
-  
+      H_2Strip_Label_Check->Fill(RearStrip_ASSOCIATED[1].second.Label, RearStrip_ASSOCIATED[0].second.Label);
+  }
 }
 
 void CuttingGroups()
@@ -2602,7 +2725,7 @@ void CuttingGroups()
   int SiPM_High_Size = SiPM_High->GetSize();
   int SiPM_Low_Size = SiPM_Low->GetSize();
 
-  /// Selection
+  /// Selection with strip now
   double diff = (Rear_Channel - Strip_Channel) / Strip_Channel;
   double spread = SpreadAcceptance[Strip_Label]->Eval(Strip_Channel);
   double mean = MeanAcceptance[Strip_Label];
@@ -2631,7 +2754,8 @@ void CuttingGroups()
       SiPM_Time = (*SiPM_High)[i].Time;
       H_Channel_Cutted[(*SiPM_High)[i].Label]->Fill((*SiPM_High)[i].Channel);
       H_RearSiPM_Time_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time);
-      H_RearSiPM_ChannelTime_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time, Rear_Channel);
+      H_SiliconSiPM_ChannelTime_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time, Rear_Channel);
+      H_SiliconSiPM_ChannelTime_Cutted[Strip_Label]->Fill(Strip_Time - SiPM_Time, Strip_Channel);
       H_SiPM_ChannelTime_Cutted[(*SiPM_High)[i].Label]->Fill(Rear_Time - SiPM_Time, (*SiPM_High)[i].Channel);
       H_RearSiPM_MulitplicityTime_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time, SiPM_High_Size);
     }
@@ -2641,16 +2765,17 @@ void CuttingGroups()
       SiPM_Time = (*SiPM_Low)[i].Time;
       H_Channel_Cutted[(*SiPM_Low)[i].Label]->Fill((*SiPM_Low)[i].Channel);
       H_RearSiPM_Time_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time);
-      H_RearSiPM_ChannelTime_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time, Rear_Channel);
+      H_SiliconSiPM_ChannelTime_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time, Rear_Channel);
+      H_SiliconSiPM_ChannelTime_Cutted[Strip_Label]->Fill(Strip_Time - SiPM_Time, Strip_Channel);
       H_SiPM_ChannelTime_Cutted[(*SiPM_Low)[i].Label]->Fill(Rear_Time - SiPM_Time, (*SiPM_Low)[i].Channel);
       H_RearSiPM_MulitplicityTime_Cutted[Rear_Label]->Fill(Rear_Time - SiPM_Time, SiPM_Low_Size);
     }
 
-    if (Rear_Channel > Rear_IAS[GetDetector(Rear_Label)].first && Rear_Channel < Rear_IAS[GetDetector(Rear_Label)].second)
-    {
-      H_SiPMLow_Mulitplicity_Cutted->Fill(SiPM_Low_Size);
-      H_SiPMHigh_Mulitplicity_Cutted->Fill(SiPM_High_Size);
-    }
+    // if (Rear_Channel > Rear_IAS[GetDetector(Rear_Label)].first && Rear_Channel < Rear_IAS[GetDetector(Rear_Label)].second)
+    // {
+    //   H_SiPMLow_Mulitplicity_Cutted->Fill(SiPM_Low_Size);
+    //   H_SiPMHigh_Mulitplicity_Cutted->Fill(SiPM_High_Size);
+    // }
 
     for (auto &signal : *Silicon)
     {
@@ -2673,55 +2798,76 @@ void CuttingGroups()
 
 void SiliconWalkCorrection()
 {
+  /// STRIP
+  int Strip_Label = (*Silicon)[1].Label;
+  double Strip_Time = (*Silicon)[1].Time;
+  double Strip_Channel = (*Silicon)[1].Channel;
 
-  int Rear_Label = (*Silicon)[0].Label;
-  double Rear_Time = (*Silicon)[0].Time;
-  double Rear_Channel = (*Silicon)[0].Channel;
-
-  double mean_time = MeanAcceptance_Walk_Silicon[Rear_Label]->Eval(Rear_Channel);
+  double mean_time = MeanAcceptance_Walk_Silicon[Strip_Label]->Eval(Strip_Channel); 
 
   for (int i = 0; i < SiPM_High->GetSize(); i++)
   {
-    double diff_time = Rear_Time - (*SiPM_High)[i].Time;
-    H_RearSiPM_ChannelTime_Walk_Silicon[Rear_Label]->Fill(diff_time + mean_time, Rear_Channel);
+    double diff_time = Strip_Time - (*SiPM_High)[i].Time;
+    H_SiPM_ChannelTime_Walk_Silicon[Strip_Label]->Fill(diff_time + mean_time, Strip_Channel);
     H_SiPM_ChannelTime_Walk_SiPM[(*SiPM_High)[i].Label]->Fill(diff_time + mean_time, (*SiPM_High)[i].Channel);
   }
 
   for (int i = 0; i < SiPM_Low->GetSize(); i++)
   {
-    double diff_time = Rear_Time - (*SiPM_Low)[i].Time;
-    H_RearSiPM_ChannelTime_Walk_Silicon[Rear_Label]->Fill(diff_time + mean_time, Rear_Channel);
+    double diff_time = Strip_Time - (*SiPM_Low)[i].Time;
+    H_SiPM_ChannelTime_Walk_Silicon[Strip_Label]->Fill(diff_time + mean_time, Strip_Channel);
     H_SiPM_ChannelTime_Walk_SiPM[(*SiPM_Low)[i].Label]->Fill(diff_time + mean_time, (*SiPM_Low)[i].Channel);
+  }
+
+  //// REAR
+  int Rear_Label = (*Silicon)[0].Label;
+  double Rear_Time = (*Silicon)[0].Time;
+  double Rear_Channel = (*Silicon)[0].Channel;
+
+  mean_time = MeanAcceptance_Walk_Silicon[Rear_Label]->Eval(Rear_Channel);
+
+  for (int i = 0; i < SiPM_High->GetSize(); i++)
+  {
+    double diff_time = Rear_Time - (*SiPM_High)[i].Time;
+    H_SiPM_ChannelTime_Walk_Silicon[Rear_Label]->Fill(diff_time + mean_time, Rear_Channel);
+    // H_SiPM_ChannelTime_Walk_SiPM[(*SiPM_High)[i].Label]->Fill(diff_time + mean_time, (*SiPM_High)[i].Channel);
+  }
+
+  for (int i = 0; i < SiPM_Low->GetSize(); i++)
+  {
+    double diff_time = Rear_Time - (*SiPM_Low)[i].Time;
+    H_SiPM_ChannelTime_Walk_Silicon[Rear_Label]->Fill(diff_time + mean_time, Rear_Channel);
+    // H_SiPM_ChannelTime_Walk_SiPM[(*SiPM_Low)[i].Label]->Fill(diff_time + mean_time, (*SiPM_Low)[i].Channel);
   }
 }
 
 inline void SiPMWalkCorrection()
 {
 
-  int Rear_Label = (*Silicon)[0].Label;
-  double Rear_Time = (*Silicon)[0].Time;
-  double Rear_Channel = (*Silicon)[0].Channel;
+  int Strip_Label = (*Silicon)[1].Label;
+  double Strip_Time = (*Silicon)[1].Time;
+  double Strip_Channel = (*Silicon)[1].Channel;
 
-  double mean_time_silicon = MeanAcceptance_Walk_Silicon[Rear_Label]->Eval(Rear_Channel);
+  double mean_time_silicon = MeanAcceptance_Walk_Silicon[Strip_Label]->Eval(Strip_Channel);
 
   for (int i = 0; i < SiPM_High->GetSize(); i++)
   {
-    double diff_time = Rear_Time - (*SiPM_High)[i].Time;
+    double diff_time = Strip_Time - (*SiPM_High)[i].Time;
     double mean_time_SiPM = MeanAcceptance_Walk_SiPM[(*SiPM_High)[i].Label]->Eval((*SiPM_High)[i].Channel);
-    H_RearSiPM_ChannelTime_Walk_Corrected[Rear_Label]->Fill(diff_time + mean_time_silicon + mean_time_SiPM, Rear_Channel);
+    H_SiPM_ChannelTime_Walk_Corrected[Strip_Label]->Fill(diff_time + mean_time_silicon + mean_time_SiPM, Strip_Channel);
     H_SiPM_ChannelTime_Walk_Corrected[(*SiPM_High)[i].Label]->Fill(diff_time + mean_time_silicon + mean_time_SiPM, (*SiPM_High)[i].Channel);
   }
 
   for (int i = 0; i < SiPM_Low->GetSize(); i++)
   {
-    double diff_time = Rear_Time - (*SiPM_Low)[i].Time;
+    double diff_time = Strip_Time - (*SiPM_Low)[i].Time;
     double mean_time_SiPM = MeanAcceptance_Walk_SiPM[(*SiPM_Low)[i].Label]->Eval((*SiPM_Low)[i].Channel);
-    H_RearSiPM_ChannelTime_Walk_Corrected[Rear_Label]->Fill(diff_time + mean_time_silicon + mean_time_SiPM, Rear_Channel);
+    H_SiPM_ChannelTime_Walk_Corrected[Strip_Label]->Fill(diff_time + mean_time_silicon + mean_time_SiPM, Strip_Channel);
     H_SiPM_ChannelTime_Walk_Corrected[(*SiPM_Low)[i].Label]->Fill(diff_time + mean_time_silicon + mean_time_SiPM, (*SiPM_Low)[i].Channel);
   }
 }
 
-inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
+inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose = 0)
 {
 
   int TIME_BETWEEN_SAME_GAIN = 20;
@@ -2738,18 +2884,23 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
 
   for (int index = 0; index < signals.GetSize(); index++)
   {
-    if (FLAG2021) signals[index].Label = YearConverter(signals[index].Label);
+    if (FLAG2021)
+      signals[index].Label = YearConverter(signals[index].Label);
     int current_label = signals[index].Label;
     if (IsDetectorSiliBack(current_label))
     {
+      if (signals[index].Channel < 600) continue;
       signals[index].Channel = signals[index].Channel - 0.5 + gRandom->Rndm();
       signals[index].Time = signals[index].Time + (-0.5 + gRandom->Rndm()) * 8;
+      if (!FULL) H_Channel_RAW[current_label]->Fill(signals[index].Channel);
       Rear_Position.push_back(index);
     }
     else if (IsDetectorSiliStrip(current_label))
     {
+      if (signals[index].Channel < 600) continue;
       signals[index].Channel = signals[index].Channel - 0.5 + gRandom->Rndm();
       signals[index].Time = signals[index].Time + (-0.5 + gRandom->Rndm()) * 8;
+      if (!FULL) H_Channel_RAW[current_label]->Fill(signals[index].Channel);
       Strip_Position.push_back(index);
     }
     else if (IsDetectorBetaHigh(current_label))
@@ -2768,12 +2919,14 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     {
       CLEANED_Tree_HRS = signals[index];
       CLEANED_Tree->Fill();
+      CLEANED_Tree_18N->Fill();
       CLEANED_Tree_HRS = Signal();
       return;
-    }    
+    }
   }
 
-  if (verbose == 1) Info("Silicon Stuff", 1);
+  if (verbose == 1)
+    Info("Silicon Stuff", 1);
   // Determining Rear strip couples
   vector<pair<Signal, Signal>> RearStrip_ASSOCIATED;
   for (int index_rear = 0; index_rear < Rear_Position.size(); index_rear++)
@@ -2787,8 +2940,18 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     }
   }
 
-  if (RearStrip_ASSOCIATED.size() < 1)
-    return;
+
+  if (RearStrip_ASSOCIATED.size() != 1)
+    return; // no intersting events
+
+  bool FLAG_Multiplicity = true;
+  bool FLAG_Cut = true;
+  bool FLAG_18N = false;
+
+  // ###### CONDITION MULTIPLICITY FOR REAL EVENTS ######
+  // NO other strip or Rear triggered
+  if (Rear_Position.size() != 1 || Strip_Position.size() != 1)
+    FLAG_Multiplicity = false;
 
   vector<bool> RearStrip_ASSOCIATED_ACCEPTED = vector<bool>(RearStrip_ASSOCIATED.size(), true);
   // ###### Cuts ####### //
@@ -2798,33 +2961,32 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     double diff = (RearStrip_ASSOCIATED[index_pair].first.Channel - RearStrip_ASSOCIATED[index_pair].second.Channel) / RearStrip_ASSOCIATED[index_pair].second.Channel;
     double spread = SpreadAcceptance[RearStrip_ASSOCIATED[index_pair].second.Label]->Eval(RearStrip_ASSOCIATED[index_pair].second.Channel);
     double mean = MeanAcceptance[RearStrip_ASSOCIATED[index_pair].second.Label];
-    if (diff > mean + 3 * spread || diff < mean - 3 * spread) 
+    if (diff > mean + 3 * spread || diff < mean - 3 * spread)
     {
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
+       RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
     }
 
     // PileUp rejection from faster flag
-    else if (RearStrip_ASSOCIATED[index_pair].first.Pileup == 1 || RearStrip_ASSOCIATED[index_pair].second.Pileup == 1)
-    {
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
-    }
+    // if (RearStrip_ASSOCIATED[index_pair].first.Pileup == 1 || RearStrip_ASSOCIATED[index_pair].second.Pileup == 1)
+    // {
+    //   RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
+    // }
 
     // PileUp rejection between groups (500µs cut on strip)
-    else if (RearStrip_ASSOCIATED[0].second.Time - lastGroupTime[RearStrip_ASSOCIATED[0].second.Label] < 500e3)
+    if (RearStrip_ASSOCIATED[0].second.Time - lastGroupTime[RearStrip_ASSOCIATED[0].second.Label] < 500e3 && YEAR == 2024)
     {
       lastGroupTime[RearStrip_ASSOCIATED[0].second.Label] = RearStrip_ASSOCIATED[0].second.Time;
       RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
     }
 
-    // RearStrip time cut (100 ns)
-    else if (abs(RearStrip_ASSOCIATED[index_pair].first.Time - RearStrip_ASSOCIATED[index_pair].second.Time) > 100)
-    {
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
-    }
-
+    // Rear-Strip time cut (>0 ns)
+    // if (RearStrip_ASSOCIATED[index_pair].first.Time - RearStrip_ASSOCIATED[index_pair].second.Time < 0)
+    // {
+    //   RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
+    // }
   }
-  
-  // Only one pair in the group
+
+  // Counting associated pair in the group
   int counter_Accepted = 0;
   for (int index_pair = 0; index_pair < RearStrip_ASSOCIATED.size(); index_pair++)
   {
@@ -2834,16 +2996,38 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     }
   }
 
-  if (counter_Accepted > 1 || counter_Accepted == 0)
-  {
-    // cout << "Rejected " << endl;
+  // CONDITION CUTS FOR REAL EVENTS
+  if (counter_Accepted != 1)
     return;
+  
+
+  // WITH INTERSTRIP
+  //  if (counter_Accepted != 1 && !(counter_Accepted == 2 && IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label)))
+  // {
+  //   // cout << "Rejected " << endl;
+  //   return;
+  // }
+
+  // CONDITION FOR 18N EVENTS
+  if (Strip_Position.size() == 2)
+  {
+    if (Is180degEvents(GetDetector(signals[Strip_Position[0]].Label), GetDetector(signals[Strip_Position[1]].Label)))
+    {
+      FLAG_18N = true;
+    }
   }
 
-  Silicon.push_back(RearStrip_ASSOCIATED[0].first);
-  Silicon.push_back(RearStrip_ASSOCIATED[0].second);
-  ////////////////////####################////////////////////
+  // SIGNALS
+  for (int index_pair = 0; index_pair < RearStrip_ASSOCIATED.size(); index_pair++)
+  {
+    if (RearStrip_ASSOCIATED_ACCEPTED[index_pair])
+    {
+      Silicon.push_back(RearStrip_ASSOCIATED[index_pair].first);
+      Silicon.push_back(RearStrip_ASSOCIATED[index_pair].second);
+    }
+  }
 
+  ////////////////////####################////////////////////
 
   /// Cutting data Rear/Strip ///
   //// Strip
@@ -2861,16 +3045,21 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
   int SiPM_High_Size = SiPM_High.size();
   int SiPM_Low_Size = SiPM_Low.size();
 
-  /// Selection
+  /// Selection Cut
   double diff = (Rear_Channel - Strip_Channel) / Strip_Channel;
   double spread = SpreadAcceptance[Strip_Label]->Eval(Strip_Channel);
   double mean = MeanAcceptance[Strip_Label];
 
-  if (!FULL)
-  {
-    H_Channel_RAW[Strip_Label]->Fill(Strip_Channel);
-    H_Channel_RAW[Rear_Label]->Fill(Rear_Channel);
-  }
+  /// Silicon Walk correction
+  // double mean_time_silicon = MeanAcceptance_Walk_Silicon[Rear_Label]->Eval(Rear_Channel); // silicon walk correction
+  double Silicon_Time = Strip_Time;
+  double mean_time_silicon = MeanAcceptance_Walk_Silicon[Strip_Label]->Eval(Strip_Channel); // silicon walk correction
+
+  // if (!FULL)
+  // {
+  //   H_Channel_RAW[Strip_Label]->Fill(Strip_Channel);
+  //   H_Channel_RAW[Rear_Label]->Fill(Rear_Channel);
+  // }
 
   int number = Strip_Label;
 
@@ -2903,35 +3092,14 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
   ////////////////////####################////////////////////
 
   ////////////////////####################////////////////////
-  /// CONTINUOUS VALUE OF CHANNELS ///
-  for (auto &signal : Silicon)
-  {
-    H_Channel_Cleaned[signal.Label]->Fill(signal.Channel);
-    CLEANED_Tree_Silicon.push_back(signal);
-  }
-
-  for (auto &signal : SiPM_High)
-  {
-    // signal.Time = CLEANED_Tree_Silicon[0].Time - signal.Time + MeanAcceptance_Walk_SiPM[signal.Label]->Eval(signal.Channel) + MeanAcceptance_Walk_Silicon[CLEANED_Tree_Silicon[0].Label]->Eval(CLEANED_Tree_Silicon[0].Channel);
-  }
-
-  for (auto &signal : SiPM_Low)
-  {
-    // signal.Time = CLEANED_Tree_Silicon[0].Time - signal.Time + MeanAcceptance_Walk_SiPM[signal.Label]->Eval(signal.Channel) + MeanAcceptance_Walk_Silicon[CLEANED_Tree_Silicon[0].Label]->Eval(CLEANED_Tree_Silicon[0].Channel);
-  }
-
-  /////////////////////////////////////
-
-  double mean_time_silicon = MeanAcceptance_Walk_Silicon[Rear_Label]->Eval(Rear_Channel); // silicon walk correction
-
   vector<Signal> SiPM_H[10]; // vector of High per Label
   vector<Signal> SiPM_L[10]; // vector of Low per Label
   //////////// NEW ANALYSIS ///////////
-  
 
   // #######################
   // ######### (A) #########
-  if (verbose == 1) Info("A", 1);
+  if (verbose == 1)
+    Info("A", 1);
   // # Searching Time difference between 2 SiPMs High (IAS) #
   // # - plotting
   // # - grouping SiPM High per Label
@@ -2954,6 +3122,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
   }
 
   // # Searching Time difference between 2 SiPMs Low (IAS) #
+  // # - grouping SiPM Low per Label
   for (int i = 0; i < SiPM_Low.size(); i++)
   {
     SiPM_L[GetDetectorChannel((SiPM_Low)[i].Label)].push_back((SiPM_Low)[i]);
@@ -2976,7 +3145,8 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
 
   // #######################
   // ######### (B) #########
-  if (verbose == 1) Info("B", 1);
+  if (verbose == 1)
+    Info("B", 1);
   // # Grouping SiPM High in subgroup with the time difference deduced in (A) #
   // # - Grouped in *SiPM_HGroups* #
   vector<vector<Signal>> SiPM_HGroups;
@@ -3006,7 +3176,8 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
 
   // #######################
   // ######### (C) #########
-  if (verbose == 1) Info("C", 1);
+  if (verbose == 1)
+    Info("C", 1);
   // # Associating Low annd High in pair keeping the made groups #
   // # - Grouped in *SiPM_Groups* #
 
@@ -3068,7 +3239,6 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     }
   }
 
-  
   // # Get Alone Low to create a new pair in the group at the end #
   for (int i_group = 0; i_group < SiPM_Groups.size(); i_group++)
   {
@@ -3076,7 +3246,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     double last = -10e6;
     for (int i_pair = 0; i_pair < SiPM_Groups[i_group].size(); i_pair++)
     {
-      double diff_time = Rear_Time - SiPM_Groups[i_group][i_pair].first.Time;
+      double diff_time = Silicon_Time - SiPM_Groups[i_group][i_pair].first.Time;
       double mean_time_SiPM = MeanAcceptance_Walk_SiPM[SiPM_Groups[i_group][i_pair].first.Label]->Eval(SiPM_Groups[i_group][i_pair].first.Channel);
       double time = -(diff_time + mean_time_silicon + mean_time_SiPM);
 
@@ -3090,7 +3260,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
       }
     }
 
-    H_Time_SubGroups[SiPM_Groups[i_group].size()]->Fill(SiPM_Groups[i_group][SiPM_Groups[i_group].size()-1].first.Time-SiPM_Groups[i_group][0].first.Time);
+    H_Time_SubGroups[SiPM_Groups[i_group].size()]->Fill(SiPM_Groups[i_group][SiPM_Groups[i_group].size() - 1].first.Time - SiPM_Groups[i_group][0].first.Time);
 
     // Loop on All low
     for (int i_low = 0; i_low < SiPM_Low.size(); i_low++)
@@ -3098,7 +3268,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
       // Only if Alone
       if (!Associated_Low[SiPM_Low[i_low].Label])
       {
-        double diff_time = Rear_Time - SiPM_Low[i_low].Time;
+        double diff_time = Silicon_Time - SiPM_Low[i_low].Time;
         double mean_time_SiPM = MeanAcceptance_Walk_SiPM[SiPM_Low[i_low].Label]->Eval(SiPM_Low[i_low].Channel);
         double low_alone = -(diff_time + mean_time_silicon + mean_time_SiPM);
         if (low_alone > first - TIME_BETWEEN_DIFFERENT_GAIN && low_alone < last + TIME_BETWEEN_DIFFERENT_GAIN)
@@ -3120,7 +3290,6 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
       }
     }
   }
-
 
   // # Plotting High Low in groups #
   // - time difference
@@ -3145,12 +3314,12 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
       {
         H_SiPM_Channel_Alone[SiPM_Groups[i_group][i_pair].second.Label]->Fill(SiPM_Groups[i_group][i_pair].second.Channel);
       }
-      // High 
+      // High
       else
       {
         H_Channel_Cleaned[SiPM_Groups[i_group][i_pair].first.Label]->Fill(SiPM_Groups[i_group][i_pair].first.Channel);
       }
-      
+
       // Alone High
       if (!SiPM_Groups[i_group][i_pair].second.isValid)
       {
@@ -3166,12 +3335,14 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
 
   // # Plotting MULTIPLICITY of groups, and subgroups #
   H_Multiplicity_Groups->Fill(SiPM_Groups.size());
-  if (IAS) H_Multiplicity_Groups_IAS->Fill(SiPM_Groups.size());
-  
+  if (IAS)
+    H_Multiplicity_Groups_IAS->Fill(SiPM_Groups.size());
+
   for (int i_group = 0; i_group < SiPM_Groups.size(); i_group++)
   {
     H_Multiplicity_SubGroups->Fill(SiPM_Groups[i_group].size());
-    if (IAS) H_Multiplicity_SubGroups_IAS->Fill(SiPM_Groups[i_group].size());
+    if (IAS)
+      H_Multiplicity_SubGroups_IAS->Fill(SiPM_Groups[i_group].size());
   }
 
   // #####################################
@@ -3200,7 +3371,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
   // # TIME FASTER SORTED #
   if (IAS && SiPM_Groups.size() > 0)
   {
-     if (Verbose)
+    if (Verbose)
     {
       cout << BLUE << endl;
       cout << "----------------------------------------------------------------------------" << endl;
@@ -3215,7 +3386,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
           continue;
 
         // correcting time
-        double diff_time = Rear_Time - signals[i_signal].Time;
+        double diff_time = Silicon_Time - signals[i_signal].Time;
         double mean_time_SiPM = MeanAcceptance_Walk_SiPM[signals[i_signal].Label]->Eval(signals[i_signal].Channel);
 
         for (int i_group = 0; i_group < SiPM_Groups.size(); i_group++)
@@ -3273,7 +3444,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
         {
           if (!SiPM_Groups[i_group][i_pair].first.isValid)
             continue;
-          double diff_time = Rear_Time - SiPM_Groups[i_group][i_pair].first.Time;
+          double diff_time = Silicon_Time - SiPM_Groups[i_group][i_pair].first.Time;
           double mean_time_SiPM = MeanAcceptance_Walk_SiPM[SiPM_Groups[i_group][i_pair].first.Label]->Eval(SiPM_Groups[i_group][i_pair].first.Channel);
           double t = -(diff_time + mean_time_silicon + mean_time_SiPM);
           // t different than nan
@@ -3339,9 +3510,8 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
   if (IAS)
   {
     H_RearSiPM_ChannelTime_dt[Rear_Label]->Fill((Silicon)[0].dt, Rear_Channel);
-    H_RearSiPM_ChannelTime_dt[Strip_Label]->Fill((Silicon)[1].dt-(Silicon)[0].dt+8100, Strip_Channel);
+    H_RearSiPM_ChannelTime_dt[Strip_Label]->Fill((Silicon)[1].dt - (Silicon)[0].dt + 8100, Strip_Channel);
   }
-
 
   for (int i_group = 0; i_group < SiPM_Groups.size(); i_group++)
   {
@@ -3349,7 +3519,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     {
       if (SiPM_Groups[i_group][i_pair].first.isValid)
       {
-        double diff_time = Rear_Time - SiPM_Groups[i_group][i_pair].first.Time;
+        double diff_time = Silicon_Time - SiPM_Groups[i_group][i_pair].first.Time;
         double mean_time_SiPM = MeanAcceptance_Walk_SiPM[SiPM_Groups[i_group][i_pair].first.Label]->Eval(SiPM_Groups[i_group][i_pair].first.Channel);
         double t = -(diff_time + mean_time_silicon + mean_time_SiPM);
         SiPM_Groups[i_group][i_pair].first.Time = t;
@@ -3358,16 +3528,10 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
         {
           H_RearSiPM_ChannelTime_dt_det[Rear_Label][SiPM_Groups[i_group][i_pair].first.Label]->Fill(t + (Silicon)[0].dt, SiPM_Groups[i_group][i_pair].first.Channel);
         }
-
-        // if ((t + (Silicon)[0].dt) < 8000 || (t + (Silicon)[0].dt) > 8200);
-        // {
-        //   SiPM_Groups[i_group][i_pair].first.isValid = false;
-        //   SiPM_Groups[i_group][i_pair].second.isValid = false;
-        // }
       }
       if (SiPM_Groups[i_group][i_pair].second.isValid)
       {
-        double diff_time = Rear_Time - SiPM_Groups[i_group][i_pair].second.Time;
+        double diff_time = Silicon_Time - SiPM_Groups[i_group][i_pair].second.Time;
         double mean_time_SiPM = MeanAcceptance_Walk_SiPM[SiPM_Groups[i_group][i_pair].second.Label]->Eval(SiPM_Groups[i_group][i_pair].second.Channel);
         double t = -(diff_time + mean_time_silicon + mean_time_SiPM);
         SiPM_Groups[i_group][i_pair].second.Time = t;
@@ -3375,15 +3539,36 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose=0)
     }
   }
 
-  CLEANED_Tree_SiPMGroup = SiPM_Groups;
-  
- 
+  ///// SAVING TREES
+  if (FLAG_Multiplicity && FLAG_Cut)
+  {
+    // - Tree total (Si+SiPMs)
+    CLEANED_Tree_Silicon = Silicon;
+    CLEANED_Tree_SiPMGroup = SiPM_Groups;
+    CLEANED_Tree->Fill();
+    CLEANED_Tree_Silicon.clear();
+    CLEANED_Tree_SiPMGroup.clear();
 
-  CLEANED_Tree->Fill();
-  Tree_Channel_detector = (Silicon)[1].Channel;
-  CLEANED_Tree_detector[(Silicon)[1].Label]->Fill();
-  CLEANED_Tree_Silicon.clear();
-  CLEANED_Tree_SiPMGroup.clear();
+    // - Tree for each silicon detectors
+    Tree_Channel_detector = (Silicon)[1].Channel;
+    CLEANED_Tree_detector[(Silicon)[1].Label]->Fill();
+
+    // - HIST CLEANED
+    H_Channel_Cleaned[(Silicon)[1].Label]->Fill(Tree_Channel_detector);
+  }
+
+  if (FLAG_18N)
+  {
+    // - Tree 18N (Si+SiPMs)
+    CLEANED_Tree_Silicon = Silicon;
+    CLEANED_Tree_SiPMGroup = SiPM_Groups;
+    CLEANED_Tree_18N->Fill();
+    CLEANED_Tree_Silicon.clear();
+    CLEANED_Tree_SiPMGroup.clear();
+
+    // - HIST CLEANED 18N
+    H_Channel_Cleaned_18N[(Silicon)[1].Label]->Fill((Silicon)[1].Channel);
+  }
 
   //////////////////////////////////////
 }

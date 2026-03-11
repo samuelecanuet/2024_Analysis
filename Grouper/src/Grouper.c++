@@ -6,6 +6,8 @@ int main(int argc, char *argv[])
     FLAG2021 = true;
     
     InitDetectors("Config_Files/sample.pid");
+    InitWindows();
+    InitCalibration();
     
     string Run_string;
 
@@ -36,9 +38,14 @@ int main(int argc, char *argv[])
 
     Info("Current Run : " + Run_string);
     ///////////////////////////////////  INPUT ///////////////////////////////////
-    // DIR_ROOT_DATA = "../../../../../run/media/local1/T7/Samuel/Regrouped/ROOT/";
     ROOT_filename = SearchFiles(DIR_ROOT_DATA, Run_string);
     ROOT_basefilename = ROOT_filename.substr(0, ROOT_filename.find(".root"));
+    if (ROOT_filename.find("32Ar") != string::npos)
+        NUCLEUS = "32Ar";
+    else if (ROOT_filename.find("33Ar") != string::npos)
+        NUCLEUS = "33Ar";
+    else
+        Error("Nucleus not recognized in filename : " + ROOT_filename);
 
     TFile *ROOT_File = MyTFile((DIR_ROOT_DATA + ROOT_filename).c_str(), "READ");
     TTree *Tree = (TTree *)ROOT_File->Get("Tree_Group");
@@ -153,9 +160,7 @@ int main(int argc, char *argv[])
         WriteHistograms_SiPMWalk();
         /////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////  FINAL CLEANING /////////////////////////////////////
-        /////////////////////////////////////////////////////////////////////////////////////////
-
-        
+        /////////////////////////////////////////////////////////////////////////////////////////       
 
         if (Run == REFERENCE_RUN) SaveFitParameters();
     }
@@ -169,6 +174,11 @@ int main(int argc, char *argv[])
     CLEANED_Tree->Branch("CLEANED_Tree_Silicon", &CLEANED_Tree_Silicon);
     CLEANED_Tree->Branch("CLEANED_Tree_SiPMGroup", &CLEANED_Tree_SiPMGroup);
     CLEANED_Tree->Branch("CLEANED_Tree_HRS", &CLEANED_Tree_HRS);
+
+    CLEANED_Tree_18N = new TTree("CLEANED_Tree_18N", "CLEANED_Tree_18N");
+    CLEANED_Tree_18N->Branch("CLEANED_Tree_Silicon", &CLEANED_Tree_Silicon);
+    CLEANED_Tree_18N->Branch("CLEANED_Tree_SiPMGroup", &CLEANED_Tree_SiPMGroup);
+    CLEANED_Tree_18N->Branch("CLEANED_Tree_HRS", &CLEANED_Tree_HRS);
 
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
@@ -198,6 +208,29 @@ int main(int argc, char *argv[])
     //////////////////////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////  Counting IAS losses /////////////////////////////////////
     //////////////////////////////////////////////////////////////////////////////////////////////
+
+    for (int det = 0; det < SIGNAL_MAX; det++)
+    {
+        if (IsDetectorSiliStrip(det))
+        {
+            if (F_Calibration[det] == nullptr)
+            {
+                Warning("No Calibration for Detector " + to_string(det) + ", skipping IAS Losses calculation for this detector.");
+                continue;
+            }
+            TF1 *f_bij = InvertFunction(F_Calibration[det]);
+            H_Channel_RAW[det]->GetXaxis()->SetRangeUser(1000*f_bij->Eval(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first), 1000*f_bij->Eval(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second));
+            H_Channel_Cleaned[det]->GetXaxis()->SetRangeUser(1000*f_bij->Eval(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first), 1000*f_bij->Eval(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second));
+            double int_raw = H_Channel_RAW[det]->Integral();
+            double int_cleaned = H_Channel_Cleaned[det]->Integral();
+            
+            G_IAS_LossesAfterCut->SetPoint(G_IAS_LossesAfterCut->GetN(), det, int_cleaned / int_raw);
+            G_IAS_LossesAfterCut->SetPointError(G_IAS_LossesAfterCut->GetN() - 1, 0, sqrt( pow( sqrt(int_cleaned) / int_raw ,2) + pow( int_cleaned * sqrt(int_raw) / (int_raw*int_raw) ,2) ));
+        }
+    }
+
+    dir_Cleaned->cd();
+    G_IAS_LossesAfterCut->Write();
 
     delete GROUPED_Tree;
     delete CUTTED_Tree;

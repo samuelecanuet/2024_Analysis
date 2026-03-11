@@ -7,13 +7,16 @@ ROOT_LIBS       = $(shell root-config --libs) -lSpectrum
 GSL_CFLAGS      = $(shell gsl-config --cflags)
 GSL_LIBS        = $(shell gsl-config --libs)
 
+algib_PATH = ./home/local1/Downloads/alglib-4.05.0.cpp.gpl/alglib-cpp/
+ALGLIB_SRCS = src/ap.cpp src/interpolation.cpp src/linalg.cpp
+
 CC        = g++
 CFLAGS    = ${FASTERAC_CFLAGS} ${ROOT_CFLAGS} ${GSL_CFLAGS} -Iinclude
 LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GSL_LIBS} -lboost_filesystem -lboost_system ../Grouper/include/Detectors.hh ../Grouper/include/Messenger.hh ../Grouper/include/Utilities.hh
 
-SRCS      = $(wildcard src/*.c++)
+SRCS      = $(wildcard src/*.c++) $(algib_PATH + $(ALGLIB_SRCS))
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Calibration Grouper
+EXE       = Calibration Grouper Grouper_fit
 
 all : $(EXE)
 

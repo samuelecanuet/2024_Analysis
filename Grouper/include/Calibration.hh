@@ -465,40 +465,6 @@ void InitResolution()
     Success("Resolution loaded");
 }
 
-TF1 *InvertFunction(TF1 *f)
-{
-    if (f->GetNpar() == 2)
-    {
-        // bijective of linear fucntion
-        double a = f->GetParameter(1);
-        double b = f->GetParameter(0);
-
-        TF1 *f = new TF1("f", Form("(x - %f)/%f", b, a), 0, 10000);
-
-        // same WHTHOUT Form but takng values of a and b
-
-        return f;
-    }
-
-    if (f->GetNpar() == 3)
-    {
-        // bijective of quadratic function
-        double a = f->GetParameter(2);
-        double b = f->GetParameter(1);
-        double c = f->GetParameter(0);
-
-        TF1 *f_plus = new TF1("f_plus", Form("(-%f + sqrt(%f^2 - 4*%f*(%f-x)))/(2*%f)", b, b, a, c, a), 0, 10000);
-        TF1 *f_minus = new TF1("f_minus", Form("(-%f - sqrt(%f^2 - 4*%f*(%f-x)))/(2*%f)", b, b, a, c, a), 0, 10000);
-
-        return f_plus;
-    }
-    else
-    {
-        Error("Function not implemented : Degree = " + to_string(f->GetNpar() - 1));
-        return nullptr;
-    }
-}
-
 void MakeResidualPlot(string NUCLEUS)
 {
     TCanvas *c1 = new TCanvas((detectorName[current_detector] + "_" + NUCLEUS + "_IAS").c_str(), (detectorName[current_detector] + "_" + NUCLEUS + "_IAS").c_str(), 1920, 1080);
@@ -836,17 +802,18 @@ TH1D* ApplyResolution(int Verbose, int current_detector, string nucleus, double 
     {
         TH1D* H_Conv = (TH1D*)SIMULATED_File[nucleus]->Get(("Silicon_Detector_Energy_Deposit_"+detectorName[current_detector]+"_All").c_str())->Clone(("H_Sim_Conv_" + detectorName[current_detector]).c_str());
         H_Conv->Reset();
-        for (int det = 1; det <= 4; det++)
-        {            
-            int detector = det;
-            detector += current_detector > 50 ? 4 : 0;
-            int detector_number = detector * 10 + GetDetectorChannel(current_detector);
+        // for (int det = 1; det <= 4; det++)
+        // {            
+        //     int detector = det;
+        //     detector += current_detector > 50 ? 4 : 0;
+        //     int detector_number = detector * 10 + GetDetectorChannel(current_detector);
 
-            if (Verbose == 1)
-                Info("Detector : " + detectorName[detector_number], indent + 1);
+        //     if (Verbose == 1)
+        //         Info("Detector : " + detectorName[detector_number], indent + 1);
 
             // loading hist
-            TH1D* H = (TH1D*)SIMULATED_File[nucleus]->Get(("Silicon_Detector_Energy_Deposit_"+detectorName[detector_number]+"_All").c_str());
+            // TH1D* H = (TH1D*)SIMULATED_File[nucleus]->Get(("Silicon_Detector_Energy_Deposit_"+detectorName[detector_number]+"_All").c_str());
+            TH1D* H = (TH1D*)SIMULATED_File[nucleus]->Get(("Silicon_Detector_Energy_Deposit_"+detectorName[current_detector]+"_All").c_str());
 
             // init pileup
             double PileUp_Probability = PileUp[NUCLEUS][current_detector].second;
@@ -864,7 +831,7 @@ TH1D* ApplyResolution(int Verbose, int current_detector, string nucleus, double 
                 }
                 H_Conv->Fill(distribution(generator) + pileup);
             }
-        }
+        // }
         return H_Conv;
     }
     
@@ -882,15 +849,15 @@ TH1D* ApplyResolution(int Verbose, int current_detector, string nucleus, double 
 
         // Tree Method
         // looping if cylindrical symetry
-        for (int det = 1; det <= 4; det++)
-        {
-            int detector = det;
-            // if (current_detector > 50) detector += 4;
-            detector += current_detector > 50 ? 4 : 0;
-            int detector_number = detector * 10 + GetDetectorChannel(current_detector);
+        // for (int det = 1; det <= 4; det++)
+        // {
+        //     int detector = det;
+        //     detector += current_detector > 50 ? 4 : 0;
+        //     int detector_number = detector * 10 + GetDetectorChannel(current_detector);
 
             // loading tree
-            TTree *SIMULATED_Tree_Detectors = (TTree *)SIMULATED_File[NUCLEUS]->Get(("Tree_" + detectorName[detector_number]).c_str());
+            // TTree *SIMULATED_Tree_Detectors = (TTree *)SIMULATED_File[NUCLEUS]->Get(("Tree_" + detectorName[detector_number]).c_str());
+            TTree *SIMULATED_Tree_Detectors = (TTree *)SIMULATED_File[NUCLEUS]->Get(("Tree_" + detectorName[current_detector]).c_str());
             Reader = new TTreeReader(SIMULATED_Tree_Detectors);
             TTreeReaderValue<double> Simulated_Energy(*Reader, "Energy");
             Reader->Restart();
@@ -901,17 +868,17 @@ TH1D* ApplyResolution(int Verbose, int current_detector, string nucleus, double 
             double PileUp_Probability = PileUp[NUCLEUS][current_detector].second;
             double PileUp_Sigma = PileUp[NUCLEUS][current_detector].first;
             while (Reader->Next())
-            {
+            {           
                 // ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Progress: ");
-                normal_distribution<double> distribution(*Simulated_Energy, resolution);
+                normal_distribution<double> distribution(*Simulated_Energy, resolution/2);
                 double pileup = 0;
-                if (gRandom->Uniform() < PileUp_Probability)
-                {
-                    pileup = abs(gRandom->Gaus(0, PileUp_Sigma));
-                }
+                // if (gRandom->Uniform() < PileUp_Probability)
+                // {
+                //     pileup = abs(gRandom->Gaus(0, PileUp_Sigma));
+                // }
                 H_Sim_Conv[NUCLEUS][current_detector]->Fill(distribution(generator) + pileup);
             }
-        }
+        // }
     }
 
     return nullptr;
@@ -976,16 +943,15 @@ double FunctionToMinimize(const double *par)
             dir_nuclei_detector[NUCLEUS][current_detector]->cd();
             H_Exp_Without_Background->Write();
 
-            // if (VERBOSE == 1)
-            //     Info("Adding 32Cl", 2);
-            // TH1D *H_Cl = ApplyResolution(VERBOSE, current_detector, "32Cl", par[0], 2, true);
-            // H_Cl->Scale(0.01 / 3 * 32 / 57 * 0.8);
-            // H_Sim_Conv["32Cl"][current_detector] = (TH1D *)H_Sim_Conv[NUCLEUS][current_detector]->Clone(("H_Sim_Conv_32Cl_" + detectorName[current_detector]).c_str());
+            if (VERBOSE == 1)
+                Info("Adding 32Cl", 2);
+            TH1D *H_Cl = ApplyResolution(VERBOSE, current_detector, "32Cl", par[0], 2, true);
+            H_Cl->Scale(0.01 / 3 * 32 / 57 * 0.8);
+            H_Sim_Conv["32Cl"][current_detector] = (TH1D *)H_Sim_Conv[NUCLEUS][current_detector]->Clone(("H_Sim_Conv_32Cl_" + detectorName[current_detector]).c_str());
             
-            // H_Sim_Conv["32Cl"][current_detector]->Add((TH1D *)Background_function[NUCLEUS][current_detector]->GetHistogram(), 1);
-            
-            
-            // H_Sim_Conv[NUCLEUS][current_detector]->Add(H_Cl);
+            H_Sim_Conv["32Cl"][current_detector]->Add((TH1D *)Background_function[NUCLEUS][current_detector]->GetHistogram(), 1);
+        
+            H_Sim_Conv[NUCLEUS][current_detector]->Add(H_Cl);
 
 
         }

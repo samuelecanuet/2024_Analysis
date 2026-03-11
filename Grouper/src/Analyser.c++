@@ -4,14 +4,12 @@ int main(int argc, char **argv)
 {
     
     NUCLEUS = "32Ar";
-    IAS[NUCLEUS] = 14;
     FLAG2025 = true;
     VERBOSE = 0;
 
 
     InitDetectors("Config_Files/sample.pid");
-    
-    
+        
     ///////// READING FILE //////////
     TTreeReader *Reader;
     TTreeReaderArray<Signal> *Silicon;
@@ -21,15 +19,14 @@ int main(int argc, char **argv)
    
     
     ///////// NEW FILE //////////
-    ANALYSED_File = MyTFile((DIR_ROOT_DATA_ANALYSED + NUCLEUS + "_analysed.root").c_str(), "RECREATE");
+    ANALYSED_File = MyTFile((DIR_ROOT_DATA_ANALYSED + NUCLEUS + "_" + to_string(YEAR) + "_analysed.root").c_str(), "RECREATE");
     TTree *ANALYSED_Tree = new TTree("ANALYSED_Tree", "ANALYSED_Tree");
 
-    double TH[10] = {0, 300, 300, 300, 400, 200, 400, 400, 400, 300};
+    // double TH[10] = {0, 300, 300, 300, 400, 200, 400, 400, 400, 300};
 
     InitCalib();
     InitWindows();
     InitHistograms();
-    
 
     ReaderData();
     RandomCorrection();
@@ -38,9 +35,9 @@ int main(int argc, char **argv)
     for (int mul = 1; mul <= BETA_SIZE; mul++)
     {
         cRatioCoinc_NoCoinc[mul] = new TCanvas(("RatioCoinc_NoCoinc_" + to_string(mul)).c_str(), ("RatioCoinc_NoCoinc_" + to_string(mul)).c_str(), 1920, 1080);
-        G_RatioCoinc_NoCoinc[mul] = new TGraph();
+        G_RatioCoinc_NoCoinc[mul] = new TGraphErrors();
         cRatioCoinc_NoCoinc_Corrected[mul] = new TCanvas(("RatioCoinc_NoCoinc_Corrected_" + to_string(mul)).c_str(), ("RatioCoinc_NoCoinc_Corrected_" + to_string(mul)).c_str(), 1920, 1080);
-        G_RatioCoinc_NoCoinc_Corrected[mul] = new TGraph();
+        G_RatioCoinc_NoCoinc_Corrected[mul] = new TGraphErrors();
     }
 
     /// DRAWING
@@ -93,24 +90,30 @@ int main(int argc, char **argv)
                 // printing //
                 
                 // Info("## RAW ##", 2);
-                int nocoinc = H_NoCoinc[i][mul]->Integral();
-                int coinc = H_Coinc[i][mul]->Integral();
-                int single = H_Single[i]->Integral();
+                double nocoinc = H_NoCoinc[i][mul]->Integral();
+                double coinc = H_Coinc[i][mul]->Integral();
+                double single = H_Single[i]->Integral();
                 // if (mul == 9)
                     // Info("Single: " + to_string(single), 3);
             
                 // Info("No Coinc: " + to_string(nocoinc), 3);
                 // Info("Coinc: " + to_string(coinc), 3);
-                // Info("Coinc/NoCoinc: " + to_string(coinc / (double)nocoinc), 3);
-                G_RatioCoinc_NoCoinc[mul]->AddPoint(i, coinc / (double)nocoinc);
+                G_RatioCoinc_NoCoinc[mul]->AddPoint(i, coinc / (coinc + nocoinc));
+                G_RatioCoinc_NoCoinc[mul]->SetPointError(G_RatioCoinc_NoCoinc[mul]->GetN() - 1, 0, 
+                    sqrt( pow (sqrt(coinc) * (nocoinc)/( (coinc + nocoinc)*(coinc + nocoinc) ),2) + pow( sqrt(nocoinc) * coinc / ( (coinc + nocoinc)*(coinc + nocoinc) ),2) ) );
+
                 // Info("## CORRECTED ##", 2);
                 // Info("## Random: " + to_string(NRandom[i][mul]), 3);
                 nocoinc = H_NoCoinc_Corrected[i][mul]->Integral();
                 coinc = H_Coinc_Corrected[i][mul]->Integral();
                 // Info("No Coinc: " + to_string(nocoinc), 3);
                 // Info("Coinc: " + to_string(coinc), 3);
-                // Info("Coinc/NoCoinc: " + to_string(coinc / (double)nocoinc), 3);
-                G_RatioCoinc_NoCoinc_Corrected[mul]->AddPoint(i, coinc / (double)nocoinc);
+                double ratio_err = sqrt( pow (sqrt(coinc) * (nocoinc)/( (coinc + nocoinc)*(coinc + nocoinc) ),2) + pow( sqrt(nocoinc) * coinc / ( (coinc + nocoinc)*(coinc + nocoinc) ),2) );
+                if (mul == 3)
+                    Info("Coinc/Single: " + to_string(coinc / single) + " +/- " + to_string(ratio_err), 3);
+                G_RatioCoinc_NoCoinc_Corrected[mul]->AddPoint(i, coinc / (coinc + nocoinc));
+                G_RatioCoinc_NoCoinc_Corrected[mul]->SetPointError(G_RatioCoinc_NoCoinc_Corrected[mul]->GetN() - 1, 0, 
+                    sqrt( pow (sqrt(coinc) * (nocoinc)/( (coinc + nocoinc)*(coinc + nocoinc) ),2) + pow( sqrt(nocoinc) * coinc / ( (coinc + nocoinc)*(coinc + nocoinc) ),2) ) );
                 // Info("## SHIFT CORRECTED ##", 2);
                 // Info("No Coinc: " + to_string(H_NoCoinc_Corrected[i][mul]->GetMean()), 3);
                 // Info("Coinc: " + to_string(H_Coinc_Corrected[i][mul]->GetMean()), 3);
@@ -260,7 +263,7 @@ int main(int argc, char **argv)
         G_RatioCoinc_NoCoinc[mul]->SetMarkerStyle(20);
         G_RatioCoinc_NoCoinc[mul]->SetMarkerSize(1);
         G_RatioCoinc_NoCoinc[mul]->GetXaxis()->SetTitle("Strip");
-        G_RatioCoinc_NoCoinc[mul]->GetYaxis()->SetTitle("Ratio Coinc/NoCoinc");
+        G_RatioCoinc_NoCoinc[mul]->GetYaxis()->SetTitle("Ratio Coinc/Single");
         G_RatioCoinc_NoCoinc[mul]->Draw("AP");
         cRatioCoinc_NoCoinc[mul]->Write();
 
@@ -268,7 +271,7 @@ int main(int argc, char **argv)
         G_RatioCoinc_NoCoinc_Corrected[mul]->SetMarkerStyle(20);
         G_RatioCoinc_NoCoinc_Corrected[mul]->SetMarkerSize(1);
         G_RatioCoinc_NoCoinc_Corrected[mul]->GetXaxis()->SetTitle("Strip");
-        G_RatioCoinc_NoCoinc_Corrected[mul]->GetYaxis()->SetTitle("Ratio Coinc/NoCoinc Corrected");
+        G_RatioCoinc_NoCoinc_Corrected[mul]->GetYaxis()->SetTitle("Ratio Coinc/Single Corrected");
         G_RatioCoinc_NoCoinc_Corrected[mul]->Draw("AP");
         cRatioCoinc_NoCoinc_Corrected[mul]->Write();
     }

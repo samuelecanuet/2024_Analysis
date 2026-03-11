@@ -1,5 +1,6 @@
 import scipy.special as sp
 from scipy.stats import norm
+import argparse
 
 def sigma_to_p(n_sigma):
     """
@@ -57,9 +58,29 @@ def find_delta(sigma=1, nu=1, tol=1e-10, max_iter=1e8):
 
 if __name__ == "__main__":
     # Define the desired sigma level and degrees of freedom
-    sigma = 1
-    nu = 4
+    default_sigma = 1
+    default_nu = 3
+
+    default_dir = ""
+
+
+    parser = argparse.ArgumentParser(description='Calculate ∆χ² for given sigma and degrees of freedom.')
+    parser.add_argument('--sigma', type=float, default=default_sigma, help='Number of standard deviations (sigma level)')
+    parser.add_argument('--npar', type=float, default=default_nu, help='Degrees of freedom (nu)')
+    parser.add_argument('--dir', type=str, default=default_dir, help='Directory to save the result')
+    args = parser.parse_args()
+    sigma = args.sigma
+    nu = args.npar
+    dir = args.dir
 
     # Find the corresponding ∆χ² value
     delta = find_delta(sigma, nu)
-    print(f"∆χ² for {sigma}σ and {nu} degrees of freedom: {delta}")
+
+
+    if (default_sigma == sigma) and (default_nu == nu):
+        print(f"∆χ² for {sigma}σ and {nu} degrees of freedom: {delta}")
+    else:   
+        with open(dir+"ConfidenceLevel_Dim.txt", "w") as f:
+            f.write(delta)
+
+    print(delta)

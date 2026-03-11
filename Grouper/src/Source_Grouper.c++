@@ -3,7 +3,8 @@
 
 int main(int argc, char *argv[])
 {
-
+    FLAG2025 = true;
+    InitDetectors("Config_Files/sample.pid");
     string Run_string;
 
     if (argc < 2)
@@ -44,9 +45,7 @@ int main(int argc, char *argv[])
     GROUPED_File->cd();
     WriteTime(ROOT_File, GROUPED_File);
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
-    InitDetectors("Config_Files/sample.pid");
     InitHistograms_Grouped();
-    InitCalibration();
 
     clock_t start = clock(), Current;
     LoadFitParameters();

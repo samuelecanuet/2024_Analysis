@@ -12,6 +12,8 @@ f==1 || f==2 {
 
 runs=($run_list)
 
+
+###### GROUPING RUN ######
 for run in "${runs[@]}"
 do
     cd Grouper

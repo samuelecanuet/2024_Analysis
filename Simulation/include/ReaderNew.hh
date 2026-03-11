@@ -4,6 +4,7 @@
 using namespace CLHEP;
 
 int Verbosee = 0;
+string NUCLEUS;
 
 TFile *ANALYSIS_File;
 
@@ -20,6 +21,7 @@ TTreeReaderArray<double> *Tree_T0;
 TTreeReaderArray<double> *Tree_Catcher_Central_Energy_Deposit;
 TTreeReaderArray<double> *Tree_Catcher_Side_Energy_Deposit;
 TTreeReaderArray<double> *Tree_PlasticScintillator_Energy_Deposit;
+TTreeReaderArray<double> *Tree_PlasticScintillator_Visible_Energy_Deposit;  
 TTreeReaderArray<Hep3Vector> *Tree_PlasticScintillator_Hit_Position;
 TTreeReaderArray<double> *Tree_PlasticScintillator_Hit_Angle;
 TTreeReaderArray<double> *Tree_PlasticScintillator_Hit_Time;
@@ -39,6 +41,10 @@ TTree *PlasticIASTree;
 int sili_code;
 double sili_e;
 double SiPM_e;
+
+TTree *FINAL_OutTree;
+Signal FINAL_OutTree_Silicon;
+vector<Signal> FINAL_OutTree_SiPM;
 
 double time_e_IAS;
 
@@ -109,7 +115,7 @@ vector<string> Particle_Used_String = {"32Ar", "32Cl", "31S", "31P", "33Ar", "33
 
 // DATA // 
 int integration_Time_Silicon = 44.2e3; // 44.2µs  
-int integration_Time_SiPM = 200; // 200ns
+int integration_Time_SiPM = 200.; // 200ns
 
 
 map<int, int> PDGtoIndex;
@@ -247,12 +253,13 @@ vector<vector<Signal>> LossLessToGroup(vector<Signal> DetectorSignals)
 {
     vector<vector<Signal>> DetectorSignals_Group;
 
-    if (DetectorSignals.size() == 1 && IsDetectorSiliStrip(DetectorSignals[0].Label))
-    {
-        return DetectorSignals_Group;
-    }
+    // if (DetectorSignals.size() == 1 && IsDetectorSiliStrip(DetectorSignals[0].Label))
+    // {
+    //     // DetectorSignals_Group.push_back({DetectorSignals[0]});
+    //     return DetectorSignals_Group;
+    // }
 
-
+    // creating groups based on Strip
     for (int i = 0; i < DetectorSignals.size(); i++)
     {
         if (IsDetectorSiliStrip(DetectorSignals[i].Label))
@@ -263,25 +270,26 @@ vector<vector<Signal>> LossLessToGroup(vector<Signal> DetectorSignals)
             }
             else
             {
+                bool added = false;
                 for (int igroup = 0; igroup < DetectorSignals_Group.size(); igroup++)
                 {
                     double dt = DetectorSignals[i].Time - DetectorSignals_Group[igroup][0].Time;
                     if (dt < maxi && dt > mini)
                     {
                         DetectorSignals_Group[igroup].push_back(DetectorSignals[i]);
+                        added = true;
                         break;
                     }
-                    else
-                    {
-                        DetectorSignals_Group.push_back({DetectorSignals[i]});
-                        break;
-                    }
+                }
+                if (!added)
+                {
+                    DetectorSignals_Group.push_back({DetectorSignals[i]});
                 }
             }
         }
     }
 
-    // grouping others
+    // Adding SiPM in group(s)
     for (int i = 0; i < DetectorSignals.size(); i++)
     {
         if (IsDetectorSiliStrip(DetectorSignals[i].Label))
@@ -343,6 +351,12 @@ void InitHistograms(int PDG_code)
     H_E0[PDG_code]->GetXaxis()->CenterTitle();
     H_E0[PDG_code]->GetYaxis()->CenterTitle();
 
+    H_T0[PDG_code] = new TH1D(("T0_" + name).c_str(), ("T0_" + name).c_str(), 1200, 0, 1.2);
+    H_T0[PDG_code]->GetXaxis()->SetTitle("T0 [s]");
+    H_T0[PDG_code]->GetYaxis()->SetTitle("Counts");
+    H_T0[PDG_code]->GetXaxis()->CenterTitle();
+    H_T0[PDG_code]->GetYaxis()->CenterTitle();
+
     H_x[PDG_code] = new TH1D(("x_" + name).c_str(), ("x_" + name).c_str(), 1000, -1000, 1000);
     H_x[PDG_code]->GetXaxis()->SetTitle("x [um]");
     H_x[PDG_code]->GetYaxis()->SetTitle("Counts");
@@ -378,12 +392,6 @@ void InitHistograms(int PDG_code)
     H_pz[PDG_code]->GetYaxis()->SetTitle("Counts");
     H_pz[PDG_code]->GetXaxis()->CenterTitle();
     H_pz[PDG_code]->GetYaxis()->CenterTitle();
-
-    H_T0[PDG_code] = new TH1D(("T0_" + name).c_str(), ("T0_" + name).c_str(), 1000, 0, 1000);
-    H_T0[PDG_code]->GetXaxis()->SetTitle("#T_0 [ns]");
-    H_T0[PDG_code]->GetYaxis()->SetTitle("Counts");
-    H_T0[PDG_code]->GetXaxis()->CenterTitle();
-    H_T0[PDG_code]->GetYaxis()->CenterTitle();
 
     H_Catcher_Central_Energy_Deposit[PDG_code] = new TH1D(("Catcher_Central_Energy_Deposit_" + name).c_str(), ("Catcher_Central_Energy_Deposit_" + name).c_str(), 15000, 0, 15000);
     H_Catcher_Central_Energy_Deposit[PDG_code]->GetXaxis()->SetTitle("Energy [keV]");
@@ -619,6 +627,7 @@ void WriteHistograms()
 
         dir_Initial[PDG]->cd();
         H_E0[PDG]->Write();
+        H_T0[PDG]->Write();
         H_x[PDG]->Write();
         H_y[PDG]->Write();
         H_z[PDG]->Write();
@@ -722,12 +731,17 @@ void WriteHistograms()
             H_Silicon_Detector_Energy_Deposit_COINC[0][det]->SetLineColor(kRed);
             H_Silicon_Detector_Energy_Deposit_COINC[0][det]->Draw("HIST SAME");
 
-            H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->GetXaxis()->SetRangeUser(3200, 3400);
-            H_Silicon_Detector_Energy_Deposit_COINC[0][det]->GetXaxis()->SetRangeUser(3200, 3400);
+            H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
+            H_Silicon_Detector_Energy_Deposit_COINC[0][det]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
+            H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
+
+            double coinc = H_Silicon_Detector_Energy_Deposit_COINC[0][det]->Integral();
+            double nocoinc = H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]->Integral();
             
             cout << "Detector: " << detectorName[det] << endl;
-            cout << "--- Ratio : " << H_Silicon_Detector_Energy_Deposit_COINC[0][det]->Integral() / H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]->Integral() * 100 << endl;
-
+            cout << "--- Ratio : " << coinc/(nocoinc+coinc) *100 <<
+                    " +/- " << sqrt(pow(sqrt(coinc) * (coinc)/(pow(nocoinc + coinc,2)),2) + pow(sqrt(nocoinc) * (coinc)/(pow(nocoinc + coinc,2)), 2 ) ) *100 << " % " << endl;
+ 
             TLatex *text = new TLatex();
             text->SetNDC();
             text->SetTextSize(0.03);
@@ -767,8 +781,8 @@ void WriteHistograms()
                 }
                 if (GetDetector(det) >= 5)
                 {
-                    H_StripH_Single[51]->Add(H_Silicon_Detector_Energy_Deposit_COINC[0][det]);
-                    H_StripH_Coinc[51]->Add(H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]);
+                    H_StripH_Single[51]->Add(H_Silicon_Detector_Energy_Deposit_SINGLE[0][det]);
+                    H_StripH_Coinc[51]->Add(H_Silicon_Detector_Energy_Deposit_COINC[0][det]);
                     H_StripH_NOCoinc[51]->Add(H_Silicon_Detector_Energy_Deposit_NOCOINC[0][det]);
                 }
             }

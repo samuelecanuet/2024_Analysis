@@ -167,38 +167,6 @@ void InitPeakWindow(string nuclei)
   }
 }
 
-void InitCalibration()
-{
-  string CalibFileName;
-
-  CalibFileName = "/Config_Files/" + to_string(YEAR) + "/Calibration_" + to_string(YEAR) + ".txt";
-
-  ifstream file(CalibFileName);
-
-  if (file.is_open())
-  {
-    Info("Calibration file found");
-
-    string line;
-    while (getline(file, line))
-    {
-      istringstream iss(line);
-      int det;
-      double a;
-      double b;
-      double c;
-      iss >> det >> a >> b >> c;
-      ManualCalibFitted[det][0] = a;
-      ManualCalibFitted[det][1] = b;
-      ManualCalibFitted[det][2] = c;
-    }
-  }
-  else
-  {
-    Error("No Calibration file found");
-  }
-}
-
 void SaveFitParameters()
 {
   TFile *file = new TFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters.root").c_str(), "RECREATE");
@@ -232,7 +200,7 @@ void SaveFitParameters()
 
 void LoadFitParameters()
 {
-  TFile *file = new TFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters.root").c_str(), "READ");
+  TFile *file = MyTFile((DIR_ROOT_DATA_GROUPED + "Grouping_FitParameters_" + to_string(YEAR) + ".root").c_str(), "READ");
   for (int i = 0; i < detectorNum; i++)
   {
     if (IsDetectorBeta(i))
@@ -520,7 +488,7 @@ inline int WriteTree_Grouped()
   GROUPED_File->cd();
   CLEANED_Tree->Write();
 
-  delete CLEANED_Tree;
+  // delete CLEANED_Tree;
   return 0;
 }
 

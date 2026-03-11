@@ -5,6 +5,7 @@ int VERBOSE = 0;
 TFile *ANALYSED_File;
 TFile *MERGED_File;
 TFile *CALIBRATED_File;
+TFile *CALIBRATED_SiPM_File;
 
 TTreeReader *Reader;
 TTreeReaderArray<Signal> *Silicon;
@@ -14,6 +15,7 @@ TTreeReaderValue<Signal> *HRS;
 string NUCLEUS = "32Ar";
 
 TF1* Calibration[SIGNAL_MAX];
+TF1* SiPM_Calibration[SIGNAL_MAX];
 TH1D* H_NoCoinc[SIGNAL_MAX][MAX_MULTIPLICTY];
 TH1D* H_Coinc[SIGNAL_MAX][MAX_MULTIPLICTY];
 TH1D* H_Coinc_Mulitplicity[SIGNAL_MAX][MAX_MULTIPLICTY];
@@ -26,9 +28,9 @@ TH1D *H_SiPM_Time_Coinc[SIGNAL_MAX][MAX_MULTIPLICTY];
 TH1D *H_Random[SIGNAL_MAX][MAX_MULTIPLICTY];
 TGraph *G_NRandom[MAX_MULTIPLICTY];
 TCanvas *cRatioCoinc_NoCoinc[BETA_SIZE];
-TGraph *G_RatioCoinc_NoCoinc[BETA_SIZE];
+TGraphErrors *G_RatioCoinc_NoCoinc[BETA_SIZE];
 TCanvas *cRatioCoinc_NoCoinc_Corrected[BETA_SIZE];
-TGraph *G_RatioCoinc_NoCoinc_Corrected[BETA_SIZE];
+TGraphErrors *G_RatioCoinc_NoCoinc_Corrected[BETA_SIZE];
 TDirectory *dir_RandomCorrection;
 TDirectory *dir_RandomCorrection_Strip[SIGNAL_MAX];
 TDirectory *dir_RandomCorrection_Strip_Write[SIGNAL_MAX];
@@ -116,9 +118,6 @@ void InitHistograms()
                 H_SiPM_Time_Coinc[i][mul]->GetYaxis()->SetTitle("Counts");
                 H_SiPM_Time_Coinc[i][mul]->GetXaxis()->CenterTitle();
                 H_SiPM_Time_Coinc[i][mul]->GetYaxis()->CenterTitle();
-
-                
-
             }
         }
 
@@ -132,7 +131,7 @@ void InitHistograms()
                 H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->CenterTitle();
                 H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->CenterTitle();
 
-                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eHighN, eHighMin, eHighMax);
+                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->SetTitle("Channel");
                 H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->SetTitle("Counts");
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->CenterTitle();
@@ -150,7 +149,7 @@ void InitHistograms()
                 H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->CenterTitle();
                 H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->CenterTitle();
 
-                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eLowN, eLowMin, eLowMax);
+                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eSiliN_cal/10 , eSiliMin_cal, eSiliMax_cal);
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->SetTitle("Channel");
                 H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->SetTitle("Counts");
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->CenterTitle();
@@ -169,7 +168,7 @@ void InitHistograms()
 
 void InitCalib()
 {
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_new.root").c_str(), "READ");
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
         if (IsDetectorSiliStrip(i))
@@ -178,13 +177,29 @@ void InitCalib()
 
             if (Calibration[i] == NULL)
             {
-                Calibration[i] = new TF1(("Calibration_" + detectorName[i]).c_str(), "x", 0, 10000);
-                Warning("No calibration found for " + detectorName[i]);
+                Error("No calibration found for " + detectorName[i]);
             }
         }
     }
 
-    Success("Calibration loaded");
+    Success("Silicon Calibration loaded");
+
+
+    CALIBRATED_SiPM_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorBetaHigh(i))
+        {
+            SiPM_Calibration[GetDetectorChannel(i)] = (TF1 *)CALIBRATED_SiPM_File->Get(("SiPM_" + to_string(GetDetectorChannel(i)) + "/F_Calibration_SiPM" + to_string(GetDetectorChannel(i))).c_str());
+
+            if (SiPM_Calibration[GetDetectorChannel(i)] == NULL)
+            {
+                Error("No SiPM calibration found for " + detectorName[i]);
+            }
+        }
+    }
+
+    Success("SiPM Calibration loaded");
 }
 
 void ReaderData()
@@ -193,7 +208,8 @@ void ReaderData()
     Reader = new TTreeReader((TTree *)MERGED_File->Get("MERGED_Tree"));
     Silicon = new TTreeReaderArray<Signal>(*Reader, "MERGED_Tree_Silicon");
     SiPM_Groups = new TTreeReaderValue<vector<vector<pair<Signal, Signal>>>>(*Reader, "MERGED_Tree_SiPMGroup");
-    if (FLAG2025) HRS = new TTreeReaderValue<Signal>(*Reader, "MERGED_Tree_HRS");
+    // if (FLAG2025) 
+    HRS = new TTreeReaderValue<Signal>(*Reader, "MERGED_Tree_HRS");
 
     clock_t start = clock(), Current;
     int Entries = Reader->GetEntries();
@@ -201,22 +217,21 @@ void ReaderData()
     while (Reader->Next() && Reader->GetCurrentEntry() < limit)
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
-        if (FLAG2025)
-        {
+        // if (FLAG2025)
+        // {
             if (IsHRSProton((**HRS).Label))
                 continue;
-        }
+        // }
 
         int Strip_Label = (*Silicon)[1].Label;
-        double energy = Calibration[Strip_Label]->Eval((*Silicon)[1].Channel / 1000);
-
-        // cout << "Energy: " << energy << "    " << Strip_Label << endl;
+        double energy = Calibration[Strip_Label]->Eval((*Silicon)[1].Channel / 1000.);
        
 
         if (WindowsMap[NUCLEUS][IAS[NUCLEUS]][Strip_Label].first > energy || energy > WindowsMap[NUCLEUS][IAS[NUCLEUS]][Strip_Label].second) // only for ias
         {
             continue;
         }
+
         H_Single[Strip_Label]->Fill(energy);
         double NEAREST = 1e9;
         int NEAREST_GROUP_INDEX = -1;
@@ -240,7 +255,6 @@ void ReaderData()
                 // Looping on pair of the subgroup
                 for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_group].size(); i_pair++)
                 {
-
                     // Taking valid element of pair with High priority
                     if ((**SiPM_Groups)[i_group][i_pair].first.isValid && !isnan((**SiPM_Groups)[i_group][i_pair].first.Time))
                     {
@@ -279,7 +293,7 @@ void ReaderData()
                 {
                     if (mul <= (**SiPM_Groups)[i_group].size())
                     {
-                        H_SiPM_Time[Strip_Label][mul]->Fill(nearest_group_time[i_group]);
+                        // H_SiPM_Time[Strip_Label][mul]->Fill(nearest_group_time[i_group]);
                         if (mul == 9)
                         {
                             H_Time_Channel[Strip_Label]->Fill(mean_group_time[i_group], energy);
@@ -291,18 +305,106 @@ void ReaderData()
 
         // cout << "Nearest: " << NEAREST << "    " << NEAREST_GROUP_INDEX << endl;
 
-        int Multiplicity;
+        int Multiplicity = 0;
         if (NEAREST_GROUP_INDEX == -1)
             Multiplicity = 0;
         else
         {
-            Multiplicity = (**SiPM_Groups)[NEAREST_GROUP_INDEX].size();
+            vector<int> index_delete = {};
+            // Multiplicity = (**SiPM_Groups)[NEAREST_GROUP_INDEX].size();
+
+            // Keeping only if Channel > 0
+            for (int i = 0; i < (**SiPM_Groups)[NEAREST_GROUP_INDEX].size(); i++)
+            {
+                if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
+                {
+                    if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel > 0 || isnan((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Time))
+                        Multiplicity++;
+                    else
+                        index_delete.push_back(i);
+                }
+                else
+                {
+                    index_delete.push_back(i);
+                }
+                // else if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
+                // {
+                //     if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel > 0)
+                //         Multiplicity++;
+                // }
+            }
+
+            // cleaning the vector with index
+            for (int i = index_delete.size() - 1; i >= 0; i--)
+            {
+                (**SiPM_Groups)[NEAREST_GROUP_INDEX].erase((**SiPM_Groups)[NEAREST_GROUP_INDEX].begin() + index_delete[i]);
+            }
+        
+
+            // push M to 0 if inferor to 100keV FOR 1 SIPM
+            // bool flagSiPMx = false;
+            // for (int i = 0; i < (**SiPM_Groups)[NEAREST_GROUP_INDEX].size(); i++)
+            // {
+            //     if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label == 104 || (**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label == 114)
+            //     {
+            //         double e_sipm = 0;
+            //         if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
+            //         {
+            //             e_sipm = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel / 1000.);
+            //         }
+            //         else if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
+            //         {
+            //             e_sipm = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel / 1000.);
+            //         }
+
+            //         flagSiPMx = true;
+
+            //         if (e_sipm < 100.)
+            //         {
+            //             Multiplicity = 0;
+            //         }
+
+            //         break;
+            //     }
+            //     // else 
+            //     // {
+            //     //     Multiplicity = 0;
+            //     // }
+            // }
+
+            // if (flagSiPMx == false)
+            // {
+            //     Multiplicity = 0;
+            // }
+
+            Multiplicity = 0;
+            for (int i = 0; i < (**SiPM_Groups)[NEAREST_GROUP_INDEX].size(); i++)
+            {
+                // exluding SiPM6
+                if (YEAR == 2025 && (GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label) == 6))
+                    continue;
+                
+                double e_sipm = 0;
+                if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
+                {
+                    e_sipm = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel / 1000.);
+                }
+                else if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
+                {
+                    e_sipm = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel / 1000.);
+                }
+
+                if (e_sipm > 100.)
+                {
+                    Multiplicity++;
+                }
+            }
         }
 
         // Filling Hist with repect to Multiplicity
         for (int mul = 1; mul <= BETA_SIZE; mul++)
         {
-            if (mul <= Multiplicity                              // Mulitplicity sorting condition
+            if (mul <= Multiplicity                              // Mulitplicity sorting condition M>=
                 && (NEAREST > start_gate && NEAREST < end_gate)) // Time gate condition
             {
 
@@ -316,13 +418,15 @@ void ReaderData()
                 {
                     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
                         continue;
-                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
+                    double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel / 1000.);
+                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
                 }
                 for (int i = 0; i < Multiplicity; i++)
                 {
                     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
                         continue;
-                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
+                    double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel / 1000.);
+                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
                 }
             }
             else
@@ -341,6 +445,11 @@ void ReaderData()
                 //         continue;
                 //     H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
                 // }
+            }
+
+            if (mul <= Multiplicity)
+            {
+                H_SiPM_Time[Strip_Label][mul]->Fill(NEAREST);
             }
         }
 
@@ -459,20 +568,20 @@ pair<double, double> ComputeEshift(int det, TH1D *H_Single, TH1D *H_Coinc, TH1D 
 
 
     double Eshift_error_2A = pow( 1. - Nc / Ns , 2) * (pow(SEc, 2) + pow(SEnc, 2));
-    double Eshift_error_2B = Nc/Ns * pow(Eshift, 2) / Ns * ( 1 - Nc/Ns );
+    double Eshift_error_2B = Nc*Nnc/pow(Ns, 3) * pow(Eshift, 2);
     double Eshift_error_2 = sqrt(Eshift_error_2A + Eshift_error_2B);
 
 
-    cout << "Eshift: " << Eshift << endl;
+    // cout << "Eshift: " << Eshift << endl;
 
-    cout << "Eshift_error_1: " << Eshift_error_1 << endl;
-    cout << "Eshift_error_2: " << Eshift_error_2 << endl;
+    // cout << "Eshift_error_1: " << Eshift_error_1 << endl;
+    // cout << "Eshift_error_2: " << Eshift_error_2 << endl;
 
-    cout << "Eshift_error_1A: " << Eshift_error_1A << endl;
-    cout << "Eshift_error_2A: " << Eshift_error_2A << endl;
+    // cout << "Eshift_error_1A: " << sqrt(Eshift_error_1A) << endl;
+    // cout << "Eshift_error_2A: " << sqrt(Eshift_error_2A) << endl;
 
-    cout << "Eshift_error_1B: " << Eshift_error_1B << endl;
-    cout << "Eshift_error_2B: " << Eshift_error_2B << endl;
+    // cout << "Eshift_error_1B: " << sqrt(Eshift_error_1B) << endl;
+    // cout << "Eshift_error_2B: " << sqrt(Eshift_error_2B) << endl;
         
     
     return make_pair(Eshift, Eshift_error_2);

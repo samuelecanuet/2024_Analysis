@@ -22,6 +22,7 @@
 #include "TGraph.h"
 #include "TGraph2D.h"
 #include "TCanvas.h"
+#include "TMarker.h"
 #include "TProfile.h"
 #include "TGraphErrors.h"
 #include "TTree.h"
@@ -79,8 +80,12 @@ TH2D *H;
 TH2D *H_precorrrected;
 TH2D *H_corrected;
 TH2D *H_reconstruction;
+TH2D *H_reconstruction_interpolated;
 TH2D *H_measurement;
 TH2D *H_measurement_reconstructed;
+
+TGraph2D *G2D_X = new TGraph2D();
+TGraph2D *G2D_Y = new TGraph2D();
 
 int A = 1;
 int B = 3;
@@ -101,6 +106,7 @@ TF2 *FinalFunction;
 TF2 *MeasurementFunction;
 TF2 *f_X;
 TF2 *f_Y;
+TGraphErrors *G_coord_fitgrid;
 
 pair<double, double> SIGMA_X;
 pair<double, double> SIGMA_Y;
@@ -154,6 +160,10 @@ bool M7_2025[7][7] = {
     // {false, false, true, true, true, false, false},
     // {false, false, false, false, false, false, false},
     // {false, false, false, false, false, false, false}};
+
+double calib_range_ua = 0.4;
+// double calib_range_ua = 0.3;
+// double calib_range_ua = 0.2;
 
 vector<vector<bool>> M;
 
@@ -765,7 +775,7 @@ double Fitting()
 /////////////////////////////////////////////////////////////////////
 
 
-void InitYearConfiguration(string Year = "2024")
+void InitYearConfiguration(string Year = "2024", string Run = "")
 {   
     if (Year == "2024")
     {
@@ -785,12 +795,18 @@ void InitYearConfiguration(string Year = "2024")
         M_measurement = ConvertToVector(M_measurement_2025);
         n = 7;
         l_real = 1.4;
-        Calibration_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/run_001_StableBeamScan_grouped.root";  
-        // Measurement_Filename = "run_041_MCP_32Ar_Beam_4T_grouped.root";
-        Measurement_Filename = "run_079_MCP_32Ar_Heinz14kV_grouped.root";
+        Calibration_Filename = DIR_ROOT_DATA_MCP_GROUPED + "run_001_StableBeamScan_grouped.root";
+        if (Run != "")
+        {
+            Measurement_Filename = SearchFiles(DIR_ROOT_DATA_MCP_GROUPED, Run);
+        }
+        else
+        {
+            Measurement_Filename = "run_079_MCP_32Ar_Heinz14kV_grouped.root";
+        }
 
-        // Calibration_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";  
-        // Measurement_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";  
+        // Calibration_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";
+        // Measurement_Filename = "/mnt/hgfs/shared-2/2025_DATA/MCP_DATA/03_TEST/005_MCP_1p9kV_BeamScan.fast/005_MCP_1p9kV_BeamScan_0001.root";
     }
     else
     {
@@ -1079,7 +1095,7 @@ void FullFunctionToMinimize2D()
         {
             // double x_center = i * rho - rho * (n-1)/2-0.01;
             // double y_center = j * rho - rho * (n-1)/2+0.017;
-            file << i * n + j << " " << FittedFunction->GetParameter(10 + i * n + j) << " " << FittedFunction->GetParameter(N + 10 + i * n + j) << endl;
+            file << i * n + j + 1 << " " << FittedFunction->GetParameter(10 + i * n + j) << " " << FittedFunction->GetParameter(N + 10 + i * n + j) << endl;
         }
     }
     file.close();
@@ -1179,7 +1195,7 @@ double MyFullFittedFunction2D_CORNER(double *x, double *par)
     double result_sum = 0.0;
     double grid_sum = 0.0;
 
-    double r = sqrt(x[0] * x[0] + x[1] * x[1]);
+    // double r = sqrt(x[0] * x[0] + x[1] * x[1]);
 
     // if (r > 0.5)
     // {
@@ -1224,15 +1240,16 @@ double MyFullFittedFunction2D_CORNER(double *x, double *par)
             double edgeDA = 0.5*(1+erf((x[0]-aDA*x[1]-bDA)/(sqrt(2)*sigma_x)));
 
             grid_sum += A * edgeAB * edgeBC * edgeCD * edgeDA;
+
         }
     }
 
     double result = grid_sum;
 
-    if (result > MAXI)
-    {
-        return MAXI;
-    }
+    // if (result > MAXI)
+    // {
+    //     return MAXI;
+    // }
 
     return result;
 }
@@ -1253,12 +1270,14 @@ double Function(double *x, double *par)
     // return 1 * (par[1] * x[0] + par[2] + pow(x[0], 2) + par[3] * pow(x[0], 3) + par[6] * x[1] * x[1] * x[1] * x[0] + par[0] * pow(x[0], 4) + par[7] * pow(x[0], 5));
 }
 
+
+// Fitting log image to real image and get points
 void FullFunctionToMinimize2D_CORNER()
 {
     Info("Fitting grid with the guess");
     double chi2 = 0.0;
     int N = n * n;
-    FittedFunction = new TF2("FittedFunction", MyFullFittedFunction2D_CORNER, -0.4, 0.4, -0.4, 0.4, 8 * N + 10);
+    FittedFunction = new TF2("FittedFunction", MyFullFittedFunction2D_CORNER, -calib_range_ua, calib_range_ua, -calib_range_ua, calib_range_ua, 8 * N + 10);
     FittedFunction->SetNpx(500);
     FittedFunction->SetNpy(500);
 
@@ -1318,9 +1337,9 @@ void FullFunctionToMinimize2D_CORNER()
     FittedFunction->FixParameter(8, 0);
 
     // l
-    FittedFunction->SetParLimits(9, 0.04, 0.1);
+    // FittedFunction->SetParLimits(9, 0.04, 0.1);
     // FittedFunction->SetParameter(9, 0.08);
-    // FittedFunction->FixParameter(9, 0.08);
+    FittedFunction->FixParameter(9, 0.);
 
     for (int i = 0; i < N; ++i)
     {
@@ -1353,55 +1372,55 @@ void FullFunctionToMinimize2D_CORNER()
         {
             double delta = 0.02;
             // a_x
-            FittedFunction->SetParLimits(10 + i, M_corner[i][0].first -delta, M_corner[i][0].first +delta);
-            FittedFunction->SetParameter(10 + i, M_corner[i][0].first);
-            // FittedFunction->FixParameter(10 + i, M_corner[i][0].first);
+            // FittedFunction->SetParLimits(10 + i, M_corner[i][0].first -delta, M_corner[i][0].first +delta);
+            // FittedFunction->SetParameter(10 + i, M_corner[i][0].first);
+            FittedFunction->FixParameter(10 + i, M_corner[i][0].first);
 
             // a_y
-            FittedFunction->SetParLimits(N + 10 + i, M_corner[i][0].second -delta, M_corner[i][0].second +delta);
-            FittedFunction->SetParameter(N + 10 + i, M_corner[i][0].second);
-            // FittedFunction->FixParameter(N + 10 + i, M_corner[i][0].second);
+            // FittedFunction->SetParLimits(N + 10 + i, M_corner[i][0].second -delta, M_corner[i][0].second +delta);
+            // FittedFunction->SetParameter(N + 10 + i, M_corner[i][0].second);
+            FittedFunction->FixParameter(N + 10 + i, M_corner[i][0].second);
 
             // b_x
-            FittedFunction->SetParLimits(2 * N + 10 + i, M_corner[i][1].first -delta, M_corner[i][1].first +delta);
-            FittedFunction->SetParameter(2 * N + 10 + i, M_corner[i][1].first);
-            // FittedFunction->FixParameter(2 * N + 10 + i, M_corner[i][1].first);
+            // FittedFunction->SetParLimits(2 * N + 10 + i, M_corner[i][1].first -delta, M_corner[i][1].first +delta);
+            // FittedFunction->SetParameter(2 * N + 10 + i, M_corner[i][1].first);
+            FittedFunction->FixParameter(2 * N + 10 + i, M_corner[i][1].first);
 
             // b_y
-            FittedFunction->SetParLimits(3 * N + 10 + i, M_corner[i][1].second -delta, M_corner[i][1].second +delta);
-            FittedFunction->SetParameter(3 * N + 10 + i, M_corner[i][1].second);
-            // FittedFunction->FixParameter(3 * N + 10 + i, M_corner[i][1].second);
+            // FittedFunction->SetParLimits(3 * N + 10 + i, M_corner[i][1].second -delta, M_corner[i][1].second +delta);
+            // FittedFunction->SetParameter(3 * N + 10 + i, M_corner[i][1].second);
+            FittedFunction->FixParameter(3 * N + 10 + i, M_corner[i][1].second);
 
             // c_x
-            FittedFunction->SetParLimits(4 * N + 10 + i, M_corner[i][2].first -delta, M_corner[i][2].first +delta);
-            FittedFunction->SetParameter(4 * N + 10 + i, M_corner[i][2].first);
-            // FittedFunction->FixParameter(4 * N + 10 + i, M_corner[i][2].first);
+            // FittedFunction->SetParLimits(4 * N + 10 + i, M_corner[i][2].first -delta, M_corner[i][2].first +delta);
+            // FittedFunction->SetParameter(4 * N + 10 + i, M_corner[i][2].first);
+            FittedFunction->FixParameter(4 * N + 10 + i, M_corner[i][2].first);
 
             // c_y
-            FittedFunction->SetParLimits(5 * N + 10 + i, M_corner[i][2].second -delta, M_corner[i][2].second +delta);
-            FittedFunction->SetParameter(5 * N + 10 + i, M_corner[i][2].second);
-            // FittedFunction->FixParameter(5 * N + 10 + i, M_corner[i][2].second);
+            // FittedFunction->SetParLimits(5 * N + 10 + i, M_corner[i][2].second -delta, M_corner[i][2].second +delta);
+            // FittedFunction->SetParameter(5 * N + 10 + i, M_corner[i][2].second);
+            FittedFunction->FixParameter(5 * N + 10 + i, M_corner[i][2].second);
 
             // d_x
-            FittedFunction->SetParLimits(6 * N + 10 + i, M_corner[i][3].first -delta, M_corner[i][3].first +delta);
-            FittedFunction->SetParameter(6 * N + 10 + i, M_corner[i][3].first);
-            // FittedFunction->FixParameter(6 * N + 10 + i, M_corner[i][3].first);
+            // FittedFunction->SetParLimits(6 * N + 10 + i, M_corner[i][3].first -delta, M_corner[i][3].first +delta);
+            // FittedFunction->SetParameter(6 * N + 10 + i, M_corner[i][3].first);
+            FittedFunction->FixParameter(6 * N + 10 + i, M_corner[i][3].first);
 
             // d_y
-            FittedFunction->SetParLimits(7 * N + 10 + i, M_corner[i][3].second -delta, M_corner[i][3].second +delta);
-            FittedFunction->SetParameter(7 * N + 10 + i, M_corner[i][3].second);
-            // FittedFunction->FixParameter(7 * N + 10 + i, M_corner[i][3].second);
+            // FittedFunction->SetParLimits(7 * N + 10 + i, M_corner[i][3].second -delta, M_corner[i][3].second +delta);
+            // FittedFunction->SetParameter(7 * N + 10 + i, M_corner[i][3].second);
+            FittedFunction->FixParameter(7 * N + 10 + i, M_corner[i][3].second);
         }
     }
 
     ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
     ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0);
     H_precorrrected->Rebin2D(2, 2);
-    H_precorrrected->GetXaxis()->SetRangeUser(-0.4, 0.4);
-    H_precorrrected->GetYaxis()->SetRangeUser(-0.4, 0.4);
+    H_precorrrected->GetXaxis()->SetRangeUser(-calib_range_ua, calib_range_ua);
+    H_precorrrected->GetYaxis()->SetRangeUser(-calib_range_ua, calib_range_ua);
 
     // H_precorrrected->SetBinContent(182, 178, 0);
-    H_precorrrected->Fit(FittedFunction, "MULTITHREAD RN", "", -0.4, 0.4);
+    H_precorrrected->Fit(FittedFunction, "MULTITHREAD RN", "", -calib_range_ua, calib_range_ua);
 
     cout << "chi2 = " << FittedFunction->GetChisquare() / FittedFunction->GetNDF() << endl;
 
@@ -1468,13 +1487,16 @@ void FullFunctionToMinimize2D_CORNER()
     FittedFunction->Write();
 }
 
+// Fitting found points to interpolate or polynbomial fit
 void FittingReconstruction_CORNER()
 {
+    Info("Fitting reconstruction with corners");
     int counter = 0;
     int N = n * n;
-    TGraphErrors *G_coord_fitgrid = new TGraphErrors();
+    G_coord_fitgrid = new TGraphErrors();
     if (FittedFunction != nullptr)
     {
+        Info("Using FittedFunction to read coordinates");
         for (int i = 0; i < n * n; ++i)
         {
             if (M[i / n][i % n])
@@ -1512,14 +1534,24 @@ void FittingReconstruction_CORNER()
             t->Draw("SAME");
         }
         c_coord_fitgrid->Write();
+
+        Info("Reading coordinates from FittedFunction");
     }
     else
     {
+        Info("Reading coordinates from file out_corner.txt");
         std::ifstream file(("out_corner_"+year+".txt").c_str());
+        if (!file.is_open())
+        {
+            Error("FittingReconstruction_CORNER", "Could not open file out_corner.txt");
+            return;
+        }
+
         std::string line;
         int counter = 0;
         while (std::getline(file, line))
         {
+            cout << "Reading line: " << line << endl;
             std::istringstream iss(line);
             double Ax, Ay, Bx, By, Cx, Cy, Dx, Dy;
             int i;
@@ -1527,16 +1559,16 @@ void FittingReconstruction_CORNER()
             {
                 break;
             }
-            i = i - 1;
             if (!M[i / n][i % n])
             {
                 continue;
             }
+            cout << N << " " << Ax << " " << Ay << endl;
             G_coord_fitgrid->SetPoint(counter, Ax, Ay);
             G_coord_fitgrid->SetPoint(counter + 1, Bx, By);
             G_coord_fitgrid->SetPoint(counter + 2, Cx, Cy);
             G_coord_fitgrid->SetPoint(counter + 3, Dx, Dy);
-            // cout << N << " " << x << " " << y << endl;
+            cout << N << " " << Ax << " " << Ay << endl;
             counter+=4;
         }
         TCanvas *c_coord_fitgrid = new TCanvas("c_coord_fitgrid", "c_coord_fitgrid", 800, 800);
@@ -1546,6 +1578,8 @@ void FittingReconstruction_CORNER()
         G_coord_fitgrid->Draw("AP");
 
         c_coord_fitgrid->Write();
+
+        Info("Reading coordinates from file out_corner.txt");
     }
 
     TGraph2D *G2D_X = new TGraph2D();
@@ -1587,7 +1621,7 @@ void FittingReconstruction_CORNER()
     TCanvas *c_fit_X = new TCanvas("c_fit_X", "c_fit_X", 800, 800);
     G2D_X->SetMarkerStyle(20);
     f_X = new TF2("f_X", Function, G2D_X->GetXmin(), G2D_X->GetXmax(), G2D_X->GetYmin(), G2D_X->GetYmax(), (NparX + 1) * (NparY + 1));
-    G2D_X->Fit("f_X", "MULTITHREAD");
+    TFitResultPtr r_X = G2D_X->Fit("f_X", "MULTITHREAD S");
     f_X->Draw("SURF2");
     G2D_X->Draw("AP SAME");
     c_fit_X->Write();
@@ -1597,7 +1631,7 @@ void FittingReconstruction_CORNER()
     G2D_Y->SetMarkerStyle(20);
 
     f_Y = new TF2("f_Y", Function, G2D_Y->GetXmin(), G2D_Y->GetXmax(), G2D_Y->GetYmin(), G2D_Y->GetYmax(), (NparX + 1) * (NparY + 1));
-    G2D_Y->Fit("f_Y", "MULTITHREAD");
+    TFitResultPtr r_Y = G2D_Y->Fit("f_Y", "MULTITHREAD S");
     f_Y->Draw("SURF2");
     G2D_Y->Draw("AP SAME");
     c_fit_Y->Write();
@@ -1617,9 +1651,9 @@ void FittingReconstruction_CORNER()
         G_real_XY->SetPoint(i, x, y);
 
         c_residus_XY->cd();
-        TText *t = new TText(x, y, Form("%d", i));
-        t->SetTextSize(0.02);
-        t->Draw();
+        // TText *t = new TText(x, y, Form("%d", i));
+        // t->SetTextSize(0.02);
+        // t->Draw();
 
     }
 
@@ -1641,6 +1675,42 @@ void FittingReconstruction_CORNER()
     }
 
     c_residus_XY->Write();
+
+    //// PLOTTING RESIDUALS
+    TCanvas *c_residuals = new TCanvas("c_residuals", "c_residuals", 800, 800);
+    TGraphErrors *G_residuals_R = new TGraphErrors();
+
+    for (int i = 0; i < G_real_XY->GetN(); ++i)
+    {
+        double x_real = G_real_XY->GetX()[i];
+        double y_real = G_real_XY->GetY()[i];
+        double x_fit = G_residus_XY->GetX()[i];
+        double y_fit = G_residus_XY->GetY()[i];
+        double x[2] = { G2D_X->GetX()[i], G2D_X->GetY()[i] };
+        double y[2] = { G2D_X->GetX()[i], G2D_X->GetY()[i] };
+        double err_x[1];
+        double err_y[1];
+        // Get the errors from the fit results
+        r_X->GetConfidenceIntervals(1, 1, 1, x, err_x, 0.683, false);
+        r_Y->GetConfidenceIntervals(1, 1, 1, y, err_y, 0.683, false);
+
+        double r_real = sqrt(x_real * x_real + y_real * y_real);
+        double r_fit = sqrt(x_fit * x_fit + y_fit * y_fit);
+        double r_fit_err = sqrt(err_x[0] * err_x[0] + err_y[0] * err_y[0]);
+
+        double residal = (r_fit - r_real) / r_real;
+        double residal_err = r_fit_err / r_real;
+
+        G_residuals_R->AddPoint(r_real, residal);
+        // G_residuals_R->SetPointError(G_residuals_R->GetN()-1, 0, residal_err);
+    }
+    c_residuals->cd();  
+    G_residuals_R->SetMarkerStyle(20);
+    G_residuals_R->SetMarkerColor(kRed);
+    G_residuals_R->GetXaxis()->SetTitle("r [mm]");
+    G_residuals_R->GetYaxis()->SetTitle("Residuals");
+    G_residuals_R->Draw("AP");
+    c_residuals->Write();
 
     // Reconstruction of the grid
     TCanvas *c_reconstruction = new TCanvas("c_reconstruction", "c_reconstruction", 800, 800);
@@ -1681,6 +1751,40 @@ void FittingReconstruction_CORNER()
     }
     H_reconstruction->Draw("COLZ");
     c_reconstruction->Write();
+
+    /// WITH INTEROLATION
+    TCanvas *c_reconstruction_interpolated = new TCanvas("c_reconstruction_interpolated", "c_reconstruction_interpolated", 800, 800);
+    H_reconstruction_interpolated = new TH2D("H_reconstruction_interpolated", "H_reconstruction_interpolated", 800, -8, 8, 800, -8, 8);
+    TFile *f = new TFile(Calibration_Filename.c_str(), "READ");
+    TTree *tree = (TTree *)f->Get("treeMCP");
+    TTreeReader *Reader = new TTreeReader(tree);
+    TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X");
+    TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y");
+
+    while (Reader->Next())
+    {
+        double x = **X0;
+        double y = **Y0;
+        double x_int = G2D_X->Interpolate(x, y);
+        double y_int = G2D_Y->Interpolate(y, x);
+
+        if (abs(x_int) >= 6.68 || abs(y_int) >= 6.68)
+            continue;
+        
+        H_reconstruction_interpolated->Fill(x_int, y_int);
+    }
+    f->Close();
+    FINAL_file->cd();
+    H_reconstruction_interpolated->Draw("COLZ");
+    c_reconstruction_interpolated->Write();
+
+    fSaved = new TFile("Calibration_Save.root", "RECREATE");
+    G2D_X->SetName("G2D_X");
+    G2D_X->Write();
+    G2D_Y->SetName("G2D_Y");
+    G2D_Y->Write();
+    fSaved->Close();
+    FINAL_file->cd();
 
     writefit();
 }
@@ -1767,14 +1871,13 @@ void LoadCenters(string Year = "2024")
     }
 }
 
-
-
 void FittingReconstruction()
 {
     int counter = 0;
-    TGraphErrors *G_coord_fitgrid = new TGraphErrors();
+    G_coord_fitgrid = new TGraphErrors();
     if (FittedFunction != nullptr)
     {
+        Info("Using ");
         for (int i = 0; i < n * n; ++i)
         {
             if (M[i / n][i % n])
@@ -1809,9 +1912,10 @@ void FittingReconstruction()
             {
                 continue;
             }
+            counter++;
             G_coord_fitgrid->SetPoint(counter, x, y);
             // cout << i << " " << x << " " << y << endl;
-            counter++;
+            
         }
         TCanvas *c_coord_fitgrid = new TCanvas("c_coord_fitgrid", "c_coord_fitgrid", 800, 800);
         G_coord_fitgrid->SetMarkerStyle(20);
@@ -1821,8 +1925,7 @@ void FittingReconstruction()
         c_coord_fitgrid->Write();
     }
 
-    TGraph2D *G2D_X = new TGraph2D();
-    TGraph2D *G2D_Y = new TGraph2D();
+    
 
     counter = 0;
     int rho = 2.;
@@ -1886,8 +1989,8 @@ void FittingReconstruction()
     TCanvas *c_reconstruction = new TCanvas("c_reconstruction", "c_reconstruction", 800, 800);
     H_reconstruction = new TH2D("H_reconstruction", "H_reconstruction", 800, -8, 8, 800, -8, 8);
 
-    // if (year == "2024")
-    // {
+    if (year == "2024")
+    {
         for (int i = 0; i < H_precorrrected->GetEntries(); ++i)
         {
             double x, y;
@@ -1896,28 +1999,811 @@ void FittingReconstruction()
             double y_fit = f_Y->Eval(y, x);
             H_reconstruction->Fill(x_fit, y_fit);
         }
-    // }
-    // else
-    // {
-    //     TFile *f = new TFile(Calibration_Filename.c_str(), "READ");
-    //     TTree *tree = (TTree *)f->Get("treeMCP");
-    //     TTreeReader *Reader = new TTreeReader(tree);
-    //     TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X0");
-    //     TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y0");
+    }
+    else
+    {
+        TFile *f = new TFile(Calibration_Filename.c_str(), "READ");
+        TTree *tree = (TTree *)f->Get("treeMCP");
+        TTreeReader *Reader = new TTreeReader(tree);
+        TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X0");
+        TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y0");
 
-    //     while(Reader->Next())
-    //     {
-    //         double x = **X0;
-    //         double y = **Y0;
-    //         double x_fit = f_X->Eval(x, y);
-    //         double y_fit = f_Y->Eval(y, x);
-    //         H_reconstruction->Fill(x_fit, y_fit);
-    //     }
-    //     f->Close();
-    //     FINAL_file->cd();
-    // }
+        while(Reader->Next())
+        {
+            double x = **X0;
+            double y = **Y0;
+            double x_fit = f_X->Eval(x, y);
+            double y_fit = f_Y->Eval(y, x);
+            H_reconstruction->Fill(x_fit, y_fit);
+        }
+        f->Close();
+        FINAL_file->cd();
+    }
     H_reconstruction->Draw("COLZ");
     c_reconstruction->Write();
+
+    
+}
+
+// the second step calibration
+TH2D* SecondStepFit_CORNER(TH2D * H, TFile * fout)
+{
+    TGraph2D *G_SecondInterpolation_X = new TGraph2D(); // x_f(x,y)
+    TGraph2D *G_SecondInterpolation_Y = new TGraph2D(); // y_f(x,y)
+
+    //### fitting the resoution by cell on the calibrated grid
+
+    Info("Fitting cell to find corners second step");
+    double chi2 = 0.0;
+    int N = n * n;
+
+    H->Rebin2D(2, 2);
+    H->SetMaximum(-1111);
+
+    TH2D* H_unzoom = (TH2D*)H->Clone("H_unzoom");
+    double offset = 0.1;
+    for (int j = 0; j < N; ++j) // lopping on each cell
+    {
+        TGraph2D *g_Corners_first = new TGraph2D();
+        TGraph2D *g_Corners_second = new TGraph2D();
+        vector<int> points_index;
+
+        double X_real_cell = j % n * rho_real - rho_real * (n-1) / 2;
+        double Y_real_cell = j / n * rho_real - rho_real * (n-1) / 2;
+        int counter = 0;
+        if (M[j / n][j % n])
+        {
+            Info("Fitting new coner position of cell " + to_string(j));
+            double extrarange = (rho_real - l_real) / 2;
+            TF2 *SecondCalibration_Function = new TF2("SecondCalibration_Function", MyFullFittedFunction2D_CORNER, X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange, Y_real_cell - l_real / 2 - extrarange, Y_real_cell + l_real / 2 + extrarange, 10 + N * 8);
+            // SecondCalibration_Function->SetNpx(50);
+            // SecondCalibration_Function->SetNpy(50);
+
+            // Amplitude
+            SecondCalibration_Function->SetParLimits(0, 0., 2000);
+            SecondCalibration_Function->SetParameter(0, 10);
+            // SecondCalibration_Function->FixParameter(0, 50);
+
+            // sigma x
+            SecondCalibration_Function->SetParLimits(1, 0.02, 1.);
+            SecondCalibration_Function->SetParameter(1, 0.8);
+            // SecondCalibration_Function->FixParameter(1, 0.1);
+
+            // sigma y
+            SecondCalibration_Function->SetParLimits(2, 0.02, 1.0);
+            SecondCalibration_Function->SetParameter(2, 0.8);
+            // SecondCalibration_Function->FixParameter(2, 0.1);
+
+            // amplitude gaus
+            SecondCalibration_Function->FixParameter(3, 0);
+            // mu gaus x
+            SecondCalibration_Function->FixParameter(4, 0);
+            // mu gaus y
+            SecondCalibration_Function->FixParameter(5, 0);
+            // sigma gaus x
+            SecondCalibration_Function->FixParameter(6, 0);
+            // sigma gaus y
+            SecondCalibration_Function->FixParameter(7, 0);
+
+            // bkg
+            SecondCalibration_Function->FixParameter(8, 0);
+
+            // l
+            SecondCalibration_Function->FixParameter(9, 0.);
+
+            for (int i = 0; i < N; ++i)
+            {
+
+                double X_real = i % n * rho_real - rho_real * (n-1) / 2 - l_real / 2;
+                double Y_real = i / n * rho_real - rho_real * (n-1) / 2 - l_real / 2;
+
+                if (!M[i / n][i % n])
+                {
+                    // fixing out of the grid points
+                    SecondCalibration_Function->FixParameter(10 + i, X_real);
+                    SecondCalibration_Function->FixParameter(N + 10 + i, Y_real);
+                    SecondCalibration_Function->FixParameter(2 * N + 10 + i, X_real + l_real);
+                    SecondCalibration_Function->FixParameter(3 * N + 10 + i, Y_real);
+                    SecondCalibration_Function->FixParameter(4 * N + 10 + i, X_real + l_real);
+                    SecondCalibration_Function->FixParameter(5 * N + 10 + i, Y_real + l_real);
+                    SecondCalibration_Function->FixParameter(6 * N + 10 + i, X_real);
+                    SecondCalibration_Function->FixParameter(7 * N + 10 + i, Y_real + l_real);
+                }
+                
+                if ( i != j)
+                {
+                    // fixing all the others
+                    SecondCalibration_Function->FixParameter(10 + i, X_real);
+                    SecondCalibration_Function->FixParameter(N + 10 + i, Y_real);
+                    SecondCalibration_Function->FixParameter(2 * N + 10 + i, X_real + l_real);
+                    SecondCalibration_Function->FixParameter(3 * N + 10 + i, Y_real);
+                    SecondCalibration_Function->FixParameter(4 * N + 10 + i, X_real + l_real);
+                    SecondCalibration_Function->FixParameter(5 * N + 10 + i, Y_real + l_real);
+                    SecondCalibration_Function->FixParameter(6 * N + 10 + i, X_real);
+                    SecondCalibration_Function->FixParameter(7 * N + 10 + i, Y_real + l_real);
+                }
+                else
+                {
+                    // hole of interest fitting the x and y of ABCD
+                    double uncertainty = 0.2;
+                    SecondCalibration_Function->SetParameter(10 + i, X_real);
+                    SecondCalibration_Function->SetParLimits(10 + i, X_real - uncertainty, X_real + uncertainty);
+                    SecondCalibration_Function->SetParameter(N + 10 + i, Y_real);
+                    SecondCalibration_Function->SetParLimits(N + 10 + i, Y_real - uncertainty, Y_real + uncertainty);
+                    SecondCalibration_Function->SetParameter(2 * N + 10 + i, X_real + l_real);
+                    SecondCalibration_Function->SetParLimits(2 * N + 10 + i, X_real + l_real - uncertainty, X_real + l_real + uncertainty);
+                    SecondCalibration_Function->SetParameter(3 * N + 10 + i, Y_real);
+                    SecondCalibration_Function->SetParLimits(3 * N + 10 + i, Y_real - uncertainty, Y_real + uncertainty);
+                    SecondCalibration_Function->SetParameter(4 * N + 10 + i, X_real + l_real);
+                    SecondCalibration_Function->SetParLimits(4 * N + 10 + i, X_real + l_real - uncertainty, X_real + l_real + uncertainty);
+                    SecondCalibration_Function->SetParameter(5 * N + 10 + i, Y_real + l_real);
+                    SecondCalibration_Function->SetParLimits(5 * N + 10 + i, Y_real + l_real - uncertainty, Y_real + l_real + uncertainty);
+                    SecondCalibration_Function->SetParameter(6 * N + 10 + i, X_real);
+                    SecondCalibration_Function->SetParLimits(6 * N + 10 + i, X_real - uncertainty, X_real + uncertainty);
+                    SecondCalibration_Function->SetParameter(7 * N + 10 + i, Y_real + l_real);
+                    SecondCalibration_Function->SetParLimits(7 * N + 10 + i, Y_real + l_real - uncertainty, Y_real + l_real + uncertainty);
+
+                    g_Corners_first->AddPoint(X_real, Y_real, 0);
+                    g_Corners_first->AddPoint(X_real + l_real, Y_real, 0);
+                    g_Corners_first->AddPoint(X_real + l_real, Y_real + l_real, 0);
+                    g_Corners_first->AddPoint(X_real, Y_real + l_real, 0);
+
+                    points_index.push_back(10 + i);
+                    points_index.push_back(N + 10 + i);
+                    points_index.push_back(2 * N + 10 + i);
+                    points_index.push_back(3 * N + 10 + i);
+                    points_index.push_back(4 * N + 10 + i);
+                    points_index.push_back(5 * N + 10 + i);
+                    points_index.push_back(6 * N + 10 + i);
+                    points_index.push_back(7 * N + 10 + i);               
+                }
+
+                counter+=4;
+            }
+
+            ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
+            ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0);
+            H->GetXaxis()->SetRangeUser(X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange);
+            H->GetYaxis()->SetRangeUser(Y_real_cell - l_real / 2 - extrarange, Y_real_cell + l_real / 2 + extrarange);
+            TFitResultPtr r = H->Fit(SecondCalibration_Function, "MULTITHREAD QRNS", "", X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange);
+
+            double X_real = j % n * rho_real - rho_real * (n-1) / 2 - l_real / 2;
+            double Y_real = j / n * rho_real - rho_real * (n-1) / 2 - l_real / 2;
+            G_SecondInterpolation_X->SetPoint(G_SecondInterpolation_X->GetN(), SecondCalibration_Function->GetParameter(10 + j), SecondCalibration_Function->GetParameter(N + 10 + j), X_real);
+            G_SecondInterpolation_Y->SetPoint(G_SecondInterpolation_Y->GetN(), SecondCalibration_Function->GetParameter(10 + j), SecondCalibration_Function->GetParameter(N + 10 + j), Y_real);
+            G_SecondInterpolation_X->SetPoint(G_SecondInterpolation_X->GetN(), SecondCalibration_Function->GetParameter(2 * N + 10 + j), SecondCalibration_Function->GetParameter(3 * N + 10 + j), X_real + l_real);
+            G_SecondInterpolation_Y->SetPoint(G_SecondInterpolation_Y->GetN(), SecondCalibration_Function->GetParameter(2 * N + 10 + j), SecondCalibration_Function->GetParameter(3 * N + 10 + j), Y_real);
+            G_SecondInterpolation_X->SetPoint(G_SecondInterpolation_X->GetN(), SecondCalibration_Function->GetParameter(4 * N + 10 + j), SecondCalibration_Function->GetParameter(5 * N + 10 + j), X_real + l_real);
+            G_SecondInterpolation_Y->SetPoint(G_SecondInterpolation_Y->GetN(), SecondCalibration_Function->GetParameter(4 * N + 10 + j), SecondCalibration_Function->GetParameter(5 * N + 10 + j), Y_real + l_real);
+            G_SecondInterpolation_X->SetPoint(G_SecondInterpolation_X->GetN(), SecondCalibration_Function->GetParameter(6 * N + 10 + j), SecondCalibration_Function->GetParameter(7 * N + 10 + j), X_real);
+            G_SecondInterpolation_Y->SetPoint(G_SecondInterpolation_Y->GetN(), SecondCalibration_Function->GetParameter(6 * N + 10 + j), SecondCalibration_Function->GetParameter(7 * N + 10 + j), Y_real + l_real);
+
+
+            if (r != 0)
+            {
+                Warning("Fit failed for cell " + to_string(j) + ". Skipping this cell.");
+                continue;
+            }
+            else
+            {
+                Info("Fit successful for cell " + to_string(j));
+                // cout << "A = " << SecondCalibration_Function->GetParameter(0) << " +/- " << SecondCalibration_Function->GetParError(0) << endl;
+            }
+
+            // SecondCalibration_Function->SetParameter(0,SecondCalibration_Function->GetParameter(0));
+            TCanvas *c_fit = new TCanvas(("Cell_fit_corners" + to_string(j)).c_str(), ("Cell_fit_corners" + to_string(j)).c_str(), 800, 800);
+            c_fit->Divide(2, 2);
+            c_fit->cd(2);
+            H_unzoom->Draw("COLZ");
+            TBox *box = new TBox(X_real_cell - l_real / 2 - extrarange, Y_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange, Y_real_cell + l_real / 2 + extrarange);
+            box->SetLineColor(kRed);
+            box->SetFillColor(0);
+            box->SetFillStyle(0);
+            box->SetLineWidth(2);
+            box->Draw("SAME");
+            c_fit->cd(1);
+            H->GetXaxis()->SetRangeUser(X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange);
+            H->GetYaxis()->SetRangeUser(Y_real_cell - l_real / 2 - extrarange, Y_real_cell + l_real / 2 + extrarange);
+            H->GetZaxis()->SetRangeUser(0, H->GetMaximum());
+            H->Draw("LEGO2");
+            SecondCalibration_Function->SetMaximum(H->GetMaximum());
+            SecondCalibration_Function->Draw("SURF SAME");
+
+            c_fit->cd(3);
+            H->Draw("COLZ");    
+            for (int p = 0; p < g_Corners_first->GetN(); ++p)
+            {
+                double x, y, z;
+                g_Corners_first->GetPoint(p, x, y, z);
+                TMarker *m = new TMarker(x, y, 20);
+                m->SetMarkerColor(kBlack);
+                m->SetMarkerSize(2);
+                m->Draw("SAME");
+            }
+
+            // filling G_Corners_second with the new fitted corners
+            for (int i = 0; i < points_index.size(); i+=2)
+            {
+                double x = SecondCalibration_Function->GetParameter(points_index[i]);
+                double y = SecondCalibration_Function->GetParameter(points_index[i+1]);
+                
+                TMarker *m = new TMarker(x, y, 20);
+                m->SetMarkerColor(kRed);
+                m->SetMarkerSize(2);
+                m->Draw("SAME");
+            }
+            H_unzoom->GetXaxis()->SetRangeUser(-8, 8);
+            H_unzoom->GetYaxis()->SetRangeUser(-8, 8);
+
+            c_fit->cd(4);
+            // residuals
+            TH2D *H_residuals = (TH2D *)H->Clone("H_residuals");
+            H_residuals->Reset();
+            for (int ix = 1; ix <= H->GetNbinsX(); ++ix)
+            {
+                for (int iy = 1; iy <= H->GetNbinsY(); ++iy)
+                {
+                    double x = H->GetXaxis()->GetBinCenter(ix);
+                    double y = H->GetYaxis()->GetBinCenter(iy);
+                    double z = H->GetBinContent(ix, iy);
+                    double z_fit = SecondCalibration_Function->Eval(x, y);
+                    H_residuals->SetBinContent(ix, iy, z - z_fit);
+                }
+            }
+
+
+            c_fit->Write();              
+            
+            cout << "Chi2 = " << SecondCalibration_Function->GetChisquare() / SecondCalibration_Function->GetNDF() << endl;
+        }   
+    }
+
+    if (G_SecondInterpolation_X->GetN() == 0 || G_SecondInterpolation_Y->GetN() == 0)
+    {
+        Error("SecondStepFit_CORNER", "No points were added to the second interpolation graphs. Exiting function.");
+        return nullptr;
+    }
+
+    G_SecondInterpolation_X->Write();
+    G_SecondInterpolation_Y->Write();
+
+    // Seocnd Interpolation reconstruction
+    TCanvas *c_reconstruction_interpolated = new TCanvas("c_reconstruction_interpolated_second", "c_reconstruction_interpolated_second", 800, 800);
+    TH2D* H_reconstruction_interpolated_second = new TH2D("H_reconstruction_interpolated_second", "H_reconstruction_interpolated_second", 800, -8, 8, 800, -8, 8);
+    TFile *f = new TFile(Calibration_Filename.c_str(), "READ");
+    TTree *tree = (TTree *)f->Get("treeMCP");
+    TTreeReader *Reader = new TTreeReader(tree);
+    TTreeReaderValue<double> *X0 = new TTreeReaderValue<double>(*Reader, "X");
+    TTreeReaderValue<double> *Y0 = new TTreeReaderValue<double>(*Reader, "Y");
+
+    TFile *ff = new TFile((DIR_ROOT_DATA_MCP_CALIBRATED + "run_001_StableBeamScan_calibrated.root").c_str(), "READ");
+    TCanvas *c_g = (TCanvas*)ff->Get("c_fit_X");
+    for (auto obj : *c_g->GetListOfPrimitives()) {
+        if (obj->InheritsFrom(TGraph2D::Class())) {
+            G2D_X = (TGraph2D*)obj;
+            break; // Exit the loop once we find the first TGraph2D
+        }
+    }
+    c_g = (TCanvas*)ff->Get("c_fit_Y");
+    for (auto obj : *c_g->GetListOfPrimitives()) {
+        if (obj->InheritsFrom(TGraph2D::Class())) {
+            G2D_Y = (TGraph2D*)obj;
+            break; // Exit the loop once we find the first TGraph2D
+        }
+    }
+
+    if (G2D_X == nullptr || G2D_Y == nullptr) {
+        Error("SecondStepFit_CORNER", "Could not retrieve G2D_X or G2D_Y from the file.");
+        f->Close();
+        ff->Close();
+        return nullptr;
+    }
+
+    while (Reader->Next())
+    {
+        double x = **X0;
+        double y = **Y0;
+        double x_int = G2D_X->Interpolate(x, y);
+        double y_int = G2D_Y->Interpolate(y, x);
+
+        double x_int_second = G_SecondInterpolation_X->Interpolate(x_int, y_int);
+        double y_int_second = G_SecondInterpolation_Y->Interpolate(x_int, y_int);
+
+        if (abs(x_int) >= 6.68 || abs(y_int) >= 6.68)
+            continue;
+        
+        H_reconstruction_interpolated_second->Fill(x_int_second, y_int_second);
+    }
+    f->Close();
+    ff->Close();
+    
+
+    // regenerate data measurement in calibrated for borlin333
+    TH2D* H_reconstruction_interpolated_second_measurement = new TH2D("H_reconstruction_interpolated_second_measurement", "H_reconstruction_interpolated_second_measurement", 800, -8, 8, 800, -8, 8);
+
+    TFile * fin = new TFile((DIR_ROOT_DATA_MCP_GROUPED + "run_006_MCP_Scan_grouped.root").c_str(), "READ");
+    TTree *tree_meas = (TTree *)fin->Get("treeMCP");
+    TTreeReader *Reader_meas = new TTreeReader(tree_meas);
+    TTreeReaderValue<double> *X0_meas = new TTreeReaderValue<double>(*Reader_meas, "X");
+    TTreeReaderValue<double> *Y0_meas = new TTreeReaderValue<double>(*Reader_meas, "Y");
+    while (Reader_meas->Next())
+    {
+        double x = **X0_meas;
+        double y = **Y0_meas;
+        double x_int = G2D_X->Interpolate(x, y);
+        double y_int = G2D_Y->Interpolate(y, x);
+
+        double x_int_second = G_SecondInterpolation_X->Interpolate(x_int, y_int);
+        double y_int_second = G_SecondInterpolation_Y->Interpolate(x_int, y_int);
+
+        if (abs(x_int) >= 6.68 || abs(y_int) >= 6.68)
+            continue;
+        
+        H_reconstruction_interpolated_second_measurement->Fill(x_int_second, y_int_second);
+    }
+
+    fin->Close();
+    TFile *fout2 = new TFile("MSecondStepCalibrated_006.root", "RECREATE");
+    H_reconstruction_interpolated_second_measurement->Write();
+    fout2->Close();
+
+    return H_reconstruction_interpolated_second;
+}
+
+// fitting the resolution 
+void FittingResolution_CORNER(TH2D* H)
+{
+    //### fitting the resoution by cell on the calibrated grid
+
+    Info("Fitting cell to find resolution");
+    double chi2 = 0.0;
+    int N = n * n;
+
+    H->Rebin2D(2, 2);
+    // H->SetMaximum(MAXI);
+
+    TH2D* H_unzoom = (TH2D*)H->Clone("H_unzoom");
+
+
+    TGraph2DErrors *G_Resolution_X = new TGraph2DErrors();
+    G_Resolution_X->SetName("G_Resolution_X");
+    TGraph2DErrors *G_Resolution_Y = new TGraph2DErrors();
+    G_Resolution_Y->SetName("G_Resolution_Y");
+
+    TGraph2DErrors *G_Resolution_X_proj = new TGraph2DErrors();
+    TGraph2DErrors *G_Resolution_Y_proj = new TGraph2DErrors();
+
+    TH1D *H_Resolution_X_proj = new TH1D("H_Resolution_X_proj", "H_Resolution_X_proj", 100, 0, 1);
+    TH1D *H_Resolution_Y_proj = new TH1D("H_Resolution_Y_proj", "H_Resolution_Y_proj", 100, 0, 1);
+    TH1D *H_Resolution_X_proj_ROI = new TH1D("H_Resolution_X_proj_ROI", "H_Resolution_X_proj_ROI", 100, 0, 1);
+    TH1D *H_Resolution_Y_proj_ROI = new TH1D("H_Resolution_Y_proj_ROI", "H_Resolution_Y_proj_ROI", 100, 0, 1);
+    double offset = 0.1;
+    for (int j = 0; j < N; ++j) // lopping on each cell
+    {
+        double X_real_cell = j % n * rho_real - rho_real * (n-1) / 2;
+        double Y_real_cell = j / n * rho_real - rho_real * (n-1) / 2;
+        int counter = 0;
+        if (M[j / n][j % n])
+        {
+            Info("Fitting resolution of cell " + to_string(j));
+            double extrarange = (rho_real - l_real) / 2;
+            TF2 *ResolutionFunction = new TF2("FittedFunction", MyFullFittedFunction2D_CORNER, X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange, Y_real_cell - l_real / 2 - extrarange, Y_real_cell + l_real / 2 + extrarange, 10 + N * 8);
+            // ResolutionFunction->SetNpx(50);
+            // ResolutionFunction->SetNpy(50);
+
+            // Amplitude
+            ResolutionFunction->SetParLimits(0, 0., 2000);
+            ResolutionFunction->SetParameter(0, 10);
+            // ResolutionFunction->FixParameter(0, 50);
+
+            // sigma x
+            ResolutionFunction->SetParLimits(1, 0.02, 1.);
+            ResolutionFunction->SetParameter(1, 0.1);
+            // ResolutionFunction->FixParameter(1, 0.1);
+
+            // sigma y
+            ResolutionFunction->SetParLimits(2, 0.02, 1.0);
+            ResolutionFunction->SetParameter(2, 0.1);
+            // ResolutionFunction->FixParameter(2, 0.1);
+
+            // amplitude gaus
+            ResolutionFunction->FixParameter(3, 0);
+            // mu gaus x
+            ResolutionFunction->FixParameter(4, 0);
+            // mu gaus y
+            ResolutionFunction->FixParameter(5, 0);
+            // sigma gaus x
+            ResolutionFunction->FixParameter(6, 0);
+            // sigma gaus y
+            ResolutionFunction->FixParameter(7, 0);
+
+            // bkg
+            ResolutionFunction->FixParameter(8, 0);
+
+            // l
+            ResolutionFunction->FixParameter(9, 0.);
+
+            for (int i = 0; i < N; ++i)
+            {
+
+                double X_real = i % n * rho_real - rho_real * (n-1) / 2 - l_real / 2;
+                double Y_real = i / n * rho_real - rho_real * (n-1) / 2 - l_real / 2;
+
+                if (!M[i / n][i % n])
+                {
+                    ResolutionFunction->FixParameter(10 + i, X_real);
+                    ResolutionFunction->FixParameter(N + 10 + i, Y_real);
+                    ResolutionFunction->FixParameter(2 * N + 10 + i, X_real + l_real);
+                    ResolutionFunction->FixParameter(3 * N + 10 + i, Y_real);
+                    ResolutionFunction->FixParameter(4 * N + 10 + i, X_real + l_real);
+                    ResolutionFunction->FixParameter(5 * N + 10 + i, Y_real + l_real);
+                    ResolutionFunction->FixParameter(6 * N + 10 + i, X_real);
+                    ResolutionFunction->FixParameter(7 * N + 10 + i, Y_real + l_real);
+                }
+                
+                if ( i != j)
+                {
+                    ResolutionFunction->FixParameter(10 + i, X_real);
+                    ResolutionFunction->FixParameter(N + 10 + i, Y_real);
+                    ResolutionFunction->FixParameter(2 * N + 10 + i, X_real + l_real);
+                    ResolutionFunction->FixParameter(3 * N + 10 + i, Y_real);
+                    ResolutionFunction->FixParameter(4 * N + 10 + i, X_real + l_real);
+                    ResolutionFunction->FixParameter(5 * N + 10 + i, Y_real + l_real);
+                    ResolutionFunction->FixParameter(6 * N + 10 + i, X_real);
+                    ResolutionFunction->FixParameter(7 * N + 10 + i, Y_real + l_real);
+
+                    // ResolutionFunction->FixParameter(10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter], G_coord_fitgrid->GetY()[counter]));
+                    // ResolutionFunction->FixParameter(N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter], G_coord_fitgrid->GetY()[counter]));
+                    // ResolutionFunction->FixParameter(2 * N + 10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter + 1], G_coord_fitgrid->GetY()[counter + 1]));
+                    // ResolutionFunction->FixParameter(3 * N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter + 1], G_coord_fitgrid->GetY()[counter + 1]));
+                    // ResolutionFunction->FixParameter(4 * N + 10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter + 2], G_coord_fitgrid->GetY()[counter + 2]));
+                    // ResolutionFunction->FixParameter(5 * N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter + 2], G_coord_fitgrid->GetY()[counter + 2]));
+                    // ResolutionFunction->FixParameter(6 * N + 10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter + 3], G_coord_fitgrid->GetY()[counter + 3]));
+                    // ResolutionFunction->FixParameter(7 * N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter + 3], G_coord_fitgrid->GetY()[counter + 3]));
+
+                }
+                else
+                {
+                    // ResolutionFunction->SetParameter(10 + i, X_real);
+                    // ResolutionFunction->SetParLimits(10 + i, X_real-offset, X_real + offset);
+                    // ResolutionFunction->SetParameter(N + 10 + i, Y_real);
+                    // ResolutionFunction->SetParLimits(N + 10 + i, Y_real-offset, Y_real + offset);
+                    // ResolutionFunction->SetParameter(2 * N + 10 + i, X_real + l_real);
+                    // ResolutionFunction->SetParLimits(2 * N + 10 + i, X_real + l_real - offset, X_real + l_real + offset);
+                    // ResolutionFunction->SetParameter(3 * N + 10 + i, Y_real);
+                    // ResolutionFunction->SetParLimits(3 * N + 10 + i, Y_real - offset, Y_real + offset);
+                    // ResolutionFunction->SetParameter(4 * N + 10 + i, X_real + l_real);
+                    // ResolutionFunction->SetParLimits(4 * N + 10 + i, X_real + l_real - offset, X_real + l_real + offset);
+                    // ResolutionFunction->SetParameter(5 * N + 10 + i, Y_real + l_real);
+                    // ResolutionFunction->SetParLimits(5 * N + 10 + i, Y_real + l_real - offset, Y_real + l_real + offset);
+                    // ResolutionFunction->SetParameter(6 * N + 10 + i, X_real);
+                    // ResolutionFunction->SetParLimits(6 * N + 10 + i, X_real - offset, X_real + offset);
+                    // ResolutionFunction->SetParameter(7 * N + 10 + i, Y_real + l_real);
+                    // ResolutionFunction->SetParLimits(7 * N + 10 + i, Y_real + l_real - offset, Y_real + l_real + offset);
+
+                    ResolutionFunction->FixParameter(10 + i, X_real);
+                    ResolutionFunction->FixParameter(N + 10 + i, Y_real);
+                    ResolutionFunction->FixParameter(2 * N + 10 + i, X_real + l_real);
+                    ResolutionFunction->FixParameter(3 * N + 10 + i, Y_real);
+                    ResolutionFunction->FixParameter(4 * N + 10 + i, X_real + l_real);
+                    ResolutionFunction->FixParameter(5 * N + 10 + i, Y_real + l_real);
+                    ResolutionFunction->FixParameter(6 * N + 10 + i, X_real);
+                    ResolutionFunction->FixParameter(7 * N + 10 + i, Y_real + l_real);
+
+                    // ResolutionFunction->FixParameter(10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter], G_coord_fitgrid->GetY()[counter]));
+                    // ResolutionFunction->FixParameter(N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter], G_coord_fitgrid->GetY()[counter]));
+                    // ResolutionFunction->FixParameter(2 * N + 10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter + 1], G_coord_fitgrid->GetY()[counter + 1]));
+                    // ResolutionFunction->FixParameter(3 * N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter + 1], G_coord_fitgrid->GetY()[counter + 1]));
+                    // ResolutionFunction->FixParameter(4 * N + 10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter + 2], G_coord_fitgrid->GetY()[counter + 2]));
+                    // ResolutionFunction->FixParameter(5 * N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter + 2], G_coord_fitgrid->GetY()[counter + 2]));
+                    // ResolutionFunction->FixParameter(6 * N + 10 + i, f_X->Eval(G_coord_fitgrid->GetX()[counter + 3], G_coord_fitgrid->GetY()[counter + 3]));
+                    // ResolutionFunction->FixParameter(7 * N + 10 + i, f_Y->Eval(G_coord_fitgrid->GetX()[counter + 3], G_coord_fitgrid->GetY()[counter + 3]));
+                }
+
+                counter+=4;
+            }
+
+            ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls(1000000);
+            ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(0);
+            H->GetXaxis()->SetRangeUser(X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange);
+            H->GetYaxis()->SetRangeUser(Y_real_cell - l_real / 2 - extrarange, Y_real_cell + l_real / 2 + extrarange);
+            TFitResultPtr r = H->Fit(ResolutionFunction, "MULTITHREAD QRNS", "", X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange);
+
+            if (r != 0)
+            {
+                Warning("Fit failed for cell " + to_string(j) + ". Skipping this cell.");
+                continue;
+            }
+            else
+            {
+                Info("Fit successful for cell " + to_string(j));
+                // cout << "A = " << ResolutionFunction->GetParameter(0) << " +/- " << ResolutionFunction->GetParError(0) << endl;
+            }
+
+
+            ResolutionFunction->SetParameter(0, ResolutionFunction->GetParameter(0));
+            TCanvas *c_fit = new TCanvas(("Cell_fit_" + to_string(j)).c_str(), ("Cell_fit_" + to_string(j)).c_str(), 800, 800);
+            c_fit->Divide(2, 2);
+            c_fit->cd(2);
+            H_unzoom->Draw("COLZ");
+            TBox *box = new TBox(X_real_cell - l_real / 2 - extrarange, Y_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange, Y_real_cell + l_real / 2 + extrarange);
+            box->SetLineColor(kRed);
+            box->SetFillColor(0);
+            box->SetFillStyle(0);
+            box->SetLineWidth(2);
+            box->Draw("SAME");
+            c_fit->cd(1);
+            H->GetXaxis()->SetRangeUser(X_real_cell - l_real / 2 - extrarange, X_real_cell + l_real / 2 + extrarange);
+            H->GetYaxis()->SetRangeUser(Y_real_cell - l_real / 2 - extrarange, Y_real_cell + l_real / 2 + extrarange);
+            H->GetZaxis()->SetRangeUser(0, H->GetMaximum());
+            H->Draw("LEGO2");
+            ResolutionFunction->SetMaximum(H->GetMaximum());
+            TLatex *latex = new TLatex();
+            latex->SetTextSize(0.03);
+            latex->DrawLatexNDC(0.15, 0.85, Form("Cell %d", j));
+            latex->DrawLatexNDC(0.15, 0.80, Form("#sigma = %.2f #pm %.2f", sqrt(pow(ResolutionFunction->GetParameter(1), 2) + pow(ResolutionFunction->GetParameter(2), 2)), sqrt(pow(ResolutionFunction->GetParError(1), 2) + pow(ResolutionFunction->GetParError(2), 2))));
+            ResolutionFunction->Draw("SURF SAME");
+            // Fitting projected resolution
+            TF1 *f_x_left = new TF1("f_x_left", "[0]*(1+erf((x-[1])/(sqrt(2)*[2])))+[3]", X_real_cell - l_real / 2 - extrarange, X_real_cell);
+            f_x_left->SetParLimits(0, 0., 10000);
+            f_x_left->SetParameter(1, X_real_cell - l_real / 2);
+            f_x_left->SetParLimits(2, 0.01, 1.);
+            f_x_left->SetParLimits(3, 0., 100000);
+            // f_x_left->SetParameters((f_x_left->GetParError(0)+f_x_left->GetParError(1))/2, (f_x_left->GetParError(1)+f_x_left->GetParError(2))/2, (f_x_left->GetParError(2)+f_x_left->GetParError(0))/2);
+            TF1 *f_x_right = new TF1("f_x_right", "[0]*(0.5*erfc((x-[1])/(sqrt(2)*[2])))+[3]", X_real_cell, X_real_cell + l_real / 2 + extrarange);
+            f_x_right->SetParLimits(0, 0., 10000);
+            f_x_right->SetParameter(1, X_real_cell + l_real / 2 );
+            f_x_right->SetParLimits(2, 0.01, 1.);
+            f_x_right->SetParLimits(3, 0., 100000);
+            // f_x_right->SetParameters((f_x_right->GetParError(0)+f_x_right->GetParError(1))/2, (f_x_right->GetParError(1)+f_x_right->GetParError(2))/2, (f_x_right->GetParError(2)+f_x_right->GetParError(0))/2);
+
+            c_fit->cd(3);
+            gStyle->SetOptFit(0);
+            TH1D *H_projX = H->ProjectionX(("H_projX_" + to_string(j)).c_str(), H->GetYaxis()->GetFirst(), H->GetYaxis()->GetLast());
+            H_projX->Draw("HIST");
+            H_projX->Fit("f_x_left", "QRN");
+            double sigma_x_left = f_x_left->GetParameter(2);
+            double sigma_x_left_err = f_x_left->GetParError(2);
+            H_projX->Fit("f_x_right", "QRN");
+            double sigma_x_right = f_x_right->GetParameter(2);
+            double sigma_x_right_err = f_x_right->GetParError(2);
+            f_x_left->SetLineColor(kRed);
+            f_x_left->Draw("SAME");
+            TLatex *latex_x_left = new TLatex();
+            latex_x_left->SetTextSize(0.03);
+            latex_x_left->DrawLatexNDC(0.15, 0.85, Form("#sigma_{x} = %.3f #pm %.3f", sigma_x_left, sigma_x_left_err));
+            f_x_right->SetLineColor(kRed);
+            f_x_right->Draw("SAME");
+            TLatex *latex_x_right = new TLatex();
+            latex_x_right->SetTextSize(0.03);
+            latex_x_right->DrawLatexNDC(0.85, 0.85, Form("#sigma_{x} = %.3f #pm %.3f", sigma_x_right, sigma_x_right_err));
+
+            TF1 *f_y_left = new TF1("f_y_left", "[0]*(1+erf((x-[1])/(sqrt(2)*[2])))+[3]", Y_real_cell - l_real / 2 - extrarange, Y_real_cell);
+            f_y_left->SetParLimits(0, 0., 10000);
+            f_y_left->SetParameter(1, Y_real_cell - l_real / 2);
+            f_y_left->SetParLimits(2, 0.01, 3.);
+            f_y_left->SetParLimits(3, 0., 100000);
+            // f_y_left->SetParameters((f_y_left->GetParError(0)+f_y_left->GetParError(1))/2, (f_y_left->GetParError(1)+f_y_left->GetParError(2))/2, (f_y_left->GetParError(2)+f_y_left->GetParError(0))/2);
+            TF1 *f_y_right = new TF1("f_y_right", "[0]*(0.5*erfc((x-[1])/(sqrt(2)*[2])))+[3]", Y_real_cell, Y_real_cell + l_real / 2 + extrarange);
+            f_y_right->SetParLimits(0, 0., 10000);
+            f_y_right->SetParameter(1, Y_real_cell + l_real / 2);
+            f_y_right->SetParLimits(2, 0.01, 3.);
+            f_y_right->SetParLimits(3, 0., 100000);
+            // f_y_left->SetParameters((f_y_right->GetParError(0)+f_y_right->GetParError(1))/2, (f_y_right->GetParError(1)+f_y_right->GetParError(2))/2, (f_y_right->GetParError(2)+f_y_right->GetParError(0))/2);
+
+            c_fit->cd(4);
+            gStyle->SetOptFit(0);
+            TH1D *H_projY = H->ProjectionY(("H_projY_" + to_string(j)).c_str(), H->GetXaxis()->GetFirst(), H->GetXaxis()->GetLast());
+            H_projY->Draw("HIST");
+            H_projY->Fit("f_y_left", "QR");
+            double sigma_y_left = f_y_left->GetParameter(2);
+            double sigma_y_left_err = f_y_left->GetParError(2);
+            H_projY->Fit("f_y_right", "QR");
+            double sigma_y_right = f_y_right->GetParameter(2);
+            double sigma_y_right_err = f_y_right->GetParError(2);
+            f_y_left->SetLineColor(kRed);
+            f_y_left->Draw("SAME");
+            TLatex *latex_y_left = new TLatex();  
+            latex_y_left->SetTextSize(0.03);
+            latex_y_left->DrawLatexNDC(0.15, 0.85, Form("#sigma_{y} = %.3f #pm %.3f", sigma_y_left, sigma_y_left_err));
+            f_y_right->SetLineColor(kRed);
+            f_y_right->Draw("SAME");
+            TLatex *latex_y_right = new TLatex();
+            latex_y_right->SetTextSize(0.03);
+            latex_y_right->DrawLatexNDC(0.85, 0.85, Form("#sigma_{y} = %.3f #pm %.3f", sigma_y_right, sigma_y_right_err));
+            c_fit->Write();
+
+            G_Resolution_X->AddPoint(X_real_cell, Y_real_cell, ResolutionFunction->GetParameter(1));
+            G_Resolution_X->SetPointError(G_Resolution_X->GetN() - 1, 0, 0, ResolutionFunction->GetParError(1));
+            // G_Resolution_X->AddPoint(X_real_cell + l_real / 2, Y_real_cell - l_real / 2, ResolutionFunction->GetParameter(1));
+            // G_Resolution_X->SetPointError(G_Resolution_X->GetN() - 1, 0, 0, ResolutionFunction->GetParError(1));
+            // G_Resolution_X->AddPoint(X_real_cell - l_real / 2, Y_real_cell + l_real / 2, ResolutionFunction->GetParameter(1));
+            // G_Resolution_X->SetPointError(G_Resolution_X->GetN() - 1, 0, 0, ResolutionFunction->GetParError(1));
+            // G_Resolution_X->AddPoint(X_real_cell + l_real / 2, Y_real_cell + l_real / 2, ResolutionFunction->GetParameter(1));
+            // G_Resolution_X->SetPointError(G_Resolution_X->GetN() - 1, 0, 0, ResolutionFunction->GetParError(1));
+            G_Resolution_Y->AddPoint(X_real_cell, Y_real_cell, ResolutionFunction->GetParameter(2));
+            G_Resolution_Y->SetPointError(G_Resolution_Y->GetN() - 1, 0, 0, ResolutionFunction->GetParError(2));
+            // G_Resolution_Y->AddPoint(X_real_cell + l_real / 2, Y_real_cell - l_real / 2, ResolutionFunction->GetParameter(2));
+            // G_Resolution_Y->SetPointError(G_Resolution_Y->GetN() - 1, 0, 0, ResolutionFunction->GetParError(2));
+            // G_Resolution_Y->AddPoint(X_real_cell - l_real / 2, Y_real_cell + l_real / 2, ResolutionFunction->GetParameter(2));
+            // G_Resolution_Y->SetPointError(G_Resolution_Y->GetN() - 1, 0, 0, ResolutionFunction->GetParError(2));
+            // G_Resolution_Y->AddPoint(X_real_cell + l_real / 2, Y_real_cell + l_real / 2, ResolutionFunction->GetParameter(2));
+            // G_Resolution_Y->SetPointError(G_Resolution_Y->GetN() - 1, 0, 0, ResolutionFunction->GetParError(2));
+            
+            G_Resolution_X_proj->AddPoint(X_real_cell - l_real / 2, Y_real_cell , sigma_x_left);
+            G_Resolution_X_proj->SetPointError(G_Resolution_X_proj->GetN() - 1, 0, 0, sigma_x_left_err);
+            G_Resolution_X_proj->AddPoint(X_real_cell + l_real / 2, Y_real_cell , sigma_x_right);
+            G_Resolution_X_proj->SetPointError(G_Resolution_X_proj->GetN() - 1, 0, 0, sigma_x_right_err);
+
+            G_Resolution_Y_proj->AddPoint(X_real_cell, Y_real_cell - l_real / 2, sigma_y_left);
+            G_Resolution_Y_proj->SetPointError(G_Resolution_Y_proj->GetN() - 1, 0, 0, sigma_y_left_err);
+            G_Resolution_Y_proj->AddPoint(X_real_cell, Y_real_cell + l_real / 2, sigma_y_right);
+            G_Resolution_Y_proj->SetPointError(G_Resolution_Y_proj->GetN() - 1, 0, 0, sigma_y_right_err);
+
+            // hist for mean value and error over the grid
+            H_Resolution_X_proj->Fill(sigma_x_left);
+            H_Resolution_X_proj->Fill(sigma_x_right);
+            H_Resolution_Y_proj->Fill(sigma_y_left);
+            H_Resolution_Y_proj->Fill(sigma_y_right);
+            if (X_real_cell > -3 && X_real_cell < 3 && Y_real_cell > -3 && Y_real_cell < 3)
+            {
+                H_Resolution_X_proj_ROI->Fill(sigma_x_left);
+                H_Resolution_X_proj_ROI->Fill(sigma_x_right);
+                H_Resolution_Y_proj_ROI->Fill(sigma_y_left);
+                H_Resolution_Y_proj_ROI->Fill(sigma_y_right);
+            }           
+            
+            cout << "Chi2 = " << ResolutionFunction->GetChisquare() / ResolutionFunction->GetNDF() << endl;
+            cout << "Cell " << j << " : " << ResolutionFunction->GetParameter(1) << " +/- " << ResolutionFunction->GetParError(1) << " , " << ResolutionFunction->GetParameter(2) << " +/- " << ResolutionFunction->GetParError(2) << endl;
+            cout << "          " << sigma_x_left << " +/- " << sigma_x_left_err << " , " << sigma_y_left << " +/- " << sigma_y_left_err << endl;
+            cout << "          " << sigma_x_right << " +/- " << sigma_x_right_err << " , " << sigma_y_right << " +/- " << sigma_y_right_err << endl;
+        }   
+    }
+
+    TCanvas *c_Resolution_X = new TCanvas("c_Resolution_X", "c_Resolution_X", 800, 800);
+    G_Resolution_X->SetMarkerStyle(20);
+    G_Resolution_X->SetMarkerColor(kBlue);
+    G_Resolution_X->GetXaxis()->SetTitle("x [mm]");
+    G_Resolution_X->GetYaxis()->SetTitle("y [mm]");
+    G_Resolution_X->Draw("AP");
+    c_Resolution_X->Write();
+
+    TCanvas *c_Resolution_Y = new TCanvas("c_Resolution_Y", "c_Resolution_Y", 800, 800);
+    G_Resolution_Y->SetMarkerStyle(20);
+    G_Resolution_Y->SetMarkerColor(kRed);
+    G_Resolution_Y->GetXaxis()->SetTitle("x [mm]");
+    G_Resolution_Y->GetYaxis()->SetTitle("y [mm]");
+    G_Resolution_Y->Draw("AP");
+    c_Resolution_Y->Write();
+
+    // RESULT PRINTING 
+    /// ### all range mean std on x and y and xy
+    TH1D* Resolution_X = new TH1D("Resolution_X", "Resolution_X", 10000, 0, 5);
+    TH1D* Resolution_Y = new TH1D("Resolution_Y", "Resolution_Y", 10000, 0, 5);
+    TH1D* Resolution_XY = new TH1D("Resolution_XY", "Resolution_XY", 10000, 0, 5);
+    /// ROI range 
+    TH1D *Resolution_X_ROI = new TH1D("Resolution_X_ROI", "Resolution_X_ROI", 10000, 0, 5);
+    TH1D *Resolution_Y_ROI = new TH1D("Resolution_Y_ROI", "Resolution_Y_ROI", 10000, 0, 5);
+    TH1D *Resolution_XY_ROI = new TH1D("Resolution_XY_ROI", "Resolution_XY_ROI", 10000, 0, 5);
+    // Graph for ROI
+    TGraphErrors *Graph_Resolution_X_ROI = new TGraphErrors();
+    Graph_Resolution_X_ROI->SetName("Graph_Resolution_X_ROI");
+    TGraphErrors *Graph_Resolution_Y_ROI = new TGraphErrors();
+    Graph_Resolution_Y_ROI->SetName("Graph_Resolution_Y_ROI");
+    for (int i = 0; i < G_Resolution_X->GetN(); ++i)
+    {
+        double x, y, res_x, res_y;
+        G_Resolution_X->GetPoint(i, x, y, res_x);
+        G_Resolution_Y->GetPoint(i, x, y, res_y);
+
+        Resolution_X->Fill(res_x);
+        Resolution_Y->Fill(res_y);
+        Resolution_XY->Fill(sqrt(pow(res_x, 2) + pow(res_y, 2)));
+
+        if (x > -3 && x < 3 && y > -3 && y < 3)
+        {
+            Resolution_X_ROI->Fill(res_x);
+            Resolution_Y_ROI->Fill(res_y);
+            Resolution_XY_ROI->Fill(sqrt(pow(res_x, 2) + pow(res_y, 2)));
+
+            Graph_Resolution_X_ROI->AddPoint(i, res_x);
+            Graph_Resolution_X_ROI->SetPointError(Graph_Resolution_X_ROI->GetN() - 1, 0, G_Resolution_X->GetErrorZ(i));
+            Graph_Resolution_Y_ROI->AddPoint(i, res_y);
+            Graph_Resolution_Y_ROI->SetPointError(Graph_Resolution_Y_ROI->GetN() - 1, 0, G_Resolution_Y->GetErrorZ(i));
+        }
+    }
+
+    Graph_Resolution_X_ROI->Fit("pol0");
+    Graph_Resolution_Y_ROI->Fit("pol0");
+
+    // Printing results
+    cout << "####### RESOLUTION RESULTS ########" << endl;
+    cout << "####### 2D FIT ########" << endl;
+    cout << "ALL Range" << endl;
+    cout << "    Resolution X: " << Resolution_X->GetMean() << " +/- " << Resolution_X->GetMeanError() << endl;
+    cout << "    Resolution Y: " << Resolution_Y->GetMean() << " +/- " << Resolution_Y->GetMeanError() << endl;
+    cout << "    Resolution XY: " << Resolution_XY->GetMean() << " +/- " << Resolution_XY->GetMeanError() << endl;
+    cout << "ROI Range" << endl;
+    cout << "    Resolution X: " << Resolution_X_ROI->GetMean() << " +/- " << Resolution_X_ROI->GetMeanError() << endl;
+    cout << "    Resolution Y: " << Resolution_Y_ROI->GetMean() << " +/- " << Resolution_Y_ROI->GetMeanError() << endl;
+    cout << "    Resolution XY: " << Resolution_XY_ROI->GetMean() << " +/- " << Resolution_XY_ROI->GetMeanError() << endl;
+    cout << "####### 1D FIT ########" << endl;
+    cout << "HIST MEAN" << endl;
+    cout << "ALL Range" << endl;
+    cout << "    Resolution X: " << H_Resolution_X_proj->GetMean() << " +/- " << H_Resolution_X_proj->GetMeanError() << endl;
+    cout << "    Resolution Y: " << H_Resolution_Y_proj->GetMean() << " +/- " << H_Resolution_Y_proj->GetMeanError() << endl;
+    cout << "ROI Range" << endl;
+    cout << "    Resolution X: " << H_Resolution_X_proj_ROI->GetMean() << " +/- " << H_Resolution_X_proj_ROI->GetMeanError() << endl;
+    cout << "    Resolution Y: " << H_Resolution_Y_proj_ROI->GetMean() << " +/- " << H_Resolution_Y_proj_ROI->GetMeanError() << endl;
+    cout << "GRAPH MEAN" << endl;
+    cout << "ROI Range" << endl;
+    cout << "    Resolution X: " << Graph_Resolution_X_ROI->GetFunction("pol0")->GetParameter(0) << " +/- " << Graph_Resolution_X_ROI->GetFunction("pol0")->GetParError(0) << endl;
+    cout << "    Resolution Y: " << Graph_Resolution_Y_ROI->GetFunction("pol0")->GetParameter(0) << " +/- " << Graph_Resolution_Y_ROI->GetFunction("pol0")->GetParError(0) << endl;
+
+
+    TCanvas *c_Resolution_XY = new TCanvas("c_Resolution_XY", "c_Resolution_XY", 800, 800);
+    TH2D *H_Resolution_X_interpolated = new TH2D("H_Resolution_X_interpolated", "H_Resolution_X_interpolated", 1600, -8, 8, 1600, -8, 8);
+    TH2D *H_Resolution_Y_interpolated = new TH2D("H_Resolution_Y_interpolated", "H_Resolution_Y_interpolated", 1600, -8, 8, 1600, -8, 8);
+    TH2D *H_Resolution_XY_interpolated = new TH2D("H_Resolution_XY_interpolated", "H_Resolution_XY_interpolated", 1600, -8, 8, 1600, -8, 8);
+    for (int bin_x = 1; bin_x <= H_Resolution_X_interpolated->GetNbinsX(); ++bin_x)
+    {
+        double x = H_Resolution_X_interpolated->GetXaxis()->GetBinCenter(bin_x);
+        for (int bin_y = 1; bin_y <= H_Resolution_X_interpolated->GetNbinsY(); ++bin_y)
+        {
+            double y = H_Resolution_X_interpolated->GetYaxis()->GetBinCenter(bin_y);
+            H_Resolution_X_interpolated->Fill(x, y, G_Resolution_X->Interpolate(x, y));
+            H_Resolution_Y_interpolated->Fill(x, y, G_Resolution_Y->Interpolate(y, x)); 
+            H_Resolution_XY_interpolated->Fill(x, y, sqrt(pow(G_Resolution_X->Interpolate(x, y), 2) + pow(G_Resolution_Y->Interpolate(y, x), 2)));
+        }
+    }
+    c_Resolution_XY->Divide(3, 1);
+    c_Resolution_XY->cd(1);
+    H_Resolution_X_interpolated->GetXaxis()->SetTitle("x [mm]");
+    H_Resolution_X_interpolated->GetYaxis()->SetTitle("y [mm]");
+    H_Resolution_X_interpolated->Draw("COLZ");
+    c_Resolution_XY->cd(2);
+    H_Resolution_Y_interpolated->GetXaxis()->SetTitle("x [mm]");
+    H_Resolution_Y_interpolated->GetYaxis()->SetTitle("y [mm]");
+    H_Resolution_Y_interpolated->Draw("COLZ");
+    c_Resolution_XY->cd(3);
+    H_Resolution_XY_interpolated->GetXaxis()->SetTitle("x [mm]");
+    H_Resolution_XY_interpolated->GetYaxis()->SetTitle("y [mm]");
+    H_Resolution_XY_interpolated->Draw("COLZ");
+    c_Resolution_XY->Write();
+
+    TCanvas *c_Resolution_XY_proj = new TCanvas("c_Resolution_XY_proj", "c_Resolution_XY_proj", 800, 800);
+    TH2D *H_Resolution_X_interpolated_proj = new TH2D("H_Resolution_X_interpolated_proj", "H_Resolution_X_interpolated_proj", 1600, -8, 8, 1600, -8, 8);
+    TH2D *H_Resolution_Y_interpolated_proj = new TH2D("H_Resolution_Y_interpolated_proj", "H_Resolution_Y_interpolated_proj", 1600, -8, 8, 1600, -8, 8);
+    TH2D * H_Resolution_XY_interpolated_proj = new TH2D("H_Resolution_XY_proj", "H_Resolution_XY_proj", 1600, -8, 8, 1600, -8, 8);
+    for (int bin_x = 1; bin_x <= H_Resolution_X_interpolated_proj->GetNbinsX(); ++bin_x)
+    {
+        double x = H_Resolution_X_interpolated_proj->GetXaxis()->GetBinCenter(bin_x);
+        for (int bin_y = 1; bin_y <= H_Resolution_X_interpolated_proj->GetNbinsY(); ++bin_y)
+        {
+            double y = H_Resolution_X_interpolated_proj->GetYaxis()->GetBinCenter(bin_y);
+            H_Resolution_X_interpolated_proj->Fill(x, y, G_Resolution_X_proj->Interpolate(x, y));
+            H_Resolution_Y_interpolated_proj->Fill(x, y, G_Resolution_Y_proj->Interpolate(y, x));
+            H_Resolution_XY_interpolated_proj->Fill(x, y, sqrt(pow(G_Resolution_X_proj->Interpolate(x, y), 2) + pow(G_Resolution_Y_proj->Interpolate(y, x), 2)));
+        }
+    }
+    c_Resolution_XY_proj->Divide(3, 1);
+    c_Resolution_XY_proj->cd(1);
+    H_Resolution_X_interpolated_proj->GetXaxis()->SetTitle("x [mm]");
+    H_Resolution_X_interpolated_proj->GetYaxis()->SetTitle("y [mm]");
+    H_Resolution_X_interpolated_proj->Draw("COLZ");
+    c_Resolution_XY_proj->cd(2);
+    H_Resolution_Y_interpolated_proj->GetXaxis()->SetTitle("x [mm]");
+    H_Resolution_Y_interpolated_proj->GetYaxis()->SetTitle("y [mm]");
+    H_Resolution_Y_interpolated_proj->Draw("COLZ");
+    c_Resolution_XY_proj->cd(3);
+    H_Resolution_XY_interpolated_proj->GetXaxis()->SetTitle("x [mm]");
+    H_Resolution_XY_interpolated_proj->GetYaxis()->SetTitle("y [mm]");
+    H_Resolution_XY_interpolated_proj->Draw("COLZ");
+    c_Resolution_XY_proj->Write();    
+
+    Graph_Resolution_X_ROI->Write();
+    Graph_Resolution_Y_ROI->Write();
+    
 }
 
 ///////////////// Verify grid /////////////////////////////////////////
@@ -2046,9 +2932,8 @@ void FinalFunctionToMinimize2D()
         // amplitude bkg in MCP
         // FinalFunction->SetParLimits(i, 0., 500);
         // FinalFunction->SetParameter(i, 10);
-
-        if (!M_final[i / n][i % n])
-        {
+        if (!M[i / n][i % n])   
+       {
             // FinalFunction->FixParameter(i, 0);
             // beta_x
             FinalFunction->FixParameter(10 + i, 0.);
@@ -2172,7 +3057,7 @@ double MyGaussian(double *x, double *par)
     double sigma_gy = par[4];
 
     // RAW EXPRESSION  OF 2D GAUSSIAN (R)
-    double gauss = A_g /(2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (2 * sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (2 * sigma_gy * sigma_gy)));
+    double gauss = A_g /(2*M_PI*sigma_gx*sigma_gy) * exp(-0.5 * ((x[0] - mu_gx) * (x[0] - mu_gx) / (sigma_gx * sigma_gx) + (x[1] - mu_gy) * (x[1] - mu_gy) / (sigma_gy * sigma_gy)));
 
     return gauss;
 }
@@ -2283,14 +3168,26 @@ double f_CORNER(double *x, double *par)
             // result_sum += (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
             // grid_sum += (erf_x_pos - erf_x_neg) * (erf_y_pos - erf_y_neg);
 
+            // int I = i * n + j;
             double Ax = par[10 + i * n + j];
+            // double Ax = I / n * rho_real - rho_real * (n - 1) / 2;
+
+            // I = n * n + i * n + j;
             double Ay = par[10 + n * n + i * n + j];
+            // double Ay = I % n * rho_real - rho_real * (n - 1) / 2;
+
+            // I = 2 * n * n + i * n + j;
             double Bx = par[10 + 2 * n * n + i * n + j];
+            // double Bx = I / n * rho_real - rho_real * (n - 1) / 2;
+
             // double By = par[10 + 3 * n * n + i * n + j];
             // double Cx = par[10 + 4 * n * n + i * n + j];
             // double Cy = par[10 + 5 * n * n + i * n + j];
             // double Dx = par[10 + 6 * n * n + i * n + j];
+
+            // I = 7 * n * n + i * n + j;
             double Dy = par[10 + 7 * n * n + i * n + j];
+            // double Dy = I % n * rho_real - rho_real * (n - 1) / 2;
 
             double erf_x = (x[0] >= (Ax) && x[0] <= (Bx)) ? 1.0 : 0.0;
             double erf_y = (x[1] >= (Ay) && x[1] <= (Dy)) ? 1.0 : 0.0;
@@ -2469,23 +3366,33 @@ double MeasurementFittedFunction2D_Convoluted(double *x, double *par)
 
 double MeasurementFunctionToMinimize2D_CORNER()
 {
-
+    Info("MeasurementFunctionToMinimize2D_CORNER");
     ////////// SOLUTION OF FIT //////////////
     // ### ERROR AT THE END THE FILE ### // 
-    double sigma_x = 1.70116e-01;
-    double sigma_y = 1.28192e-01;
-    double Amplitude_gauss = 2.62887e+02;
-    double mu_gx = -7.91786e-02;
-    double mu_gy = 6.31885e-02;
-    double sigma_gx = 6.59898e-01;
-    double sigma_gy = 7.73420e-01;
-    double bkg = 3.40290e+00;
+    // double sigma_x = 1.70116e-01;
+    // double sigma_y = 1.28192e-01;
+    // double Amplitude_gauss = 2.62887e+02;
+    // double mu_gx = -7.91786e-02;
+    // double mu_gy = 6.31885e-02;
+    // double sigma_gx = 6.59898e-01;
+    // double sigma_gy = 7.73420e-01;
+    // double bkg = 3.40290e+00;
     /////////////////////////////////////////   
+    // ### 2025 ### // 
+    double sigma_x = 0.220817;
+    double sigma_y = 0.246183;
+    double Amplitude_gauss = 46.38;
+    double mu_gx = -0.0162802;
+    double mu_gy = 0.464346;
+    double sigma_gx = 0.756407;
+    double sigma_gy = 0.451475;
+    double bkg = 1.23283;
+    /////////////////////////////////////////  
 
     double chi2 = 0.0;
     int N = n * n;
 
-    // ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(2); // 2 for verbose
+    ROOT::Math::MinimizerOptions::SetDefaultPrintLevel(2); // 2 for verbose
     ROOT::Math::MinimizerOptions::SetDefaultErrorDef(9.30*9.30);
     MeasurementFunction = new TF2("MeasurementFunction", MeasurementFittedFunction2D_Convoluted_CORNER, x_measurement_min, x_measurement_max, x_measurement_min, x_measurement_max, 8 * N + 10);
     MeasurementFunction->SetNpx(75);
@@ -2497,44 +3404,44 @@ double MeasurementFunctionToMinimize2D_CORNER()
     MeasurementFunction->FixParameter(0, 0);
 
     // sigma x
-    MeasurementFunction->SetParLimits(1, 0.1, 0.4);
-    MeasurementFunction->SetParameter(1, 0.17);
-    // MeasurementFunction->FixParameter(1, sigma_x);
+    // MeasurementFunction->SetParLimits(1, 0.1, 0.4);
+    // MeasurementFunction->SetParameter(1, 0.17);
+    MeasurementFunction->FixParameter(1, sigma_x);
 
     // sigma y
-    MeasurementFunction->SetParLimits(2, 0.1, 0.4);
-    MeasurementFunction->SetParameter(2, 0.12);
-    // MeasurementFunction->FixParameter(2, sigma_y);
+    // MeasurementFunction->SetParLimits(2, 0.1, 0.4);
+    // MeasurementFunction->SetParameter(2, 0.12);
+    MeasurementFunction->FixParameter(2, sigma_y);
 
     // amplitude gaus
-    MeasurementFunction->SetParLimits(3, 0, 1000);
-    MeasurementFunction->SetParameter(3, 50);
-    // MeasurementFunction->FixParameter(3, Amplitude_gauss);
+    // MeasurementFunction->SetParLimits(3, 0, 1000);
+    // MeasurementFunction->SetParameter(3, 50);
+    MeasurementFunction->FixParameter(3, Amplitude_gauss);
 
     // mu gaus x
-    MeasurementFunction->SetParLimits(4, -1, 1);
-    MeasurementFunction->SetParameter(4, 0);
-    // MeasurementFunction->FixParameter(4, mu_gx);
+    // MeasurementFunction->SetParLimits(4, -1, 1);
+    // MeasurementFunction->SetParameter(4, 0);
+    MeasurementFunction->FixParameter(4, mu_gx);
 
     // mu gaus y
-    MeasurementFunction->SetParLimits(5, -1, 1);
-    MeasurementFunction->SetParameter(5, 0);
-    // MeasurementFunction->FixParameter(5, mu_gy);
+    // MeasurementFunction->SetParLimits(5, -1, 1);
+    // MeasurementFunction->SetParameter(5, 0);
+    MeasurementFunction->FixParameter(5, mu_gy);
 
     // sigma gaus x
-    MeasurementFunction->SetParLimits(6, 0.1, 1.5);
-    MeasurementFunction->SetParameter(6, 0.6);
-    // MeasurementFunction->FixParameter(6, sigma_gx);
+    // MeasurementFunction->SetParLimits(6, 0.1, 1.5);
+    // MeasurementFunction->SetParameter(6, 1.0);
+    MeasurementFunction->FixParameter(6, sigma_gx);
 
     // sigma gaus y
-    MeasurementFunction->SetParLimits(7, 0.1, 1.5);
-    MeasurementFunction->SetParameter(7, 0.6);
-    // MeasurementFunction->FixParameter(7, sigma_gy);
+    // MeasurementFunction->SetParLimits(7, 0.1, 1.5);
+    // MeasurementFunction->SetParameter(7, 0.6);
+    MeasurementFunction->FixParameter(7, sigma_gy);
 
     // bkg
-    MeasurementFunction->SetParLimits(8, 0, 100);
-    MeasurementFunction->SetParameter(8, 4);
-    // MeasurementFunction->FixParameter(8, bkg);
+    // MeasurementFunction->SetParLimits(8, 0, 100);
+    // MeasurementFunction->SetParameter(8, 4);
+    MeasurementFunction->FixParameter(8, bkg);
 
     // l
     // MeasurementFunction->SetParLimits(9, 0.8, 1.4);
@@ -2602,10 +3509,19 @@ double MeasurementFunctionToMinimize2D_CORNER()
     H_measurement_reconstructed->GetYaxis()->SetRangeUser(x_measurement_min, x_measurement_max);
 
     // H_measurement_reconstructed->SetBinContent(57, 51, 0);
-    H_measurement_reconstructed->Fit(MeasurementFunction, "MULTITHREAD RNM");
+    TFitResultPtr r = H_measurement_reconstructed->Fit(MeasurementFunction, "MULTITHREAD RNS");
     
     chi2 = H_measurement_reconstructed->Chisquare(MeasurementFunction) / MeasurementFunction->GetNDF();
     cout << "chi2 = " << chi2 << endl;
+
+    // cout << "Sigma_x = " << MeasurementFunction->GetParameter(1) << " +/- " << MeasurementFunction->GetParError(1) << endl;
+    // cout << "Sigma_y = " << MeasurementFunction->GetParameter(2) << " +/- " << MeasurementFunction->GetParError(2) << endl;
+    // cout << "Amplitude_gauss = " << MeasurementFunction->GetParameter(3) << " +/- " << MeasurementFunction->GetParError(3) << endl;
+    // cout << "mu_gx = " << MeasurementFunction->GetParameter(4) << " +/- " << MeasurementFunction->GetParError(4) << endl;
+    // cout << "mu_gy = " << MeasurementFunction->GetParameter(5) << " +/- " << MeasurementFunction->GetParError(5) << endl;
+    // cout << "sigma_gx = " << MeasurementFunction->GetParameter(6) << " +/- " << MeasurementFunction->GetParError(6) << endl;
+    // cout << "sigma_gy = " << MeasurementFunction->GetParameter(7) << " +/- " << MeasurementFunction->GetParError(7) << endl;
+    // cout << "bkg = " << MeasurementFunction->GetParameter(8) << " +/- " << MeasurementFunction->GetParError(8) << endl;
 
     
 
@@ -2647,6 +3563,8 @@ double MeasurementFunctionToMinimize2D_CORNER()
         fMyGaussian->SetParameter(3, MeasurementFunction->GetParameter(5));
         fMyGaussian->SetParameter(4, MeasurementFunction->GetParameter(7));
         fMyGaussian->Write();
+
+        r->Write();
     }
     return chi2;
 }
@@ -2821,7 +3739,7 @@ void Measurement2D()
     if (YEAR == 2024)
     {
         // recreate data in histogram
-        H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 1000, x_measurement_min, x_measurement_max, 1000, x_measurement_min, x_measurement_max);
+        H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 1000, x_final_min, x_final_max, 1000, x_final_min, x_final_max);
         for (int i = 0; i < H_measurement->GetEntries(); ++i)
         {
             double x, y;
@@ -2835,9 +3753,17 @@ void Measurement2D()
     }
     else
     {
+        fSaved = new TFile("Calibration_Save.root", "READ");
+        if (!fSaved->IsOpen())
+        {
+            cout << "Error: Calibration_Save.root not found!" << endl;
+            return;
+        }
+        G2D_X = (TGraph2D*)fSaved->Get("G2D_X");
+        G2D_Y = (TGraph2D*)fSaved->Get("G2D_Y");
         // recreate data in histogram from Tree
-        H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 300, x_measurement_min, x_measurement_max, 300, x_measurement_min, x_measurement_max);
-        TFile *file_measurement = MyTFile((DIR_ROOT_DATA_MCP+Measurement_Filename).c_str(), "READ");
+        H_measurement_reconstructed = new TH2D("H_measurement_reconstructed", "H_measurement_reconstructed", 1000, x_final_min, x_final_max, 1000, x_final_min, x_final_max);
+        TFile *file_measurement = MyTFile((DIR_ROOT_DATA_MCP_GROUPED+Measurement_Filename).c_str(), "READ");
 
         TTree *tree = (TTree*)file_measurement->Get("treeMCP");
         TTreeReader *Reader = new TTreeReader(tree);
@@ -2849,24 +3775,28 @@ void Measurement2D()
             double x = **X_Tree;
             double y = **Y_Tree;
 
-            double x_fit = f_X->Eval(x, y);
-            double y_fit = f_Y->Eval(y, x);
+            // double x_fit = f_X->Eval(x, y);
+            // double y_fit = f_Y->Eval(y, x);
+
+            double x_fit = G2D_X->Interpolate(x, y);
+            double y_fit = G2D_Y->Interpolate(y, x);
 
             H_measurement_reconstructed->Fill(x_fit, y_fit);
         }
         file_measurement->Close();
     }
     FINAL_file->cd();
+    
 
     TCanvas *c_measurement_reconstructed = new TCanvas("Measurement_2D_View", "Measurement_2D_View", 800, 800);
     H_measurement_reconstructed->Draw("COLZ");
     c_measurement_reconstructed->Write();
 
-    fSaved = new TFile("Calibration_Saved.root", "RECREATE");
-    fSaved->cd();
-    H_measurement_reconstructed->SetName("H_measurement_reconstructed");
-    H_measurement_reconstructed->Write();
-    fSaved->Close();
+    // fSaved = new TFile("Calibration_Saved.root", "RECREATE");
+    // fSaved->cd();
+    // H_measurement_reconstructed->SetName("H_measurement_reconstructed");
+    // H_measurement_reconstructed->Write();
+    // fSaved->Close();
 
     FINAL_file->cd();
 }

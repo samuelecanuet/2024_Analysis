@@ -29,7 +29,7 @@ with open(filename, 'r') as file:
 H1D = H2D.ProjectionY("H1D")
 H1D.SetTitle("X Projection")
 H1D.GetXaxis().SetTitle("X Position (um)")
-H1D.GetYaxis().SetTitle("Height (um)")
+H1D.GetYaxis().SetTitle("Height (nm)")
 
 DisplayTH1D(H1D)
 plt.text(15, 800, '10µm', horizontalalignment='center', verticalalignment='center')
@@ -38,6 +38,19 @@ plt.text(55, 800, '10µm', horizontalalignment='center', verticalalignment='cent
 
 
 
+file = ROOT.TFile("height_map.root", "RECREATE")
+c = ROOT.TCanvas("c", "c", 800, 600)
+H2D.SetTitle("Height Map")
+H2D.GetXaxis().SetTitle("X Position (um)")
+H2D.GetYaxis().SetTitle("Y Position (um)")
+H2D.GetZaxis().SetTitle("Height (nm)")
+H2D.Draw("COLZ")
+c.SaveAs("height_map.png")
+c.Write()
+file.Close()
+
+plt.savefig("height_projection.png")
 plt.show()
+
 
     

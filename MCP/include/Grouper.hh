@@ -5,13 +5,15 @@ string ROOT_filename;
 string ROOT_basefilename;
 
 TH1D *H_MCP_CORNERS_TIME[5];
+TH1D* H_MCP_CORNERS_TIME_FULL[5];
 TH1D *H_Channel[6];
 TH2D *H_QDC1_QDC2;
 TH2D *H_RAW_2D;
+TH2D *H_RAW_2D_uncleaned;
 TH2D *H_LOG_2D;
 
 TFile *OUTPUT_File;
-double X_Tree, Y_Tree;
+double X_Tree, Y_Tree, TIME_Tree;
 
 TTree *OutTree;
 
@@ -24,14 +26,21 @@ void InitHistograms()
     OutTree = new TTree("treeMCP", "treeMCP");
     OutTree->Branch("X", &X_Tree, "X/D");
     OutTree->Branch("Y", &Y_Tree, "Y/D");
+    OutTree->Branch("Time", &TIME_Tree, "Time/D");
 
     for (int i = 1; i <= 5; i++)
     {
         H_MCP_CORNERS_TIME[i] = new TH1D(("H_MCP_CORNERS_TIME_" + to_string(i)).c_str(), ("H_MCP_CORNERS_TIME_" + to_string(i)).c_str(), 500, -500, 500);
         H_MCP_CORNERS_TIME[i]->GetXaxis()->SetTitle("Time [ns]");
-        H_MCP_CORNERS_TIME[i]->GetYaxis()->SetTitle("Counts");
+        H_MCP_CORNERS_TIME[i]->GetYaxis()->SetTitle("Counts / 2 ns");
         H_MCP_CORNERS_TIME[i]->GetXaxis()->CenterTitle();
         H_MCP_CORNERS_TIME[i]->GetYaxis()->CenterTitle();
+
+        H_MCP_CORNERS_TIME_FULL[i] = new TH1D(("H_MCP_CORNERS_TIME_FULL_" + to_string(i)).c_str(), ("H_MCP_CORNERS_TIME_FULL_" + to_string(i)).c_str(), 1000, -1000, 1000);
+        H_MCP_CORNERS_TIME_FULL[i]->GetXaxis()->SetTitle("Time [ns]");
+        H_MCP_CORNERS_TIME_FULL[i]->GetYaxis()->SetTitle("Counts / 2 ns");
+        H_MCP_CORNERS_TIME_FULL[i]->GetXaxis()->CenterTitle();
+        H_MCP_CORNERS_TIME_FULL[i]->GetYaxis()->CenterTitle();
 
         H_Channel[i] = new TH1D(("H_Channel_" + to_string(i)).c_str(), ("H_Channel_" + to_string(i)).c_str(), 10000, 0, 100000);
         H_Channel[i]->GetXaxis()->SetTitle("Channel");
@@ -47,6 +56,12 @@ void InitHistograms()
     H_RAW_2D->GetYaxis()->SetTitle("Y");
     H_RAW_2D->GetXaxis()->CenterTitle();
     H_RAW_2D->GetYaxis()->CenterTitle();
+
+    H_RAW_2D_uncleaned = new TH2D("H_RAW_2D_uncleaned", "H_RAW_2D_uncleaned", 1000, -1, 1, 1000, -1, 1);
+    H_RAW_2D_uncleaned->GetXaxis()->SetTitle("X");
+    H_RAW_2D_uncleaned->GetYaxis()->SetTitle("Y");
+    H_RAW_2D_uncleaned->GetXaxis()->CenterTitle();
+    H_RAW_2D_uncleaned->GetYaxis()->CenterTitle();
 
     H_LOG_2D = new TH2D("h_Image", "h_Image", 1000, -1, 1, 1000, -1, 1);
     H_LOG_2D->GetXaxis()->SetTitle("X");
@@ -76,9 +91,23 @@ void WriteHistograms()
     leg->Draw("SAME");
     c->Write();
 
+    TCanvas *c_full = new TCanvas("TIME_CORNERS_FULL", "TIME_CORNERS_FULL", 800, 800);
+    TLegend *leg_full = new TLegend(0.1, 0.7, 0.3, 0.9);
+    for (int i = 1; i < 5; i++)
+    {
+        H_MCP_CORNERS_TIME_FULL[i]->Write();
+        c_full->cd();
+        H_MCP_CORNERS_TIME_FULL[i]->SetLineColor(i);
+        H_MCP_CORNERS_TIME_FULL[i]->Draw("SAME");
+        leg_full->AddEntry(H_MCP_CORNERS_TIME_FULL[i], ("Corner " + to_string(i)).c_str(), "l");
+    }
+    leg_full->Draw("SAME");
+    c_full->Write();
+
     OUTPUT_File->cd();
     H_Channel[5]->Write();
     H_RAW_2D->Write();
+    H_RAW_2D_uncleaned->Write();
     H_LOG_2D->Write();
     H_QDC1_QDC2->Write();
 
@@ -90,6 +119,11 @@ void WriteHistograms()
 
 pair<double, double> ComputeXY(double A, double B, double C, double D)
 {
+    // double norm = A + B + C + D;
+    // double X = (-A + B + C - D) / (A + B + C + D);
+    // double Y = (-A - B + C + D) / (A + B + C + D);
+    // return make_pair(X, Y);
+    // B *= 1.26;
     double norm = A + B + C + D;
     double X = (A + B - C - D) / (A + B + C + D);
     double Y = (A - B + C - D) / (A + B + C + D);
@@ -98,6 +132,12 @@ pair<double, double> ComputeXY(double A, double B, double C, double D)
 
 pair<double, double> ComputeXY_log(double A, double B, double C, double D)
 {
+    // double norm = A + B + C + D;
+    // double X = -(-log(A/norm) + log(B/norm) + log(C/norm) - log(D/norm)) / (log(A/norm) + log(B/norm) + log(C/norm) + log(D/norm));
+    // double Y = -(-log(A/norm) - log(B/norm) + log(C/norm) + log(D/norm)) / (log(A/norm) + log(B/norm) + log(C/norm) + log(D/norm));
+    // return make_pair(X, Y);
+
+    // B*=0.4;
     double norm = A + B + C + D;
     double X = -(log(A/norm) + log(B/norm) - log(C/norm) - log(D/norm)) / (log(A/norm) + log(B/norm) + log(C/norm) + log(D/norm));
     double Y = -(log(A/norm) - log(B/norm) + log(C/norm) - log(D/norm)) / (log(A/norm) + log(B/norm) + log(C/norm) + log(D/norm));
@@ -137,10 +177,28 @@ void ReadTree_MCP(TTreeReaderArray<Signal> &signals)
 
     if (counter_corner == 4)
     {
+
+        if (signals_corner[0].Channel <= 0 || signals_corner[1].Channel <= 0 || signals_corner[2].Channel <= 0 || signals_corner[3].Channel <= 0 || signals_corner[4].Channel <= 0)
+        {
+            return;
+        }
+
+        // full time window
+        for (int i = 1; i < 5; i++)
+        {
+            H_MCP_CORNERS_TIME_FULL[i]->Fill((signals_corner[i].Time-MCP_Time));
+        }
+        pair<double, double> XY_uncleaned = ComputeXY(signals_corner[2].Channel, signals_corner[1].Channel, signals_corner[3].Channel, signals_corner[4].Channel);
+        H_RAW_2D_uncleaned->Fill(XY_uncleaned.first, XY_uncleaned.second);
+
+        H_Channel[5]->Fill(signals_corner[0].Channel);
+        H_QDC1_QDC2->Fill(signals_corner[0].Channel, signals_corner[0].Pileup);
+        
+        // Fill histograms for MCP corners
         for (int i = 1; i < 5; i++)
         {
 
-            if ((signals_corner[i].Time-MCP_Time) > -100 || (signals_corner[i].Time-MCP_Time) < -180)
+            if ((signals_corner[i].Time-MCP_Time) > -100 || (signals_corner[i].Time-MCP_Time) < -190)
             {
                 return;
             }
@@ -150,15 +208,11 @@ void ReadTree_MCP(TTreeReaderArray<Signal> &signals)
 
             
         }
-        H_Channel[5]->Fill(signals_corner[0].Channel);
-        H_QDC1_QDC2->Fill(signals_corner[0].Channel, signals_corner[0].Pileup);
+        
 
         
 
-        if (signals_corner[0].Channel <= 0 || signals_corner[1].Channel <= 0 || signals_corner[2].Channel <= 0 || signals_corner[3].Channel <= 0 || signals_corner[4].Channel <= 0)
-        {
-            return;
-        }
+        
         // cout << signals_corner[0].Channel << " " << signals_corner[1].Channel << " " << signals_corner[2].Channel << " " << signals_corner[3].Channel << " " << signals_corner[4].Channel << endl;
 
         pair<double, double> XY = ComputeXY(signals_corner[2].Channel, signals_corner[1].Channel, signals_corner[3].Channel, signals_corner[4].Channel);
@@ -172,9 +226,9 @@ void ReadTree_MCP(TTreeReaderArray<Signal> &signals)
         H_RAW_2D->Fill(X, Y);
         H_LOG_2D->Fill(X_log, Y_log);
 
-        X_Tree = X;
-        Y_Tree = Y;
+        TIME_Tree = MCP_Time;
+        X_Tree = X_log;
+        Y_Tree = Y_log;
         OutTree->Fill();
     }
-
 }

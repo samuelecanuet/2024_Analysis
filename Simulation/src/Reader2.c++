@@ -6,6 +6,7 @@ int main(int argc, char *argv[])
 {
     FLAG2024 = true;
     InitDetectors("../Grouper/Config_Files/sample.pid");
+    InitWindows();
     // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/24-02/207Bi_thin";
     // string name = "/run/media/local1/Disque_Dur/2024_DATA/SIMULATED_DATA/03-17/207Bi_100um_CS0_CSP0_CV1_CVP1"; 
     // string name = "../../../../../../mnt/hgfs/shared-2/2024_DATA/Time_test_2";
@@ -20,8 +21,9 @@ int main(int argc, char *argv[])
 
     string path = DIR_DATA_HDD + "../SIMULATED_DATA/06-09/";
     // string path = "/run/media/local1/DATANEX/Samuel-G4/06-03/";
-    // string name = "proton_" + e_str + "MeV";
-    string name = "33Ar_ENSDF_CS0_CSP0_CV1_CVP1";
+    // string name = "proton_3.50MeV";
+    // string name = "32Ar_sx0.5_sy0.5_y3.0_CS0_CSP0_CV1_CVP1";
+    string name = "32Ar_ENSDF_CS0_CSP0_CV1_CVP1"; 
 
     
     // name = "241Am_700nm_width";

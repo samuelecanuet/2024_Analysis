@@ -89,6 +89,25 @@
         "*.hhh": "cpp",
         "regex": "cpp",
         "CRADLE_like_reader.C": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "HalfLife.C": "cpp",
+        "myRooFit.C": "cpp",
+        "print.C": "cpp",
+        "Compare.C": "cpp",
+        "Root2Ascii.C": "cpp",
+        "*.hhcopy": "cpp",
+        "Merging_RootFile.C": "cpp",
+        "MacroResolutyion_temp.C": "cpp",
+        "MacroResolution_temp.C": "cpp",
+        "Apply.C": "cpp",
+        "ApplySecondStepCalibration.C": "cpp",
+        "RateCorrectionForPlot.C": "cpp",
+        "SIPM_CalibSimple.C": "cpp",
+        "SIPM_CalibBi.C": "cpp",
+        "207Bi_2025.C": "cpp",
+        "Bi20_2025.C": "cpp",
+        "Bi207_2025.C": "cpp",
+        "Bi207_2025 copy.C": "cpp",
+        "ChangeGain.C": "cpp"
     }
 }

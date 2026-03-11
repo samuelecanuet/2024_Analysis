@@ -5,7 +5,7 @@
 int main()
 {
 
-    FLAG2024 = true;
+    FLAG2025 = true;
     
     InitDetectors("Config_Files/sample.pid");
     VERBOSE = 0;
@@ -65,8 +65,8 @@ int main()
     // InitSiPM_Calibration();
     // InitSiPM_Resolution();
     // InitExperimentalSpectrum();
-    InitDirectionDeltaEnergy(false);
-
+    InitDirectionDeltaEnergy(true);
+    
     //// READING DATA FOR IDENTIFICATION AND SPECTROCOPY ////
     Start("Reading Experimental Data");
     for (string Nucleus : Nuclei)
@@ -100,4 +100,5 @@ int main()
     }
 
     FINAL_FILE->Close();    
+    
 }

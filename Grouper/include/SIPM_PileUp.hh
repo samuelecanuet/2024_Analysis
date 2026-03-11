@@ -192,15 +192,20 @@ void FittingQ1Q2()
                 }
             }
 
-            Correction[det] = new TF1(("PileUp_Correction_"+detectorName[det]).c_str(), GraphFit, eHighMin, eHighMax, 6);
-            Correction[det]->SetParameter(0, 2e6);
-            Correction[det]->SetParameter(2, 1e5);
-            // Correction[det]->SetParLimits(2, 0, 8e5);
-            Correction[det]->SetParameter(2, 1e6);
-            Correction[det]->SetParameter(4, 3e6);
-            Correction[det]->SetParLimits(4, 2.0e6, 3.2e6);
-            Correction[det]->FixParameter(5, 0);
-            graph[det]->Fit(Correction[det], "R");
+            // Correction[det] = new TF1(("PileUp_Correction_"+detectorName[det]).c_str(), GraphFit, eHighMin, eHighMax, 6);
+            // Correction[det]->SetParameter(0, 2e6);
+            // Correction[det]->SetParameter(2, 1e5);
+            // // Correction[det]->SetParLimits(2, 0, 8e5);
+            // Correction[det]->SetParameter(2, 1e6);
+            // Correction[det]->SetParameter(4, 3e6);
+            // Correction[det]->SetParLimits(4, 2.0e6, 3.2e6);
+            // Correction[det]->FixParameter(5, 0);
+            // graph[det]->Fit(Correction[det], "R");
+
+            Correction[det] = new TF1(("PileUp_Correction_"+detectorName[det]).c_str(), POL2, eHighMin, eHighMax, 2);
+            Correction[det]->SetParLimits(1, 0.5, 1.5);
+            Correction[det]->SetParameter(1, 0.5);
+            graph[det]->Fit(Correction[det], "R", "", 60e3, eHighMax);  
         }
 
         if (IsDetectorBetaLow(det))
@@ -230,7 +235,7 @@ void FittingQ1Q2()
             }
 
             Correction[det] = new TF1(("PileUp_Correction_"+detectorName[det]).c_str(), POL2, eLowMin, eLowMax, 2);
-            Correction[det]->SetParLimits(1, 0, 1);
+            Correction[det]->SetParLimits(1, 0.5, 1.5);
             Correction[det]->SetParameter(1, 0.5);
             graph[det]->Fit(Correction[det], "R", "", 60e3, eLowMax);          
 
@@ -249,6 +254,7 @@ bool PileUp(Signal signal, double coef)
 
 void WriteHistograms()
 {
+    Info("Write Histograms");
     TCanvas *c_AllHigh = new TCanvas("AllHigh", "AllHigh", 800, 800);
     c_AllHigh->Divide(3, 3);
     TCanvas *c_AllLow = new TCanvas("AllLow", "AllLow", 800, 800);
@@ -268,7 +274,8 @@ void WriteHistograms()
             TCanvas *c = new TCanvas(detectorName[det].c_str(), detectorName[det].c_str(), 800, 800);   
             H_Q1_Q2[det]->Draw("COLZ");
             graph[det]->Draw("P SAME");
-            Correction[det]->SetParameter(5, DELTA);
+            // Correction[det]->SetParameter(5, DELTA);
+            Correction[det]->SetParameter(0, Correction[det]->GetParameter(0) + DELTA);
             TGraph *g = new TGraph();
             for (int bin = 0; bin < eHighN; bin++)
             {
@@ -278,7 +285,8 @@ void WriteHistograms()
             g->SetLineWidth(2);
             g->SetLineColor(kRed);
             g->Draw("SAME");
-            Correction[det]->SetParameter(5, -DELTA);
+            // Correction[det]->SetParameter(5, -DELTA);
+            Correction[det]->SetParameter(0, Correction[det]->GetParameter(0) - 2*DELTA);
             TGraph *g2 = new TGraph();
             for (int bin = 0; bin < eHighN; bin++)
             {
