@@ -1,11 +1,8 @@
 #include "Res_electronic.hh"
-
-
-
 int main()
 {
 
-    FLAG2025 = true;
+    FLAG2024 = true;
     InitDetectors("Config_Files/sample.pid");
 
     /////////////////////////////  FILES PER YEAR /////////////////////////////
@@ -21,7 +18,7 @@ int main()
     }
     else if (YEAR == 2025)
     {
-        file = MyTFile(DIR_ROOT_DATA + "/faster_grouped/run_017_208Po_test_pulser.root", "READ");
+        file = MyTFile(DIR_ROOT_DATA + "/run_017_208Po_test_pulser.root", "READ");
         Mean = 38000;
     }
     ////////////////////////////////////////////////////////////////////////////
@@ -30,7 +27,7 @@ int main()
     FINAL_File = MyTFile(DIR_ROOT_DATA_CALIBRATED + "Electronic_Resolution_" + to_string(YEAR) + ".root", "RECREATE");
     std::ofstream outfile(("Config_Files/" + to_string(YEAR) + "/Electronic_Resolution_" + to_string(YEAR) + ".txt").c_str());
     ////////////////////////////////////////////////////////////////////////////
-
+    InitCalib();
     BuildHistograms();
 
     FittingHistograms();

@@ -236,6 +236,10 @@ void LoadMatchingFunction(int Run)
     {
       Matching_function[i] = (TF1*)MATCHED_File->Get(("poll1" + to_string(Run) + to_string(i)).c_str()); 
 
+      // blank &&&&&&&&&&&&&&&&&&&&&&&
+      Matching_function[i] = new TF1(("poll1" + to_string(Run) + to_string(i)).c_str(), "x", 0, 10000);
+      // &&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
       if (Matching_function[i] == NULL)
       {
         int run_past = Run;

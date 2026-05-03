@@ -1,6 +1,6 @@
 #!/bin/bash
 
-YEAR="2024"
+YEAR="2025"
 
 
 

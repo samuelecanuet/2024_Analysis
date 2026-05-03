@@ -44,7 +44,7 @@ int main()
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     Start("OUTPUT Files");
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated_" + to_string(YEAR) + "_res.root").c_str(), "RECREATE");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated_" + to_string(YEAR) + "_all_res.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
     
     ///////////////////////////////  INITIALISATION ///////////////////////////////
@@ -67,7 +67,9 @@ int main()
         current_detector = det;
         CalibrationSiPM();
     }
-   
+
+    //////////////////////////// INIT BETA SPECTRUM MORPH //////////////////////////
+      
     
     WriteHistograms();
     CALIBRATED_File->Close();

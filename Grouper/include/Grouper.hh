@@ -2940,10 +2940,6 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose = 0)
     }
   }
 
-
-  if (RearStrip_ASSOCIATED.size() != 1)
-    return; // no intersting events
-
   bool FLAG_Multiplicity = true;
   bool FLAG_Cut = true;
   bool FLAG_18N = false;
@@ -2972,19 +2968,15 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose = 0)
     //   RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
     // }
 
-    // PileUp rejection between groups (500µs cut on strip)
-    if (RearStrip_ASSOCIATED[0].second.Time - lastGroupTime[RearStrip_ASSOCIATED[0].second.Label] < 500e3 && YEAR == 2024)
-    {
-      lastGroupTime[RearStrip_ASSOCIATED[0].second.Label] = RearStrip_ASSOCIATED[0].second.Time;
-      RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
-    }
-
     // Rear-Strip time cut (>0 ns)
     // if (RearStrip_ASSOCIATED[index_pair].first.Time - RearStrip_ASSOCIATED[index_pair].second.Time < 0)
     // {
     //   RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
     // }
   }
+
+  if (RearStrip_ASSOCIATED.size() != 1)
+    return; // no intersting events
 
   // Counting associated pair in the group
   int counter_Accepted = 0;
@@ -2999,7 +2991,6 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose = 0)
   // CONDITION CUTS FOR REAL EVENTS
   if (counter_Accepted != 1)
     return;
-  
 
   // WITH INTERSTRIP
   //  if (counter_Accepted != 1 && !(counter_Accepted == 2 && IsDetectorSiliInterStrip(RearStrip_ASSOCIATED[0].second.Label, RearStrip_ASSOCIATED[1].second.Label)))
@@ -3017,15 +3008,25 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose = 0)
     }
   }
 
+  // PileUp rejection between groups (500µs cut on strip)
+  // if ()
+  //   {
+  //     // lastGroupTime[RearStrip_ASSOCIATED[index_pair].second.Label] = RearStrip_ASSOCIATED[index_pair].second.Time;
+  //     RearStrip_ASSOCIATED_ACCEPTED[index_pair] = false;
+  //   }
+
   // SIGNALS
   for (int index_pair = 0; index_pair < RearStrip_ASSOCIATED.size(); index_pair++)
   {
-    if (RearStrip_ASSOCIATED_ACCEPTED[index_pair])
+    if (RearStrip_ASSOCIATED_ACCEPTED[index_pair] && RearStrip_ASSOCIATED[index_pair].second.Time - lastGroupTime[RearStrip_ASSOCIATED[index_pair].second.Label] > 500e3)
     {
       Silicon.push_back(RearStrip_ASSOCIATED[index_pair].first);
       Silicon.push_back(RearStrip_ASSOCIATED[index_pair].second);
     }
   }
+
+  if (Silicon.size() != 2)
+    return; // no intersting events
 
   ////////////////////####################////////////////////
 
@@ -3061,6 +3062,8 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose = 0)
   //   H_Channel_RAW[Rear_Label]->Fill(Rear_Channel);
   // }
 
+
+  // pileup check
   int number = Strip_Label;
 
   bool IAS = false;
@@ -3081,7 +3084,20 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals, int verbose = 0)
     H_Group_ChannelTime[Rear_Label]->Fill(Rear_Time - lastGroupTime[Rear_Label], Rear_Channel);
   }
 
-  lastGroupTime[number] = Rear_Time;
+  // PileUp time update
+  for (int index = 0; index < signals.GetSize(); index++)
+  {
+    if (FLAG2021)
+      signals[index].Label = YearConverter(signals[index].Label);
+    int current_label = signals[index].Label;
+    if (IsDetectorSiliBack(current_label) || IsDetectorSiliStrip(current_label))
+    {
+      if (signals[index].Channel < 600) continue;
+      lastGroupTime[current_label] = signals[index].Time;
+    }
+  }
+
+  // lastGroupTime[number] = Rear_Time;
 
   if (!FULL)
   {

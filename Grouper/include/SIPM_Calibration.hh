@@ -100,7 +100,7 @@ vector<double> Resolution_OffSet_det;
 vector<double> Resolution_2_det;
 map<string, double[SIGNAL_MAX]> SiPM_Threshold_Ratio;
 // DATA //
-vector<string> Nuclide = {"32Ar", "33Ar"};
+vector<string> Nuclide = {"32Ar"};//, "33Ar"};
 double DELTA_PileUp_Range = 200e3;
 map<string, vector<int>> Map_Peak;
 string NUCLEUS;
@@ -210,6 +210,40 @@ TF1 *InvertingLinear(TF1 *f)
     f_inv->SetParameter(0,1. / a);
     f_inv->SetParameter(1, -b / a);
     return f_inv;
+}
+
+
+TH1D* GetBetaSpectrumMorphing(double Qbeta_target, TH1D* h)
+{
+    // Qbeta dependant Spectrum 
+
+    // double Qbeta = 3814-1022; 
+    double Qbeta = 5046; 
+    // int peak = 27;
+    int peak = 14;
+    string nucleus = "32Ar";
+
+    TH1D *H_REF = (TH1D*)H_Sim_Conv[nucleus][peak][5]->Clone();
+
+    TH1D *H_OUT = (TH1D*)h->Clone();
+    H_OUT->Reset();
+
+    for (int i = 1; i <= H_REF->GetNbinsX(); i++)
+    {
+        double energy = H_REF->GetBinCenter(i);
+        double content = H_REF->GetBinContent(i);
+
+        double morphed_energy = energy * Qbeta_target / Qbeta;
+
+        int bin_out = H_OUT->FindBin(morphed_energy);
+        if (bin_out >= 1 && bin_out <= H_OUT->GetNbinsX())
+        {
+            H_OUT->SetBinContent(bin_out, content);
+        }
+    }
+
+    return H_OUT;
+    
 }
 
 void InitMatchingSiPM()
@@ -1272,7 +1306,7 @@ double Chi2TreeHist_conv(const double *par)
             Info("Init Histograms", 1);
 
         // FIRST ias
-        vector<double> PeakVector = {IAS[NUCLEUS]};
+        vector<double> PeakVector = {IAS[NUCLEUS], 27};
         for (int i=0;i<IAS[NUCLEUS];++i) PeakVector.push_back(i);
         for (int i=IAS[NUCLEUS]+1;i<=50;++i) PeakVector.push_back(i); 
         //
@@ -1464,8 +1498,60 @@ double Chi2TreeHist_conv(const double *par)
                     H->Scale(0.7*0.24/0.143 / H->Integral()); // RATIO BR GAMMA TO 2208 OVER BETA TO 2208 (x solid angle gamma for beta gamma pile up)
 
                     H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Add(H);
-                    H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Scale(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].second->Integral() / H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Integral());
+                    H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Scale(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].second->Integral() / H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Integral());                
                 }   
+
+                if (peak_number == 24 && NUCLEUS == "32Ar")
+                {
+
+                    // minimization to find the right Qbeta 
+                    vector<double> chi2qbeta;
+                    vector<double> Qbeta_values;
+                    vector<double> norm_values;
+                    for (double Qbeta = 3000; Qbeta <= 5000; Qbeta += 50)
+                    {
+                        TH1D* H_temp = (TH1D*)H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Clone();
+                        TH1D *H = GetBetaSpectrumMorphing(Qbeta, H_temp);
+                        // H->Rebin(H->GetNbinsX() / H_temp->GetNbinsX());
+                        H_temp->Scale(1. / H_temp->Integral());
+                        H->Scale(1./H->Integral());
+
+                        // minimization for the normalization of the beta spectrum
+                        vector<double> chi2norm;    
+                        vector<double> norm_values_q; 
+                        for (double norm = 0.1; norm <= 0.7; norm += 0.05)
+                        {
+                            TH1D* H_temp_norm = (TH1D*)H_temp->Clone();
+                            H_temp_norm->Add(H, norm);
+                            chi2norm.push_back(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].second->Chi2Test(H_temp_norm, "CHI2/NDF"));
+                            norm_values_q.push_back(norm);
+
+                            Info("Qbeta: " + to_string(Qbeta) + "   Norm: " + to_string(norm) + "   Chi2: " + to_string(chi2norm[chi2norm.size() - 1]), 4);
+                        }
+                        double best_norm = norm_values_q[distance(chi2norm.begin(), min_element(chi2norm.begin(), chi2norm.end()))];
+                        norm_values.push_back(best_norm);
+                        H_temp->Add(H, best_norm);
+                        H_temp->Scale(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].second->Integral() / H_temp->Integral());
+
+                        chi2qbeta.push_back(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].second->Chi2Test(H_temp, "CHI2/NDF"));
+                        Qbeta_values.push_back(Qbeta);
+
+                        Info("Qbeta: " + to_string(Qbeta) + "   Norm: " + to_string(best_norm) + "   Chi2: " + to_string(chi2qbeta[chi2qbeta.size() - 1]), 3);
+                    }
+
+                    double best_qbeta = Qbeta_values[distance(chi2qbeta.begin(), min_element(chi2qbeta.begin(), chi2qbeta.end()))];
+                    double best_norm = norm_values[distance(chi2qbeta.begin(), min_element(chi2qbeta.begin(), chi2qbeta.end()))];
+
+                    Success("Best Qbeta: " + to_string(best_qbeta) + "   Best Norm: " + to_string(best_norm) + "   Chi2: " + to_string(chi2qbeta[distance(chi2qbeta.begin(), min_element(chi2qbeta.begin(), chi2qbeta.end()))]), 2);
+                        
+                    TH1D *H = GetBetaSpectrumMorphing(best_qbeta, H_Sim_Conv[NUCLEUS][peak_number][current_detector]);
+                    // H->Rebin(H->GetNbinsX() / H_Sim_Conv[NUCLEUS][peak_number][current_detector]->GetNbinsX());
+                    H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Scale(1 / H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Integral());
+                    H->Scale(best_norm / H->Integral());
+                    H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Add(H);
+                    H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Scale(H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].second->Integral() / H_Sim_Conv[NUCLEUS][peak_number][current_detector]->Integral());
+
+                }
 
                 else
                 {
@@ -1813,6 +1899,10 @@ void WriteHistograms()
     }
     Info("Write Histograms done");
 }
+
+
+
+
 
 
 #endif

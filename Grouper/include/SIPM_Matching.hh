@@ -247,8 +247,6 @@ int WriteONOFFValues(bool first, bool dummy = false)
                     if (dummy || SiPM_ONOFF_Coef_RUN[det][stoi(run)] == nullptr)
                     {
                         SiPM_ONOFF_Coef_RUN[det][stoi(run)] = new TF1(("SiPM_ONOFF_Coef_RUN_" + detectorName[det] + "_run_" + run).c_str(), "[0]*x + [1]", 0, 100e6);
-                        SiPM_ONOFF_Coef_RUN[det][stoi(run)]->SetParameter(0, 1.);
-                        SiPM_ONOFF_Coef_RUN[det][stoi(run)]->SetParameter(1, 0.);
                     }
                     SiPM_ONOFF_Coef_RUN[det][stoi(run)]->SetName(("SiPM_ONOFF_Coef_RUN_" + detectorName[det] + "_run_" + run).c_str());
                     SiPM_ONOFF_Coef_RUN[det][stoi(run)]->Write();
@@ -271,25 +269,28 @@ int LoadONOFFValues()
         return 1;
     }
 
+    // Info("SiPM ONOFF Coef loaded from file", 1);
     for (int det = 0; det < SIGNAL_MAX; det++)
     {
+        // cout << "Detector: " << det << endl;
         if (IsDetectorBeta(det))
         {
-
+            // Info("Detector: " + detectorName[det], 1);
             for (auto &pairr : Map_RunFiles)
             {
                 NUCLEI = pairr.first;
                 for (string run : pairr.second)
                 {
                     SiPM_ONOFF_Coef_RUN[det][stoi(run)] = ((TF1 *)f->Get(("SiPM_ONOFF_Coef_RUN_" + detectorName[det] + "_run_" + run).c_str()));
+                    SiPM_ONOFF_Coef_RUN[det][stoi(run)]->SetParameters(1, 1);
+                    // Info("SiPM ONOFF Coef loaded for detector: " + detectorName[det] + " run: " + run);
                 }
             }
         }
-
-        // f->Close();
-        MATCHED_File->cd();
-        return 0;
     }
+
+    // f->Close();
+    MATCHED_File->cd();
 
     return 0;
 }
@@ -321,28 +322,28 @@ void WriteValues(bool first)
 int LoadValues(bool inverted_for_applying = true)
 {
     Warning("Read matching values from file");
-    // TFile *f = MyTFile((DIR_ROOT_DATA_MATCHED + "SiPM_Matching_values.root").c_str(), "READ");
-    // if (f == NULL)
-    // {
-    //     return 1;
-    // }
-    // for (int det = 0; det < SIGNAL_MAX; det++)
-    // {
-    //     if (IsDetectorBeta(det))
-    //     {
-    //         if (inverted_for_applying)
-    //             MatchingSiPM[RUN][det] = InvertingLinear((TF1 *)f->Get(("MatchingSiPM_" + RUN + "_" + detectorName[det]).c_str()));
-    //         else
-    //             MatchingSiPM[RUN][det] = (TF1 *)f->Get(("MatchingSiPM_" + RUN + "_" + detectorName[det]).c_str());
-    //         if (IsDetectorBetaHigh(det))
-    //         {
-    //             MatchingLowHigh[RUN][det] = (TF1 *)f->Get(("MatchingLowHigh_" + RUN + "_" + detectorName[det]).c_str());
-    //         }
-    //     }
-    // }
+    TFile *ff = MyTFile((DIR_ROOT_DATA_MATCHED + "SiPM_Matching_values.root").c_str(), "READ");
+    if (ff == NULL)
+    {
+        return 1;
+    }
+    for (int det = 0; det < SIGNAL_MAX; det++)
+    {
+        if (IsDetectorBeta(det))
+        {
+            if (inverted_for_applying)
+                MatchingSiPM[RUN][det] = InvertingLinear((TF1 *)ff->Get(("MatchingSiPM_" + RUN + "_" + detectorName[det]).c_str()));
+            else
+                MatchingSiPM[RUN][det] = (TF1 *)ff->Get(("MatchingSiPM_" + RUN + "_" + detectorName[det]).c_str());
+            if (IsDetectorBetaHigh(det))
+            {
+                MatchingLowHigh[RUN][det] = (TF1 *)ff->Get(("MatchingLowHigh_" + RUN + "_" + detectorName[det]).c_str());
+            }
+        }
+    }
 
-    // // f->Close();
-    // MATCHED_File->cd();
+    // f->Close();
+    MATCHED_File->cd();
 
     TFile *f = MyTFile((DIR_ROOT_DATA_MATCHED + "SiPM_Matching_Functions.root").c_str(), "READ");
     for (int det = 0; det < SIGNAL_MAX; det++)
@@ -655,18 +656,20 @@ void ReadData()
         }
 
         // Applying ONOFF
-        for (int i_groups = 0; i_groups < (**SiPM_Groups).size(); i_groups++)
-        {
-            for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_groups].size(); i_pair++)
-            {
+        // Info("Applying ONOFF correction", 2);
+        // for (int i_groups = 0; i_groups < (**SiPM_Groups).size(); i_groups++)
+        // {
+        //     for (int i_pair = 0; i_pair < (**SiPM_Groups)[i_groups].size(); i_pair++)
+        //     {
                 
-                if ((**SiPM_Groups)[i_groups][i_pair].first.isValid)
-                    (**SiPM_Groups)[i_groups][i_pair].first.Channel = SiPM_ONOFF_Coef_RUN[(**SiPM_Groups)[i_groups][i_pair].first.Label+10][stoi(RUN)]->Eval((**SiPM_Groups)[i_groups][i_pair].first.Channel);
-                if ((**SiPM_Groups)[i_groups][i_pair].second.isValid)
-                    (**SiPM_Groups)[i_groups][i_pair].second.Channel = SiPM_ONOFF_Coef_RUN[(**SiPM_Groups)[i_groups][i_pair].second.Label][stoi(RUN)]->Eval((**SiPM_Groups)[i_groups][i_pair].second.Channel);
-            }
-        }
+        //         if ((**SiPM_Groups)[i_groups][i_pair].first.isValid)
+        //             (**SiPM_Groups)[i_groups][i_pair].first.Channel = SiPM_ONOFF_Coef_RUN[(**SiPM_Groups)[i_groups][i_pair].first.Label+10][stoi(RUN)]->Eval((**SiPM_Groups)[i_groups][i_pair].first.Channel);
+        //         if ((**SiPM_Groups)[i_groups][i_pair].second.isValid)
+        //             (**SiPM_Groups)[i_groups][i_pair].second.Channel = SiPM_ONOFF_Coef_RUN[(**SiPM_Groups)[i_groups][i_pair].second.Label][stoi(RUN)]->Eval((**SiPM_Groups)[i_groups][i_pair].second.Channel);
+        //     }
+        // }
 
+        // Info("Filling Histograms", 2);
         // Looping on SiPM groups
         for (int i_groups = 0; i_groups < (**SiPM_Groups).size(); i_groups++)
         {
@@ -1350,6 +1353,7 @@ void WriteHistogram(int Verbose = 0, bool correction = false)
             H_SiPM_HighLow[RUN][i]->Write();
             // G_SiPM_HighLow[RUN][i]->Write();
 
+            if (Verbose == 2) Info("Drawing High SiPM " + detectorName[i] + " in run " + RUN);
             c_High->cd();
             H_SiPM_High[RUN][i]->Draw("HIST SAME");
 
@@ -1361,6 +1365,7 @@ void WriteHistogram(int Verbose = 0, bool correction = false)
                 MatchingSiPM[RUN][i]->Write();
             }
 
+            if (Verbose == 2) Info("Drawing High-Low correlation for SiPM " + detectorName[i] + " in run " + RUN);
             /////////// ##### FIITING HIGH LOW ###### ///////////
             // TH2D and FIT
             cHighLowSiPM->cd(GetDetectorChannel(i));
@@ -1380,6 +1385,7 @@ void WriteHistogram(int Verbose = 0, bool correction = false)
                 text->Draw("SAME");
             }
 
+            if (Verbose == 2) Info("Drawing High-Low correlation graph for SiPM " + detectorName[i] + " in run " + RUN);
             // TGraph and FIT
             cHighLowSiPM_Fitting->cd(GetDetectorChannel(i));
             G_SiPM_HighLow[RUN][i]->SetTitle(("SiPM " + to_string(GetDetectorChannel(i))).c_str());
@@ -1396,6 +1402,7 @@ void WriteHistogram(int Verbose = 0, bool correction = false)
                 text->Draw("SAME");
             }
 
+            if (Verbose == 2) Info("Drawing SiPM gain correlation for SiPM " + detectorName[i] + " in run " + RUN);
             /////////// ##### FIITING SiPM Gain ###### ///////////
             // TH2D and FIT
             cSiPM_GainH->cd(GetDetectorChannel(i));

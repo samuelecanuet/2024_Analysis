@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2021 = true;
+    FLAG2025 = true;
     
     InitDetectors("Config_Files/sample.pid");
     InitWindows();
@@ -44,6 +44,8 @@ int main(int argc, char *argv[])
         NUCLEUS = "32Ar";
     else if (ROOT_filename.find("33Ar") != string::npos)
         NUCLEUS = "33Ar";
+    else if (ROOT_filename.find("208Po") != string::npos)
+        NUCLEUS = "208Po";
     else
         Error("Nucleus not recognized in filename : " + ROOT_filename);
 

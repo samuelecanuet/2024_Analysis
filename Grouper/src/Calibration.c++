@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2025 = true;
+    FLAG2024 = true;
     
     InitDetectors("Config_Files/sample.pid");
     VERBOSE = 0;
@@ -38,16 +38,19 @@ int main(int argc, char *argv[])
         MERGED_File["32Ar_thick"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_thick_merged.root").c_str(), "READ");
         MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
         Start("SIMULATED Files");
-        SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/12-16/32Ar_ENSDF_2024_Default_analysed.root").c_str(), "READ");
+        SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/32Ar_ENSDF_2024_Default_analysed_new.root").c_str(), "READ");
         // SIMULATED_File["32Ar_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/03-26/32Ar_full_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
         SIMULATED_File["32Ar_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/12-16/32Ar_ENSDF_2024_THICK_Default_analysed.root").c_str(), "READ");
-        SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/08-27/33Ar_ENSDF_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
+        SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/33Ar_ENSDF_2024_Default_analysed_new.root").c_str(), "READ");
         SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
         // SIMULATED_File["18N_thick"] = MyTFile((DIR_DATA_HDD + "../SIMULATED_DATA/04-01/18N_thick_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
 
-        CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
+        // CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
         // CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
-        CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
+        // CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
+
+        CalibrationPeaks["32Ar"] = {8, 14, 17, 23};
+        CalibrationPeaks["33Ar"] = {9, 12, 21, 26};
     }
     ////////////////////////////////////////////////////////////////////////////
     ///////////////////////////////////  2025 //////////////////////////////////
@@ -60,36 +63,42 @@ int main(int argc, char *argv[])
         MERGED_File["33Ar_thick"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_thick_merged.root").c_str(), "READ");
         Start("SIMULATED Files");
         // SIMULATED_File["32Ar"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/08-27/32Ar_ENSDF_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-        SIMULATED_File["32Ar"] = MyTFile(DIR_DATA_HDD + "../SIMULATED_DATA/32Ar_ENSDF_2025_Default_analysed.root", "READ");
+        SIMULATED_File["32Ar"] = MyTFile(DIR_DATA_HDD + "../SIMULATED_DATA/32Ar_ENSDF_2025_Default_analysed_new.root", "READ");
         // SIMULATED_File["33Ar"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/08-27/33Ar_ENSDF_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
-        SIMULATED_File["33Ar"] = MyTFile(DIR_DATA_HDD + "../SIMULATED_DATA/33Ar_ENSDF_2025_Default_analysed.root", "READ");
+        SIMULATED_File["33Ar"] = MyTFile(DIR_DATA_HDD + "../SIMULATED_DATA/33Ar_ENSDF_2025_Default_analysed_new.root", "READ");
         // SIMULATED_File["33Ar_thick"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/03-26/33Ar_full_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
         SIMULATED_File["32Cl"] = MyTFile(DIR_DATA_HDD + "../SIMULATED_DATA/32Cl_ENSDF_2025_Default_analysed.root", "READ");
         // SIMULATED_File["18N"] = MyTFile((DIR_DATA_HDD + "../../2024_DATA/SIMULATED_DATA/04-01/18N_CS0_CSP0_CV1_CVP1_analysed.root").c_str(), "READ");
 
-        // CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25, 28, 29, 30};
-        CalibrationPeaks["32Ar"] = {5, 8, 9, 14, 23, 25};
-        CalibrationPeaks["33Ar"] = {12, 21};
+        // IAS pol1
+        CalibrationPeaks["32Ar"] = {5, 8, 14, 17, 23};
+        CalibrationPeaks["33Ar"] = {9, 12, 21, 26};
         // CalibrationPeaks["33Ar_thick"] = {2, 12, 21, 26, 35};
+
+        // FULL pol2
+        CalibrationPeaks["32Ar"] = {1, 3, 8, 14, 17, 23, 25, 27, 29, 30};
+        CalibrationPeaks["33Ar"] = {9, 12, 21, 26};
     }
     ////////////////////////////////////////////////////////////////////////////
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     Start("OUTPUT Files");
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "_new.root").c_str(), "RECREATE");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "_fullLitt.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
 
     ///////////////////////////////////////////////////////////////////////////////
     int first = 11;
     int last = 86;
     Fitting_Resolution_FLAG = false;
-    // Fitting_Calibration_FLAG = false;
+    // Fitting_Calibration_FLAG = false; // no implemented  
+    Calibration_Litt = true;
 
     FillingSimHitograms();
     InitAlphaPeaks();
     InitWindows();
-    InitManualCalibration();
+    
     InitElectronicResolution();
+    InitElectronicLinearity();
     InitResolution();
     InitPileUp();
     
@@ -121,6 +130,7 @@ int main(int argc, char *argv[])
     /// LINEAR MANUAL CALIB ON 32Ar
     NUCLEUS = "32Ar";
     Start("Manual Calibration");
+    InitManualCalibration();
     for (int i = first; i < last; i++)
     {
         if (IsDetectorSiliStrip(i))
@@ -164,7 +174,7 @@ int main(int argc, char *argv[])
     }
 
     Start("Writting Plots");
-    PlottingWindows(first, last);
+    // PlottingWindows(first, last);
     PlottingSummed(first, last);
     PlottingFitParameters(first, last);
 

@@ -47,6 +47,10 @@ TFile *FINAL_File;
 TH1D* H_Channel[SIGNAL_MAX];
 TGraphErrors *G_Linearity[SIGNAL_MAX];
 TGraphErrors *G_Global =  new TGraphErrors();
+TGraphErrors *G_Global_Delta =  new TGraphErrors();
+TGraphErrors *G_Global_FWHM[10];
+
+TGraphErrors *G_Electronic_Matching[SIGNAL_MAX];
 
 
 void InitTGraphs()

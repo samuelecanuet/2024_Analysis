@@ -148,7 +148,7 @@ void ProgressBar(int cEntry, int TotalEntries, clock_t start, clock_t Current, s
   }
 }
 
-void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepping = 1, int indent = 0)
+void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepping = 1, int indent = 0, string opt = "")
 {
     if (cEntry % stepping == 0 || cEntry == TotalEntries - 1) // Refresh only at stepping intervals or the last entry
     {
@@ -166,20 +166,28 @@ void ProgressCounter(int cEntry, int TotalEntries, string Prefix = "", int stepp
         << flush;
     }
 
+    
     if (cEntry == TotalEntries - 1)
     {
-        cout << BLUE << setw(GENERAL_INDENT); 
-        if (indent > 0)
+        if (opt != "Q")
         {
-            for (int i = 0; i < indent; i++)
-                cout << " ";
-            cout << "├─";
+            cout << BLUE << setw(GENERAL_INDENT); 
+            if (indent > 0)
+            {
+                for (int i = 0; i < indent; i++)
+                    cout << " ";
+                cout << "├─";
+            }
+            cout << ("\r" + Prefix + " : ").c_str()
+                << "Completed "
+                << RESET
+                << endl;
         }
-        cout << ("\r" + Prefix + " : ").c_str()
-             << "Completed "
-             << RESET
-             << endl;
+        else 
+            cout << "" << RESET << endl;
     }
+    
+    
 }
 
 string formatValueWithError(double value, double error, string type = "latex") {

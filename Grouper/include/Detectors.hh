@@ -29,6 +29,7 @@
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TH3D.h"
+#include "THStack.h"
 #include "TProfile.h"
 #include "TProfile2D.h"	
 #include "TGraph.h"	
@@ -50,6 +51,7 @@
 #include "TMarker3DBox.h"
 #include "TPolyLine3D.h"
 #include "TView.h"
+#include "TGaxis.h"
 //// functions ////
 #include "TF1.h"
 #include "TF2.h"
@@ -99,6 +101,7 @@ string DIR_ROOT_DATA_RATE;
 string DIR_ROOT_DATA_SIMULATED;
 string DIR_DATA_ISOLDE;
 string DIR_DATA_HDD;
+string DIR_HDD_SIMULATED;
 ///////////////
 
 
@@ -723,6 +726,7 @@ inline void InitDetectors(const string &fname)
     DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2025_DATA/SIMULATED_DATA/";
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2025_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2025_DATA/DETECTOR_DATA/";
+    DIR_HDD_SIMULATED = "/run/media/local1/Disque_Dur/2025_DATA/SIMULATED_DATA/";
     REFERENCE_RUN = 98;
     MATCHING_RUN = 69;
   }
@@ -741,6 +745,7 @@ inline void InitDetectors(const string &fname)
     DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2024_DATA/SIMULATED_DATA/";
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2024_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2024_DATA/DETECTOR_DATA/";
+    DIR_HDD_SIMULATED = "/run/media/local1/Disque_Dur/2024_DATA/SIMULATED_DATA/";
     REFERENCE_RUN = 114;
     MATCHING_RUN = 77;
   }
@@ -759,6 +764,7 @@ inline void InitDetectors(const string &fname)
     DIR_ROOT_DATA_SIMULATED = "/mnt/hgfs/shared-2/2021_DATA/SIMULATED_DATA/";
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2021_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2021_DATA/DETECTOR_DATA/";
+    DIR_HDD_SIMULATED = "/run/media/local1/Disque_Dur/2021_DATA/SIMULATED_DATA/";
     REFERENCE_RUN = 16;
     MATCHING_RUN = 36;
   }

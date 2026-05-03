@@ -168,7 +168,7 @@ void InitHistograms()
 
 void InitCalib()
 {
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_new.root").c_str(), "READ");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
         if (IsDetectorSiliStrip(i))
@@ -584,5 +584,5 @@ pair<double, double> ComputeEshift(int det, TH1D *H_Single, TH1D *H_Coinc, TH1D 
     // cout << "Eshift_error_2B: " << sqrt(Eshift_error_2B) << endl;
         
     
-    return make_pair(Eshift, Eshift_error_2);
+    return make_pair(Eshift, Eshift_error_1);
 }

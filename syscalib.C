@@ -6,7 +6,7 @@ int syscalib()
     FLAG2025 = true;
     InitDetectors("Grouper/Config_Files/sample.pid");
 
-    TFile *Exp = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_new.root").c_str(), "READ");
+    TFile *Exp = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
     
     for (int det = 1; det < SIGNAL_MAX; det ++)
     {

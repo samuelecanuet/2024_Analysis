@@ -7,8 +7,8 @@ map<string, TFile*> MERGED_File;
 map<string, TFile*> SIMULATED_File;
 
 //Calibrations
-TF1* Calibration_Function[SIGNAL_MAX];
-TFitResultPtr Calibration_Result[SIGNAL_MAX];
+TF1* Calibration[SIGNAL_MAX];
+TF1* Calibration_Litt[SIGNAL_MAX];
 
 TTreeReader *Reader;
 TTreeReaderArray<Signal> *Silicon;
@@ -19,7 +19,14 @@ TFile *FINAL_FILE;
 
 // Silicon Spectrum 
 map<string, map<string, TH1D*>> H_Exp;
+map<string, map<string, TH1D*>> H_Exp_Litt;
 map<string, map<string, TH1D*>> H_Exp_Coinc;
+map<string, map<string, TH1D*>> H_Exp_Coinc_Litt;
+map<string, map<string, TH1D*>> H_Silicon_TimeGated_1;
+map<string, map<string, TH1D*>> H_Silicon_TimeGated_1_Coinc;
+map<string, map<string, TH1D*>> H_Silicon_TimeGated_2;
+map<string, map<string, TH1D*>> H_Silicon_TimeGated_2_Coinc;
+
 
 //Realse Curves
 map<string, map<int, map<string, TH1D*>>> H_Release;
@@ -27,6 +34,9 @@ map<string, map<int, map<string, TH1D*>>> H_Release_Coinc;
 
 // Beta Spectrum
 map<string, map<int, map<string, TH1D*>>> H_Exp_Beta;
+
+// H_EpEb
+map<string, map<string, TH2D*>> H_EpEb;
 
 // DeltaE
 TGraphErrors *G_Sim_DeltaE_Proton = new TGraphErrors();
@@ -41,20 +51,60 @@ vector<string> Nuclei;
 int start_gate = -20;
 int end_gate = 40;
 
-void InitCalibration()
+void InitCalib()
 {
-    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "_new.root").c_str(), "READ");
-    for (int det = 1;  det < SIGNAL_MAX; det++)
+    TFile *CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_full.root").c_str(), "READ");
+    for (int i = 0; i < SIGNAL_MAX; i++)
     {
-        Calibration_Function[det] = (TF1*)f->Get(("Calibration_" + detectorName[det]).c_str());
-        Calibration_Result[det] = (TFitResult*)f->Get(("Calibration_R_" + detectorName[det]).c_str());
+        if (IsDetectorSiliStrip(i))
+        {
+            Calibration[i] = (TF1 *)CALIBRATED_File->Get(("Calibration_" + detectorName[i]).c_str());
+
+            if (Calibration[i] == NULL)
+            {
+                Error("No calibration found for " + detectorName[i]);
+            }
+        }
     }
-    f->Close();
+
+    Success("Silicon Calibration loaded");
+
+    TFile *CALIBRATED_File_Litt = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_fullLitt.root").c_str(), "READ");
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorSiliStrip(i))
+        {
+            Calibration_Litt[i] = (TF1 *)CALIBRATED_File_Litt->Get(("Calibration_" + detectorName[i]).c_str());
+
+            if (Calibration_Litt[i] == NULL)
+            {
+                Error("No calibration found for " + detectorName[i]);
+            }
+        }
+    } 
+    
+    Success("Silicon Litt Calibration loaded");
+
+    TFile *CALIBRATED_SiPM_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorBetaHigh(i))
+        {
+            Calibration[GetDetectorChannel(i)] = (TF1 *)CALIBRATED_SiPM_File->Get(("SiPM_" + to_string(GetDetectorChannel(i)) + "/F_Calibration_SiPM" + to_string(GetDetectorChannel(i))).c_str());
+
+            if (Calibration[GetDetectorChannel(i)] == NULL)
+            {
+                Error("No SiPM calibration found for " + detectorName[i]);
+            }
+        }
+    }
+
+    Success("SiPM Calibration loaded");
 }
 
 void InitExperimentalSpectrum()
 {
-    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_new.root").c_str(), "READ");
+    TFile *f = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
     for (string Nucleus : Nuclei)
     {
         for (int det = 1; det < SIGNAL_MAX; det++)
@@ -388,11 +438,54 @@ void InitHistograms(string Nucleus)
         H_Exp[Nucleus][dir]->GetXaxis()->CenterTitle();
         H_Exp[Nucleus][dir]->GetYaxis()->CenterTitle();
 
+        H_Exp_Litt[Nucleus][dir] = new TH1D(("Spectrum_Litt_" + Nucleus + "_" + dir).c_str(), ("Spectrum_Litt_" + Nucleus + "_" + dir).c_str(), 2*eSiliN_cal/10, -eSiliMax_cal, eSiliMax_cal);
+        H_Exp_Litt[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
+        H_Exp_Litt[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
+        H_Exp_Litt[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_Exp_Litt[Nucleus][dir]->GetYaxis()->CenterTitle();
+
         H_Exp_Coinc[Nucleus][dir] = new TH1D(("Spectrum_Coinc_" + Nucleus + "_" + dir).c_str(), ("Spectrum_Coinc_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
         H_Exp_Coinc[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
         H_Exp_Coinc[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
         H_Exp_Coinc[Nucleus][dir]->GetXaxis()->CenterTitle();
         H_Exp_Coinc[Nucleus][dir]->GetYaxis()->CenterTitle();
+
+        H_Exp_Coinc_Litt[Nucleus][dir] = new TH1D(("Spectrum_Coinc_Litt_" + Nucleus + "_" + dir).c_str(), ("Spectrum_Coinc_Litt_" + Nucleus + "_" + dir).c_str(), 2*eSiliN_cal/10, -eSiliMax_cal, eSiliMax_cal);
+        H_Exp_Coinc_Litt[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
+        H_Exp_Coinc_Litt[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
+        H_Exp_Coinc_Litt[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_Exp_Coinc_Litt[Nucleus][dir]->GetYaxis()->CenterTitle();
+
+        H_EpEb[Nucleus][dir] = new TH2D(("H_EpEb_" + Nucleus + "_" + dir).c_str(), ("H_EpEb_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal, eSiliN_cal/100, eSiliMin_cal, eSiliMax_cal);
+        H_EpEb[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
+        H_EpEb[Nucleus][dir]->GetYaxis()->SetTitle("Energy (keV)");
+        H_EpEb[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_EpEb[Nucleus][dir]->GetYaxis()->CenterTitle();
+
+        H_Silicon_TimeGated_1[Nucleus][dir] = new TH1D(("H_Silicon_TimeGated_1_" + Nucleus + "_" + dir).c_str(), ("H_Silicon_TimeGated_1_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+        H_Silicon_TimeGated_1[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
+        H_Silicon_TimeGated_1[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
+        H_Silicon_TimeGated_1[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_Silicon_TimeGated_1[Nucleus][dir]->GetYaxis()->CenterTitle();
+
+        H_Silicon_TimeGated_1_Coinc[Nucleus][dir] = new TH1D(("H_Silicon_TimeGated_1_Coinc_" + Nucleus + "_" + dir).c_str(), ("H_Silicon_TimeGated_1_Coinc_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+        H_Silicon_TimeGated_1_Coinc[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
+        H_Silicon_TimeGated_1_Coinc[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
+        H_Silicon_TimeGated_1_Coinc[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_Silicon_TimeGated_1_Coinc[Nucleus][dir]->GetYaxis()->CenterTitle();
+
+        H_Silicon_TimeGated_2[Nucleus][dir] = new TH1D(("H_Silicon_TimeGated_2_" + Nucleus + "_" + dir).c_str(), ("H_Silicon_TimeGated_2_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+        H_Silicon_TimeGated_2[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
+        H_Silicon_TimeGated_2[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
+        H_Silicon_TimeGated_2[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_Silicon_TimeGated_2[Nucleus][dir]->GetYaxis()->CenterTitle();
+
+        H_Silicon_TimeGated_2_Coinc[Nucleus][dir] = new TH1D(("H_Silicon_TimeGated_2_Coinc_" + Nucleus + "_" + dir).c_str(), ("H_Silicon_TimeGated_2_Coinc_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+        H_Silicon_TimeGated_2_Coinc[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
+        H_Silicon_TimeGated_2_Coinc[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
+        H_Silicon_TimeGated_2_Coinc[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_Silicon_TimeGated_2_Coinc[Nucleus][dir]->GetYaxis()->CenterTitle();
+
 
         for (int peak = 1; peak <= CanvasMap[Nucleus].first * CanvasMap[Nucleus].second; peak++)
         {
@@ -504,7 +597,7 @@ void ReadingExperimentalData(string Nucleus)
 
     double Proton_Pulse = 0;
 
-    while (Reader->Next() && Reader->GetCurrentEntry() < 1e6)
+    while (Reader->Next() && Reader->GetCurrentEntry() < Entries)
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
 
@@ -516,47 +609,72 @@ void ReadingExperimentalData(string Nucleus)
 
         int Silicon_Label = (*Silicon)[1].Label;
         string dir = Silicon_Label < 50 ? "Up" : "Down";
-        double Silicon_Energy = Calibration_Function[Silicon_Label]->Eval((*Silicon)[1].Channel / 1000.);
+        double Silicon_Energy = Calibration[Silicon_Label]->Eval((*Silicon)[1].Channel / 1000.);
+        double Silicon_Energy_Litt = Calibration_Litt[Silicon_Label]->Eval((*Silicon)[1].Channel / 1000.);
         double Silicon_Time = (*Silicon)[1].Time * 1e-9;
 
         // cout << "Proton Pulse: " << Proton_Pulse << "    Silicon Time: " << Silicon_Time << "    Diff: " << Silicon_Time - Proton_Pulse << endl;
 
-        bool Coincidence = IsCoincidence((*Silicon)[1].Time, **SiPM_Groups);
+        bool Coincidence = IsCoincidence(Silicon_Time, **SiPM_Groups);
 
         // All Spectrum
         H_Release[Nucleus][0][dir]->Fill(Silicon_Time - Proton_Pulse);
         H_Exp[Nucleus][dir]->Fill(Silicon_Energy);
+        H_Exp_Litt[Nucleus][dir]->Fill(Silicon_Energy_Litt);
         if (Coincidence)
         {
             H_Release_Coinc[Nucleus][0][dir]->Fill(Silicon_Time - Proton_Pulse);
             H_Exp_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
-        }
+            H_Exp_Coinc_Litt[Nucleus][dir]->Fill(Silicon_Energy_Litt);
 
-        // Looping through peaks
-        for (int peak = 1; peak <= CanvasMap[Nucleus].first * CanvasMap[Nucleus].second; peak++)
-        {
-            if (WindowsMap[Nucleus][peak][Silicon_Label].first == -1 || !WindowsMap[Nucleus][peak][Silicon_Label].first)
-                continue;
+            if (Silicon_Time - Proton_Pulse < 0.4)
+                H_Silicon_TimeGated_1_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
+            else
+                H_Silicon_TimeGated_2_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
 
-            if (WindowsMap[Nucleus][peak][Silicon_Label].first < Silicon_Energy && Silicon_Energy < WindowsMap[Nucleus][peak][Silicon_Label].second)
+            if ((**SiPM_Groups)[0].size() >= 3)
             {
-                H_Release[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
-                if (Coincidence)
+                for (int i = 0; i < (**SiPM_Groups)[0].size(); i++)
                 {
-                    H_Release_Coinc[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
-                    if ((**SiPM_Groups)[0].size() == 9)
+                    if (GetDetectorChannel((**SiPM_Groups)[0][i].second.Label) == 7 && (**SiPM_Groups)[0][i].second.isValid)
                     {
-                        for (int i = 0; i < (**SiPM_Groups)[0].size(); i++)
-                        {
-                            if (GetDetectorChannel((**SiPM_Groups)[0][i].first.Label) == 7)
-                            {
-                                H_Exp_Beta[Nucleus][peak][dir]->Fill((**SiPM_Groups)[0][i].second.Channel);
-                            }
-                        }
+                        H_EpEb[Nucleus][dir]->Fill(Silicon_Energy, Calibration[7]->Eval((**SiPM_Groups)[0][i].second.Channel/1000.));
                     }
                 }
             }
         }
+
+        // if (Silicon_Time - Proton_Pulse < 0.3 && Silicon_Time - Proton_Pulse > 0.1)
+        if (Silicon_Time - Proton_Pulse < 0.4)
+            H_Silicon_TimeGated_1[Nucleus][dir]->Fill(Silicon_Energy);
+        else
+            H_Silicon_TimeGated_2[Nucleus][dir]->Fill(Silicon_Energy);
+
+        // Looping through peaks
+        // for (int peak = 1; peak <= CanvasMap[Nucleus].first * CanvasMap[Nucleus].second; peak++)
+        // {
+        //     if (WindowsMap[Nucleus][peak][Silicon_Label].first == -1 || !WindowsMap[Nucleus][peak][Silicon_Label].first)
+        //         continue;
+
+        //     if (WindowsMap[Nucleus][peak][Silicon_Label].first < Silicon_Energy && Silicon_Energy < WindowsMap[Nucleus][peak][Silicon_Label].second)
+        //     {
+        //         H_Release[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
+        //         if (Coincidence && (**SiPM_Groups).size() > 0)
+        //         {
+        //             H_Release_Coinc[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
+        //             if ((**SiPM_Groups)[0].size() >= 3)
+        //             {
+        //                 for (int i = 0; i < (**SiPM_Groups)[0].size(); i++)
+        //                 {
+        //                     if (GetDetectorChannel((**SiPM_Groups)[0][i].second.Label) == 7 && (**SiPM_Groups)[0][i].second.isValid)
+        //                     {
+        //                         H_Exp_Beta[Nucleus][peak][dir]->Fill(Calibration[GetDetectorChannel((**SiPM_Groups)[0][i].second.Label)]->Eval((**SiPM_Groups)[0][i].second.Channel/1000.));
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -595,7 +713,7 @@ void ComputeDeltaEHist()
             {
                 Error("H_Exp[" + Nucleus + "][Up] is nullptr, skipping peak " + to_string(peak));
             }
-            Info("Peak " + to_string(peak), 2);
+            // Info("Peak " + to_string(peak), 2);
             H_Exp[Nucleus]["Up"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][peak][15].first, WindowsMap[Nucleus][peak][11].second);
             H_Exp[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][peak][55].first, WindowsMap[Nucleus][peak][51].second);
             
@@ -667,6 +785,7 @@ void ComputeDeltaEHist()
 
 void PlottingPeak(string Nucleus, double peak)
 {
+    Info("Plotting Peak " + to_string(peak) + " for " + Nucleus, 1);
     double E0 = PeakData[Nucleus][peak][0];
     ostringstream oss;
     oss << fixed << setprecision(1) << E0;
@@ -674,6 +793,7 @@ void PlottingPeak(string Nucleus, double peak)
     TCanvas *c = new TCanvas((Nucleus + "_Peak_" + to_string(peak) + "_" + E0_str + "keV").c_str(), (Nucleus + "_Peak_" + to_string(peak) + "_" + E0_str + "keV").c_str(), 1920, 1080);
     c->Divide(2, 2);
 
+    Info("Up Spectrum Single/Coinc", 2);
     // Up Spectrum Single/Coinc
     c->cd(1);
     TPad *padUp = new TPad("Silicon Spectrum (Up)", "Silicon Spectrum (Up)", 0, 0.5, 1.0, 1.0);
@@ -695,6 +815,7 @@ void PlottingPeak(string Nucleus, double peak)
     legend->AddEntry(H_Exp_Coinc[Nucleus][dir], "Coincidence", "l");
     legend->Draw("SAME");
 
+        Info("Down Spectrum Single/Coinc", 2);
     c->cd(1);
     TPad *padDown = new TPad("Silicon Spectrum (Down)", "Silicon Spectrum (Down)", 0, 0, 1.0, 0.5);
     padDown->Draw();
@@ -713,6 +834,7 @@ void PlottingPeak(string Nucleus, double peak)
     legend->Draw("SAME");
 
     // Particle Identification
+    Info("Particle Identification", 2);
     c->cd(2);
     TMultiGraph *mg = new TMultiGraph();
     TLegend *l = new TLegend(0.7, 0.7, 0.9, 0.9);
@@ -740,6 +862,7 @@ void PlottingPeak(string Nucleus, double peak)
     text2->Draw("SAME");
 
     // Release curve
+    Info("Release Curve", 2);
     c->cd(3);
     TLegend *legend_release = new TLegend(0.7, 0.7, 0.9, 0.9);
     H_Release[Nucleus][peak]["Down"]->Add(H_Release[Nucleus][peak]["Up"]);
@@ -770,23 +893,138 @@ void PlottingPeak(string Nucleus, double peak)
 
     // Beta Spectrum
     c->cd(4);
-    TLegend *legend_beta = new TLegend(0.7, 0.7, 0.9, 0.9);
+    Info("Beta Spectrum", 2);   
+    // TLegend *legend_beta = new TLegend(0.7, 0.7, 0.9, 0.9);
 
-    for (string dir : Directions)
-    {
-        // H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(1, WindowsBetaMap[Nucleus][peak]);
-        H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(H_Exp_Beta[Nucleus][peak][dir]->GetBinWidth(1), -1111);
-        H_Exp_Beta[Nucleus][peak][dir]->SetTitle("#beta Spectrum");
-        H_Exp_Beta[Nucleus][peak][dir]->SetStats(false);
-        double factor = (double)Freedman_Diaconis(H_Exp_Beta[Nucleus][peak][dir]);
-        H_Exp_Beta[Nucleus][peak][dir]->Rebin((int)factor);
-        H_Exp_Beta[Nucleus][peak][dir]->GetYaxis()->SetTitle(("Counts / " + to_string(0.1 * factor) + "keV").c_str());
-        if (dir == "Up") H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST");
-        else H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST SAME");
+    // for (string dir : Directions)
+    // {
+    //     // H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(1, WindowsBetaMap[Nucleus][peak]);
+    //     if (H_Exp_Beta[Nucleus][peak][dir] == nullptr)
+    //         continue;
+    //     H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(H_Exp_Beta[Nucleus][peak][dir]->GetBinWidth(1), -1111);
+    //     H_Exp_Beta[Nucleus][peak][dir]->SetTitle("#beta Spectrum");
+    //     H_Exp_Beta[Nucleus][peak][dir]->SetStats(false);
+    //     double factor = (double)Freedman_Diaconis(H_Exp_Beta[Nucleus][peak][dir]);
+    //     H_Exp_Beta[Nucleus][peak][dir]->Rebin((int)factor);
+    //     H_Exp_Beta[Nucleus][peak][dir]->GetYaxis()->SetTitle(("Counts / " + to_string(0.1 * factor) + "keV").c_str());
+    //     if (dir == "Up") H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST");
+    //     else H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST SAME");
 
-        legend_beta->AddEntry(H_Exp_Beta[Nucleus][peak][dir], (dir).c_str(), "l");
-    }
-    legend_beta->Draw("SAME");
+    //     legend_beta->AddEntry(H_Exp_Beta[Nucleus][peak][dir], (dir).c_str(), "l");
+    // }
+    // legend_beta->Draw("SAME");
 
     c->Write();
+    Info("Peak " + to_string(peak) + " plotted for " + Nucleus);
+}
+
+void PlottingReleaseScaling(string Nucleus)
+{
+    FINAL_FILE->cd();
+    
+    ////// ######## SINGLE ######## //////
+    // IAS SCALING //
+    TCanvas *c = new TCanvas((Nucleus + "_Release_Scaling").c_str(), (Nucleus + "_Release_Scaling").c_str(), 800, 600);
+    H_Exp[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][IAS[Nucleus]][51].first, WindowsMap[Nucleus][IAS[Nucleus]][55].second);
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][IAS[Nucleus]][51].first, WindowsMap[Nucleus][IAS[Nucleus]][55].second);
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][IAS[Nucleus]][51].first, WindowsMap[Nucleus][IAS[Nucleus]][55].second); 
+
+    // H_Silicon_TimeGated_1[Nucleus]["Down"]->Scale((double)H_Exp[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_1[Nucleus]["Down"]->Integral());
+    // H_Silicon_TimeGated_2[Nucleus]["Down"]->Scale((double)H_Exp[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_2[Nucleus]["Down"]->Integral());
+
+    TLegend *legend = new TLegend(0.7, 0.7, 0.9, 0.9);
+    H_Exp[Nucleus]["Down"]->SetTitle("Release Scaling");
+    H_Exp[Nucleus]["Down"]->SetStats(false);
+    H_Exp[Nucleus]["Down"]->Draw("HIST");
+    legend->AddEntry(H_Exp[Nucleus]["Down"], "Experimental Spectrum", "l");
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->SetLineColor(kRed);
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->SetTitle("Release Scaling");
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->Draw("HIST SAME");
+    legend->AddEntry(H_Silicon_TimeGated_1[Nucleus]["Down"], "Time Gated < 0.4s", "l");
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->SetLineColor(kBlue);
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->SetTitle("Release Scaling");
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->Draw("HIST SAME");
+    legend->AddEntry(H_Silicon_TimeGated_2[Nucleus]["Down"], "Time Gated > 0.4s", "l");
+    legend->Draw("SAME");
+    c->Write();
+
+    // LOW ENERGY SCALING //
+    double mini = 620;
+    double maxi = 850;
+    TCanvas *cLow = new TCanvas((Nucleus + "_Release_LowScaling").c_str(), (Nucleus + "_Release_LowScaling").c_str(), 800, 600);
+    H_Exp[Nucleus]["Down"]->GetXaxis()->SetRangeUser(mini, maxi);
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->GetXaxis()->SetRangeUser(mini, maxi);
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->GetXaxis()->SetRangeUser(mini, maxi); 
+
+    // H_Silicon_TimeGated_1[Nucleus]["Down"]->Scale((double)H_Exp[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_1[Nucleus]["Down"]->Integral());
+    // H_Silicon_TimeGated_2[Nucleus]["Down"]->Scale((double)H_Exp[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_2[Nucleus]["Down"]->Integral());
+
+    H_Exp[Nucleus]["Down"]->SetTitle("Release Scaling");
+    H_Exp[Nucleus]["Down"]->SetStats(false);
+    H_Exp[Nucleus]["Down"]->Draw("HIST");
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->SetLineColor(kRed);
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->SetTitle("Release Scaling");
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_1[Nucleus]["Down"]->Draw("HIST SAME");
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->SetLineColor(kBlue);
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->SetTitle("Release Scaling");
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_2[Nucleus]["Down"]->Draw("HIST SAME");
+    legend->Draw("SAME");
+    cLow->Write();    
+
+
+
+    ////// ######## COINCIDENCE ######## //////
+    // IAS SCALING //
+    TCanvas *c_coinc = new TCanvas((Nucleus + "_Release_Scaling_Coinc").c_str(), (Nucleus + "_Release_Scaling_Coinc").c_str(), 800, 600);
+    H_Exp_Coinc[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][IAS[Nucleus]][51].first, WindowsMap[Nucleus][IAS[Nucleus]][55].second);
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][IAS[Nucleus]][51].first, WindowsMap[Nucleus][IAS[Nucleus]][55].second);
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][IAS[Nucleus]][51].first, WindowsMap[Nucleus][IAS[Nucleus]][55].second);
+
+    // H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->Scale((double)H_Exp_Coinc[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->Integral());
+    // H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->Scale((double)H_Exp_Coinc[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->Integral());
+
+    TLegend *legend_coinc = new TLegend(0.7, 0.7, 0.9, 0.9);
+    H_Exp_Coinc[Nucleus]["Down"]->SetTitle("Release Scaling in Coincidence");
+    H_Exp_Coinc[Nucleus]["Down"]->SetStats(false);
+    H_Exp_Coinc[Nucleus]["Down"]->Draw("HIST");
+    legend_coinc->AddEntry(H_Exp_Coinc[Nucleus]["Down"], "Experimental Spectrum", "l");
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->SetLineColor(kRed);
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->SetTitle("Release Scaling in Coincidence");
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->Draw("HIST SAME");
+    legend_coinc->AddEntry(H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"], "Coinc Time Gated < 0.4s", "l");
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->SetLineColor(kBlue);
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->SetTitle("Release Scaling in Coincidence");
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->Draw("HIST SAME");
+    legend_coinc->AddEntry(H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"], "Coinc Time Gated > 0.4s", "l");
+    legend_coinc->Draw("SAME");
+    c_coinc->Write();
+
+        // LOW ENERGY SCALING //
+    TCanvas *cLow_coinc = new TCanvas((Nucleus + "_Release_LowScaling_Coinc").c_str(), (Nucleus + "_Release_LowScaling_Coinc").c_str(), 800, 600);
+    H_Exp_Coinc[Nucleus]["Down"]->GetXaxis()->SetRangeUser(mini, maxi);
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->GetXaxis()->SetRangeUser(mini, maxi);
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->GetXaxis()->SetRangeUser(mini, maxi);
+
+    // H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->Scale((double)H_Exp_Coinc[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->Integral());
+    // H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->Scale((double)H_Exp_Coinc[Nucleus]["Down"]->Integral() / (double)H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->Integral());
+
+    H_Exp_Coinc[Nucleus]["Down"]->SetTitle("Release Scaling in Coincidence");
+    H_Exp_Coinc[Nucleus]["Down"]->SetStats(false);
+    H_Exp_Coinc[Nucleus]["Down"]->Draw("HIST");
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->SetLineColor(kRed);
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->SetTitle("Release Scaling in Coincidence");
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_1_Coinc[Nucleus]["Down"]->Draw("HIST SAME");
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->SetLineColor(kBlue);
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->SetTitle("Release Scaling in Coincidence");
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->SetStats(false);
+    H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->Draw("HIST SAME");
+    legend_coinc->Draw("SAME");
+    cLow_coinc->Write();
 }

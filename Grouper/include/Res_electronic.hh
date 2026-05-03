@@ -34,8 +34,8 @@
 #include "TVirtualFitter.h"
 
 #include "../../../lib/SignalDict/Signal.h"
-#include "Detectors.hh"
 
+#include "Analyser.hh"
 using namespace std;
 using namespace ROOT::Math;
 default_random_engine generator;
@@ -132,10 +132,10 @@ void FittingHistograms()
                 continue;
             }
 
-            out << i << " " << Channel[i]->GetFunction("gaus")->GetParameter(2) << " " << Channel[i]->GetFunction("gaus")->GetParError(2) << endl;
+            out << i << " " << Calibration[i]->GetParameter(1) *Channel[i]->GetFunction("gaus")->GetParameter(2)/1000 << " " << Calibration[i]->GetParameter(1) *Channel[i]->GetFunction("gaus")->GetParError(2)/1000 << endl;
 
-            G_Resolution->AddPoint(i, Channel[i]->GetFunction("gaus")->GetParameter(2));
-            G_Resolution->SetPointError(G_Resolution->GetN()-1, 0, Channel[i]->GetFunction("gaus")->GetParError(2));
+            G_Resolution->AddPoint(i, Calibration[i]->GetParameter(1) * Channel[i]->GetFunction("gaus")->GetParameter(2) / 1000);
+            G_Resolution->SetPointError(G_Resolution->GetN()-1, 0, Calibration[i]->GetParameter(1) * Channel[i]->GetFunction("gaus")->GetParError(2) / 1000);
 
             Info(detectorName[i] + " : " + to_string(Channel[i]->GetFunction("gaus")->GetParameter(2)) + " CH", 1);
         }

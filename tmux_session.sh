@@ -13,7 +13,11 @@ tmux send-keys -t $SESSION:0.1 'cd /mnt/hgfs/shared-2/; clear; clear' C-m
 
 # Now split the **right pane** vertically (into top and bottom)
 tmux split-window -v -t $SESSION:0.1 -c ~/project3
-tmux send-keys -t $SESSION:0.2 'htop' C-m
+tmux send-keys -t $SESSION:0.2 'cd /run/media/local1/DATANEX/Samuel-G4/; clear; clear' C-m
+
+# Now split the **right pane** vertically (into top and bottom)
+tmux split-window -v -t $SESSION:0.2 -c ~/project3
+tmux send-keys -t $SESSION:0.3 'htop' C-m
 
 trap "tmux kill-session -t $SESSION" EXIT
 # # tmux set-option destroy-unattached on

@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     ///////////////////////////////////  FILES //////////////////////////////////
     
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
-    MATCHED_Filename = "SiPM_Matching_test.root";
+    MATCHED_Filename = "SiPM_Matching_test_woONOFF_REF1.root";
     MATCHED_File = MyTFile(DIR_ROOT_DATA_MATCHED + MATCHED_Filename, "RECREATE");
     MATCHED_File->cd();
 
@@ -183,6 +183,7 @@ int main(int argc, char **argv)
     }
 
     WriteHistograms(1);
+    exit(0);
 
     Info("APPLYING MATCHING");
     // Applying corrections

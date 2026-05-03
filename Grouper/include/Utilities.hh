@@ -119,6 +119,32 @@ string SearchFiles(const string &directory, const string &run_number, string OPT
   }
 }
 
+vector<string> SearchFilesIn(const string &directory, const string &in_it)
+{
+  DIR *dir;
+  struct dirent *ent;
+  vector<string> filenames;
+  if ((dir = opendir(directory.c_str())) != NULL)
+  {
+	while ((ent = readdir(dir)) != NULL)
+	{
+	  string filename = ent->d_name;
+	  cout << "Checking file: " << filename << endl;
+	  if (filename.find(in_it) != string::npos)
+	  {
+		filenames.push_back(filename);
+	  }
+	}
+	closedir(dir);
+	return filenames;
+  }
+  else
+  {
+	Error(("Could not open directory: " + directory).c_str());
+	return {};
+  }
+}
+
 int ConvertBase5ToBase10(int base5_int)
 {
 	string base5 = to_string(base5_int);
@@ -392,6 +418,53 @@ TGraphErrors *GetResiduals(TH1D *h1, TH1D* h2)
 		g->SetPointError(g->GetN() - 1, 0, err);
 	}
 	return g;
+}
+
+TGraphErrors *GetResiduals(TGraphErrors *g, TF1 *f)
+{
+	TGraphErrors *g_res = new TGraphErrors();
+	for (int i = 0; i < g->GetN(); i++)
+	{
+		double x, y;
+		g->GetPoint(i, x, y);
+		double y_fit = f->Eval(x);
+		double err = g->GetErrorY(i);
+		g_res->AddPoint(x, (y - y_fit));
+		g_res->SetPointError(g_res->GetN() - 1, 0, err);
+	}
+	return g_res;
+}
+
+Double_t Scale(Double_t x, double a, double b)
+{
+  Double_t v;
+  v = a * x + b; // "linear scaling" function example
+  return v;
+}
+
+void ScaleAxis(TAxis *a, Double_t (*Scale)(Double_t, double, double), double a_scale, double b_scale)
+{
+  if (!a) return; // just a precaution
+  if (a->GetXbins()->GetSize())
+    {
+      TArrayD X(*(a->GetXbins()));
+      for(Int_t i = 0; i < X.GetSize(); i++) X[i] = Scale(X[i], a_scale, b_scale);
+      a->Set((X.GetSize() - 1), X.GetArray());
+    }
+  else
+    {
+      a->Set( a->GetNbins(),
+              Scale(a->GetXmin(), a_scale, b_scale),
+              Scale(a->GetXmax(), a_scale, b_scale) ); 
+    }
+  return;
+}
+
+void ScaleXaxis(TH1 *h, Double_t (*Scale)(Double_t, double, double), double a, double b)
+{
+  if (!h) return; // just a precaution
+  ScaleAxis(h->GetXaxis(), Scale, a, b);
+  return;
 }
 
 const map<string, int> NametoCode_map = {

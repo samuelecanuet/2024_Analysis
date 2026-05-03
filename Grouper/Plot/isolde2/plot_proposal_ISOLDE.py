@@ -5,9 +5,6 @@ dir = "../../../../../../../mnt/hgfs/shared-2/2024_DATA/DETECTOR_DATA/CALIBRATED
 
 plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=-0.2)
 
-
-
-
 ################### 2024 ###################
 
 def extranalbehavior(ax):

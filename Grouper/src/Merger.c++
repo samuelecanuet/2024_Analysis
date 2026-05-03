@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2024 = true;
+    FLAG2025 = true;
     InitDetectors("Config_Files/sample.pid");
     InitRuns();
     InitProtonPulse();
@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
     for (auto &pairr : Map_RunFiles)
     {
         string NUCLEUS = pairr.first;
-        if (NUCLEUS.find("33Ar") == string::npos)
-            continue;
+        // if (NUCLEUS.find("33Ar") == string::npos)
+        //     continue;
         pair<string, vector<string>> NUCLEUS_Run = make_pair(NUCLEUS, Map_RunFiles[NUCLEUS]);
         Start("Merging " + NUCLEUS_Run.first);
         MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + NUCLEUS_Run.first + "_merged.root").c_str(), "RECREATE");

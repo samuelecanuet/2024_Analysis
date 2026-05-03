@@ -14,7 +14,7 @@ LIBS      = ${FASTERAC_LIBS}   ${ROOT_LIBS} ${GSL_LIBS} -lboost_filesystem -lboo
 
 SRCS      = $(wildcard src/*.c++)
 OBJS      = $(patsubst src/%.c++,obj/%.o,$(SRCS))
-EXE       = Reader_CRADLE Reader2 ScatteringModel ReaderNew InterStrip Efficiency Efficiency2 Systematic Systematic_MC Positions
+EXE       = Reader_CRADLE Reader2 ScatteringModel ReaderNew InterStrip Efficiency Efficiency2 Systematic Systematic_MC Positions Sensitivity
 
 all : $(EXE)
 

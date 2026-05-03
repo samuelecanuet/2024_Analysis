@@ -34,6 +34,10 @@ TH3D *H3_CoincSingle;
 TH3D *H3_ProtonCounts;
 TH3D *H3_Total;
 
+TGraphErrors *G_ProtonCounts_X = new TGraphErrors();
+TGraphErrors *G_ProtonCounts_Y = new TGraphErrors();
+TGraphErrors *G_ProtonCounts_Z = new TGraphErrors();
+
 TGraph2DErrors *G2_Eshift_YZ = new TGraph2DErrors();
 TGraph2D *G2_CoincSingle_YZ = new TGraph2D();
 TGraph2DErrors *G2_ProtonCounts_YZ = new TGraph2DErrors();
@@ -157,12 +161,12 @@ double PValue(const TGraphErrors *g1, const TGraphErrors *g2, string option = ""
     return p_value;
 }
 
-double Sum(const TGraphErrors *g, string option = "")
+pair<double, double> Sum(const TGraphErrors *g, string option = "")
 {
     if (!g)
     {
         Error("Graph is null.");
-        return -1;
+        return {-1, -1};
     }
 
     double sum = 0.0;
@@ -176,7 +180,7 @@ double Sum(const TGraphErrors *g, string option = "")
         g->GetPoint(i, x, y);
         sum += std::abs(y);
     }
-    return sum;
+    return {sum, 0.0};
 }
 
 pair<double, double> MeanDistance(TGraphErrors *g)
@@ -206,6 +210,52 @@ pair<double, double> MeanDistance(TGraphErrors *g)
     mean_err = 1./sqrt(weight_sum);
 
     return {mean, mean_err};
+}
+
+pair<double, double> WeightedMeanSquareDistance(TGraphErrors *g)
+{
+    if (!g)
+    {
+        Error("WeightedMeanSquareDistance", "Graph is null.");
+        return {-1.0, -1.0};
+    }
+
+    const int n = g->GetN();
+    if (n == 0)
+    {
+        Error("WeightedMeanSquareDistance", "Graph is empty.");
+        return {-1.0, -1.0};
+    }
+
+    double sum_w = 0.0;
+    double sum_wy2 = 0.0;
+
+    for (int i = 0; i < n; ++i)
+    {
+        double x, y;
+        g->GetPoint(i, x, y);
+
+        const double ey = g->GetErrorY(i);
+        if (ey <= 0.0 || y == 0.0)
+            continue;
+
+        const double sigma_y2 = 2.0 * std::abs(y) * ey;
+        const double w = 1.0 / (sigma_y2 * sigma_y2);
+
+        sum_w += w;
+        sum_wy2 += w * y * y;
+    }
+
+    if (sum_w == 0.0)
+    {
+        Error("WeightedMeanSquareDistance", "No valid points with non-zero uncertainty.");
+        return {-1.0, -1.0};
+    }
+
+    const double mean_square = sum_wy2 / sum_w;
+    const double mean_square_err = std::sqrt(1.0 / sum_w);
+
+    return {mean_square, mean_square_err};
 }
 
 pair<double, double> MeanDiff(TGraphErrors *g1, TGraphErrors *g2)
@@ -257,6 +307,103 @@ pair<double, double> MeanDiff(TGraphErrors *g1, TGraphErrors *g2)
     double mean_diff_err = sqrt(mean_err_g1 * mean_err_g1 + mean_err_g2 * mean_err_g2);
 
     return {mean_diff, mean_diff_err};
+}
+
+pair<double, double> AsymetryEfficiency(string filename)
+{
+    Info("Calculating Asymetry Efficiency for " + filename);    
+    TFile *f = MyTFile(filename.c_str(), "READ", "Q");
+    // First Gate
+    int peak1 = 6;
+    // Second Gate
+    int peak2 = 14;
+
+    double Sum1_Up_Exp = 0.0;
+    double Sum1_Down_Exp = 0.0;
+    double Sum2_Up_Exp = 0.0;
+    double Sum2_Down_Exp = 0.0;
+
+    double Sum1_Up_Sim = 0.0;
+    double Sum1_Down_Sim = 0.0;
+    double Sum2_Up_Sim = 0.0;
+    double Sum2_Down_Sim = 0.0;
+        
+    for (int det = 1; det <= SIGNAL_MAX; det++)
+    {
+        if (IsDetectorSiliStrip(det))
+        {
+            cout << "Detector: " << detectorName[det] << endl;
+            
+            //Exp
+            TH1D* H_Exp = (TH1D *)Exp_FILE_grouped->Get(("Strip/Strip_Channel/" + detectorName[det] + "/Channel_Cleaned_" + detectorName[det]).c_str());
+            if (H_Exp == nullptr) Error("Channel_Cleaned histogram not found for " + detectorName[det] + " in experimental grouped file");
+
+            //peak1
+            H_Exp->GetXaxis()->SetRangeUser(Silicon_Calibration[det]->Eval(WindowsMap[NUCLEUS][peak1][det].first)*1e3, Silicon_Calibration[det]->Eval(WindowsMap[NUCLEUS][peak1][det].second)*1e3);
+            if (det>50) Sum1_Down_Exp += H_Exp->Integral();
+            else Sum1_Up_Exp += H_Exp->Integral();
+            Info(Form("Exp Peak 1: %.0f", H_Exp->Integral()), 2);
+            //peak2
+            H_Exp->GetXaxis()->SetRangeUser(Silicon_Calibration[det]->Eval(WindowsMap[NUCLEUS][peak2][det].first)*1e3, Silicon_Calibration[det]->Eval(WindowsMap[NUCLEUS][peak2][det].second)*1e3);
+            if (det>50) Sum2_Down_Exp += H_Exp->Integral();
+            else Sum2_Up_Exp += H_Exp->Integral();
+            Info(Form("Exp Peak 2: %.0f", H_Exp->Integral()), 2);
+
+            //Sim
+            TCanvas *c_Sim = (TCanvas *)f->Get(("H_Single_" + detectorName[det]).c_str());
+            TH1D *H_Sim = nullptr;
+            for (auto key : *c_Sim->GetListOfPrimitives())
+            {
+                if (string(key->GetName()).find("H_Single") != string::npos)
+                {
+                    H_Sim = (TH1D *)key;
+                }
+            }
+            if (H_Sim == nullptr) Error("H_Single histogram not found in simulated file for " + detectorName[det]);
+            
+            //peak1
+            H_Sim->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][peak1][det].first, WindowsMap[NUCLEUS][peak1][det].second);
+            if (det>50) Sum1_Down_Sim += H_Sim->Integral();
+            else Sum1_Up_Sim += H_Sim->Integral();
+            Info(Form("Sim Peak 1: %.0f", H_Sim->Integral()), 2);
+
+            //peak2
+            H_Sim->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][peak2][det].first, WindowsMap[NUCLEUS][peak2][det].second);
+            if (det>50) Sum2_Down_Sim += H_Sim->Integral();
+            else Sum2_Up_Sim += H_Sim->Integral();
+            Info(Form("Sim Peak 2: %.0f", H_Sim->Integral()), 2);        
+        }   
+    }
+
+    cout << "Sum1_Up_Exp: " << Sum1_Up_Exp << endl;
+    cout << "Sum1_Down_Exp: " << Sum1_Down_Exp << endl;
+    cout << "Sum2_Up_Exp: " << Sum2_Up_Exp << endl;
+    cout << "Sum2_Down_Exp: " << Sum2_Down_Exp << endl;
+
+    cout << "Sum1_Up_Sim: " << Sum1_Up_Sim << endl;
+    cout << "Sum1_Down_Sim: " << Sum1_Down_Sim << endl;
+    cout << "Sum2_Up_Sim: " << Sum2_Up_Sim << endl;
+    cout << "Sum2_Down_Sim: " << Sum2_Down_Sim << endl;
+
+    double Asym_Sim = (Sum1_Up_Sim * Sum2_Down_Sim) / (Sum2_Up_Sim * Sum1_Down_Sim);
+    double Asym_Sim_err = sqrt( pow( sqrt(Sum1_Up_Sim) * Sum2_Down_Sim / (Sum2_Up_Sim * Sum1_Down_Sim), 2)  + pow( Sum1_Up_Sim * sqrt(Sum2_Down_Sim) / (Sum2_Up_Sim * Sum1_Down_Sim), 2) + pow( Sum1_Up_Sim * Sum2_Down_Sim * sqrt(Sum2_Up_Sim) / (Sum2_Up_Sim * Sum2_Up_Sim * Sum1_Down_Sim), 2) + pow( Sum1_Up_Sim * Sum2_Down_Sim * sqrt(Sum1_Down_Sim) / (Sum2_Up_Sim * Sum1_Down_Sim * Sum1_Down_Sim), 2) );
+    double Asym_Exp = (Sum1_Up_Exp * Sum2_Down_Exp) / (Sum2_Up_Exp * Sum1_Down_Exp);
+    double Asym_Exp_err = sqrt(     pow( sqrt(Sum1_Up_Exp) * Sum2_Down_Exp / (Sum2_Up_Exp * Sum1_Down_Exp), 2) 
+                                  + pow( Sum1_Up_Exp * sqrt(Sum2_Down_Exp) / (Sum2_Up_Exp * Sum1_Down_Exp), 2)
+                                  + pow( Sum1_Up_Exp * Sum2_Down_Exp * sqrt(Sum2_Up_Exp) / (Sum2_Up_Exp * Sum2_Up_Exp * Sum1_Down_Exp), 2) 
+                                  + pow( Sum1_Up_Exp * Sum2_Down_Exp * sqrt(Sum1_Down_Exp) / (Sum2_Up_Exp * Sum1_Down_Exp * Sum1_Down_Exp), 2) ) ;
+
+    double DeltaAsym = Asym_Sim - Asym_Exp;
+    double DeltaAsym_err = sqrt(Asym_Sim_err*Asym_Sim_err + Asym_Exp_err*Asym_Exp_err);
+
+    f->Close();
+    
+    Info(filename, 1);
+    Info("Asymmetry Efficiency Sim: " + to_string(Asym_Sim) + " ± " + to_string(Asym_Sim_err), 2);
+    Info("Asymmetry Efficiency Exp: " + to_string(Asym_Exp) + " ± " + to_string(Asym_Exp_err), 2);
+    Info("Delta Asymmetry Efficiency (Sim - Exp): " + to_string(DeltaAsym) + " ± " + to_string(DeltaAsym_err), 2);
+
+    return make_pair(DeltaAsym, DeltaAsym_err); 
 }
 
 void LoadCalibrations()
@@ -332,14 +479,37 @@ double FindMinimalStep(const vector<double> &values)
 
 string AnalyseSim(string filename, double &x, double &y, double &z)
 {
+    double a = 0;
     TFile *Sim = MyTFile(filename.c_str(), "READ", "Q");
 
     // extracting parametrs from filename with regex
     std::regex rgx;
+    bool flagnew = false;
     if (TYPE == "Catcher")
         rgx = std::regex("catcherx([-+]?[0-9]*\\.?[0-9]+)_catchery([-+]?[0-9]*\\.?[0-9]+)_catcherz([-+]?[0-9]*\\.?[0-9]+)");
+        // rgx = std::regex("catcherx([-+]?[0-9]*\\.?[0-9]+)_catchery([-+]?[0-9]*\\.?[0-9]+)_catcherz([-+]?[0-9]*\\.?[0-9]+)_a([-+]?[0-9]*\\.?[0-9]+)");                                                                   
     else if (TYPE == "Detectors")
+    {
         rgx = std::regex("catcherz([-+]?[0-9]*\\.?[0-9]+)_Det_x([-+]?[0-9]*\\.?[0-9]+)_y([-+]?[0-9]*\\.?[0-9]+)");
+        std::smatch match;
+        if (std::regex_search(filename, match, rgx) && match.size() == 4)
+        {
+        }
+        else
+        {
+            rgx = std::regex("Det_x([-+]?[0-9]*\\.?[0-9]+)_y([-+]?[0-9]*\\.?[0-9]+)_z([-+]?[0-9]*\\.?[0-9]+)");
+             if (std::regex_search(filename, match, rgx) && match.size() == 4)
+             {
+                flagnew = true;
+             }
+             else
+             {
+                Error("Filename does not match expected patterns for Detectors type: " + filename);
+                return "";
+             }
+        }
+    }
+
     else
     {
         Error("Unknown TYPE: " + TYPE);
@@ -347,6 +517,7 @@ string AnalyseSim(string filename, double &x, double &y, double &z)
     }
     std::smatch match;
     if (std::regex_search(filename, match, rgx) && match.size() == 4)
+    // if (std::regex_search(filename, match, rgx) && match.size() == 5)
     {
         string x_pos = TYPE == "Catcher" ? to_string(stod(match[1])) : to_string(stod(match[2]));
         string y_pos = TYPE == "Catcher" ? to_string(stod(match[2])) : to_string(stod(match[3]));
@@ -354,12 +525,15 @@ string AnalyseSim(string filename, double &x, double &y, double &z)
         if (stod(x_pos) == 0.25 && stod(y_pos) == 4.0 && stod(z_pos) == 1.15)
             return "";
 
-        x = TYPE == "Catcher" ? stod(match[1]) : stod(match[2]);
-        y = TYPE == "Catcher" ? stod(match[2]) : stod(match[3]);
-        z = TYPE == "Catcher" ? stod(match[3]) : stod(match[1]);
+        x = TYPE == "Catcher" ? stod(match[1]) : flagnew ? stod(match[1]) : stod(match[2]);
+        y = TYPE == "Catcher" ? stod(match[2]) : flagnew ? stod(match[2]) : stod(match[3]);
+        z = TYPE == "Catcher" ? stod(match[3]) : flagnew ? stod(match[3]) : stod(match[1]);
+
+        a = TYPE == "Catcher" ? stod(match[4]) : 0;
     }
 
-    string par_string = "x=" + to_string(x) + " y=" + to_string(y) + " z=" + to_string(z);
+    // string par_string = "x=" + to_string(x) + " y=" + to_string(y) + " z=" + to_string(z);
+    string par_string = "x=" + to_string(x) + " y=" + to_string(y) + " z=" + to_string(z) + " a=" + to_string(a);
 
     // - Eshift
     TCanvas *c_Sim = (TCanvas *)Sim->Get("Eshift");
@@ -696,6 +870,7 @@ void PlottingScans()
     OUTPUT_FILE->cd();
 
     // flat on x
+    Info("Plotting scans YZ", 1);
     vector<double> x_values, y_values;
     for (int i = 0; i < G2_CoincSingle_YZ->GetN(); i++)
     {
@@ -704,6 +879,7 @@ void PlottingScans()
         x_values.push_back(x);
         y_values.push_back(y);
     }
+    Info("Found " + to_string(x_values.size()) + " points", 1);
     sort(x_values.begin(), x_values.end());
     sort(y_values.begin(), y_values.end());
     auto last_x = unique(x_values.begin(), x_values.end());
@@ -716,7 +892,7 @@ void PlottingScans()
     double x_maxi = abs(x_values.back()) > abs(x_values.front()) ? abs(x_values.back()) : abs(x_values.front());
     double x_min = -x_maxi - min_step_x / 2;
     double x_max = x_maxi + min_step_x / 2;
-
+    Info("x range: [" + to_string(x_min) + ", " + to_string(x_max) + "] with step " + to_string(min_step_x), 1);
     double y_maxi = abs(y_values.back()) > abs(y_values.front()) ? abs(y_values.back()) : abs(y_values.front());
     double y_min = -y_maxi - min_step_y / 2;
     double y_max = y_maxi + min_step_y / 2;
@@ -726,7 +902,7 @@ void PlottingScans()
 
     if (TYPE == "Detectors")
     {
-
+        Info("Plotting detectors scans YZ", 1);
         TCanvas *C_Scan_YZ = new TCanvas("C_Scan_YZ", "C_Scan_YZ", 1200, 800);
         C_Scan_YZ->Divide(4, 1);
         // Proton Counts
@@ -827,6 +1003,7 @@ void PlottingScans()
     n_bins_x = (int)((x_max - x_min) / min_step_x) * 10;
     n_bins_y = (int)((y_max - y_min) / min_step_y) * 10;
 
+    Info("Plotting scans on XY plane", 1);
     TCanvas *C_Scan_XY = new TCanvas("C_Scan_XY", "C_Scan_XY", 1200, 800);
     C_Scan_XY->Divide(4, 1);
     // Proton Counts
@@ -997,26 +1174,61 @@ void PlottingScans()
             double y = G2_MeanDiff_CoincSingle_XY->GetY()[i];
             double value = G2_MeanDiff_CoincSingle_XY->GetZ()[i];
             double err = G2_MeanDiff_CoincSingle_XY->GetErrorZ(i);
+            if (y < 1.6 || y > 2.4)
+                continue;
             G_Y_Diff->AddPoint(y, value);
             G_Y_Diff->SetPointError(G_Y_Diff->GetN() - 1, 0, err);
         }
 
-        G_Y_Diff->SetTitle("Mean Diff Coinc/Single Ratio at x=0;Y (mm);Mean Diff Ratio");
+        G_Y_Diff->SetTitle("Mean Diff Coinc/Single Ratio at x=0;y (mm);Mean Diff Ratio");
         G_Y_Diff->SetMarkerStyle(20);
         G_Y_Diff->SetMarkerColor(kBlack);
         G_Y_Diff->SetMarkerSize(2);
-        TF1 *f_diff = new TF1("asympol2_diff", AsymetricPol2, 1.25, 2.5, 4);
-        f_diff->SetParameters(2.1, 0, 0, 0);
+        TF1 *f_diff = new TF1("pol1", "[0]*(x-[1])", 1.6, 2.4);
+        f_diff->SetParameters(-0.005, 2.2);
         r = G_Y_Diff->Fit(f_diff, "RS");
         G_Y_Diff->Draw("AP");
+        double Y0 = f_diff->GetParameter(1);
+        double err_Y0 = f_diff->GetParError(1);
+
+        TLatex *latex_diff = new TLatex(0.6, 0.8, Form("y_{0} = %.2f +/- %.2f mm", Y0, err_Y0));
+        latex_diff->SetNDC();
+        latex_diff->SetTextColor(kRed);
+        latex_diff->Draw("SAME");
+
+        TLine *line_yO = new TLine(Y0, G_Y_Diff->GetYaxis()->GetXmin(), Y0, f_diff->Eval(Y0));
+        line_yO->SetLineColor(kRed);
+        line_yO->SetLineStyle(9);
+        line_yO->Draw("SAME");
+        TLine *line_y0p = new TLine(Y0 + err_Y0, G_Y_Diff->GetYaxis()->GetXmin(), Y0 + err_Y0, f_diff->Eval(Y0 - err_Y0));
+        line_y0p->SetLineColor(kRed);
+        line_y0p->SetLineStyle(2);
+        line_y0p->Draw("SAME");
+        TLine *line_y0m = new TLine(Y0 - err_Y0, G_Y_Diff->GetYaxis()->GetXmin(), Y0 - err_Y0, f_diff->Eval(Y0 + err_Y0));
+        line_y0m->SetLineColor(kRed);
+        line_y0m->SetLineStyle(2);
+        line_y0m->Draw("SAME");
+        TLine *line_zero = new TLine(G_Y_Diff->GetXaxis()->GetXmin(), 0, Y0, 0);
+        line_zero->SetLineColor(kRed);
+        line_zero->SetLineStyle(9);
+        line_zero->Draw("SAME");
+        TLine *line_zerop = new TLine(G_Y_Diff->GetXaxis()->GetXmin(), f_diff->Eval(Y0 + err_Y0), Y0 - err_Y0, f_diff->Eval(Y0 + err_Y0));
+        line_zerop->SetLineColor(kRed);
+        line_zerop->SetLineStyle(2);
+        line_zerop->Draw("SAME");
+        TLine *line_zerom = new TLine(G_Y_Diff->GetXaxis()->GetXmin(), f_diff->Eval(Y0 - err_Y0), Y0 + err_Y0, f_diff->Eval(Y0 - err_Y0));
+        line_zerom->SetLineColor(kRed);
+        line_zerom->SetLineStyle(2);
+        line_zerom->Draw("SAME");
+        
         C_Scan_Y_Diff->Write();
 
         if (r->IsValid())
         {
             Info("1D Fit on Diff Ratio Results:");
-            Warning("Z is fixed!");
+            Warning("XZ are fixed!");
             Info("χ2 / NDF = " + to_string(r->Chi2() / r->Ndf()));
-            Info(Form("Y0 = %.2f +/- %.2f mm", f_diff->GetParameter(0), f_diff->GetParError(0)));
+            Info(Form("Y0 = %.2f +/- %.2f mm", Y0, err_Y0));
         }
          else
         {
@@ -1094,14 +1306,88 @@ void PlottingScans()
 
     if (TYPE == "Detectors")
     {
-
         /// PROTON COUNTS ///
         Info(" --- Fitting Proton Counts --- ");
+        Info("Fitting X", 2)    ;
+        // 1D fit in a global minimum on X
+        TCanvas *C_Scan_X = new TCanvas("C_Scan_X", "C_Scan_X", 1200, 800);
+        G_ProtonCounts_X->SetTitle("Proton Counts at y=1.3-2.5;X (mm);Proton Counts");
+        G_ProtonCounts_X->SetMarkerStyle(20);
+        G_ProtonCounts_X->SetMarkerColor(kBlack);
+        G_ProtonCounts_X->SetMarkerSize(2);
+        TF1 *f = new TF1("asympol2", "[0] + [1]*pow(x-[2], 2)", -1.5, 1.5);
+        f->SetParameters(G_ProtonCounts_X->GetMinimum(), 1000, -0.3);
+        f->SetParLimits(1, 0, 1e6);
+        TFitResultPtr r = G_ProtonCounts_X->Fit(f, "RS");
+        G_ProtonCounts_X->Draw("AP");
+        C_Scan_X->Write();
+
+        Info("1D Fit on X Results:");
+        Warning("Z is fixed!");
+        Warning("Y is fixed!");
+        if (r->IsValid())        {
+            Info("χ2 / NDF = " + to_string(r->Chi2() / r->Ndf()));
+            Info(Form("X0 = %.2f +/- %.2f mm", f->GetParameter(2), f->GetParError(2)));
+        }
+        else        {
+            Warning("1D Fit on X did not converge!");
+        }
+
+        Info("Fitting Y", 2);
+        // 1D fit in a global minimum on Y
+        TCanvas *C_Scan_Y = new TCanvas("C_Scan_Y", "C_Scan_Y", 1200, 800);
+        G_ProtonCounts_Y->SetTitle("Proton Counts at x=0;Y (mm);Proton Counts");
+        G_ProtonCounts_Y->SetMarkerStyle(20);
+        G_ProtonCounts_Y->SetMarkerColor(kBlack);
+        G_ProtonCounts_Y->SetMarkerSize(2);
+        f = new TF1("asympol2", "[0] + [1]*pow(x-[2], 2)", 0.0, 3.5);
+        f->SetParameters(G_ProtonCounts_Y->GetMinimum(), 1000, 1.8);
+        f->SetParLimits(1, 0, 1e6);
+        r = G_ProtonCounts_Y->Fit(f, "RS");
+        G_ProtonCounts_Y->Draw("AP");
+        C_Scan_Y->Write();
+
+        Info("1D Fit on Y Results:");
+        Warning("Z is fixed!");
+        Warning("X is fixed!");
+        if (r->IsValid())        {
+            Info("χ2 / NDF = " + to_string(r->Chi2() / r->Ndf()));
+            Info(Form("Y0 = %.2f +/- %.2f mm", f->GetParameter(2), f->GetParError(2)));
+        }
+        else        {
+            Warning("1D Fit on Y did not converge!");
+        }
+
+        Info("Fitting on Z", 2);
+        // 1D fit in a global minimum on Z
+        TCanvas *C_Scan_Z = new TCanvas("C_Scan_Z", "C_Scan_Z", 1200, 800);
+        G_ProtonCounts_Z->SetTitle("Proton Counts at x=0, y=1.75;Z (mm);Proton Counts");
+        G_ProtonCounts_Z->SetMarkerStyle(20);
+        G_ProtonCounts_Z->SetMarkerColor(kBlack);
+        G_ProtonCounts_Z->SetMarkerSize(2);
+        f = new TF1("asympol2", "[0] + [1]*pow(x-[2], 2)", -2, 1.8);
+        f->SetParameters(G_ProtonCounts_Z->GetMinimum(), 1000, 0.4);
+        f->SetParLimits(1, 0, 1e6);
+        r = G_ProtonCounts_Z->Fit(f, "RS");
+        G_ProtonCounts_Z->Draw("AP");
+        C_Scan_Z->Write();
+
+        Info("1D Fit on Z Results:");
+        Warning("X is fixed!");
+        Warning("Y is fixed!");
+        if (r->IsValid())        {
+            Info("χ2 / NDF = " + to_string(r->Chi2() / r->Ndf()));
+            Info(Form("Z0 = %.2f +/- %.2f mm", f->GetParameter(2), f->GetParError(2)));
+        }
+        else        {
+            Warning("1D Fit on Z did not converge!");
+        }
+
         Info("Fitting XY", 2);
         // 2D fit in a global minimum 2D asym XY 
-        double x_min_fit = -2;
-        double x_max_fit = 2;
-        double y_min_fit = 0.;
+        double x_min_fit = -1.5;
+        double x_max_fit = 1.5;
+        double y_min_fit = 0.5;
         double y_max_fit = 3.;
         TGraph2DErrors *G2_ProtonCounts_XY_Fit = new TGraph2DErrors();
         for (int i = 0; i < G2_ProtonCounts_XY->GetN(); i++)
@@ -1121,15 +1407,14 @@ void PlottingScans()
         TF2 * f2 = new TF2("asympol2_2D", AsymetricPol2_2D, x_min_fit, x_max_fit, y_min_fit, y_max_fit, 7);
         f2->SetParLimits(0, -1, 1);
         f2->SetParameter(0, 0.);
-        f2->SetParLimits(1, 0.5, 3);
-        f2->SetParameter(1, 2.);
-        f2->SetParLimits(2, 0.0, 10);
-        f2->SetParLimits(3, 0.0, 10);
-        f2->SetParLimits(4, 0.0, 10);
-        f2->SetParLimits(5, 0.0, 10);
-        f2->SetParLimits(6, 0.0, 10);
-        // set call limit
-        TFitResultPtr r = G2_ProtonCounts_XY_Fit->Fit(f2, "RS", "");
+        f2->SetParLimits(1, 0.5, 2.2);
+        f2->SetParameter(1, 1.8);
+        // f2->SetParLimits(2, 0.0, 0.1);
+        // f2->SetParLimits(3, 0.0, 0.1);
+        // f2->SetParLimits(4, 0.0, 0.1);
+        // f2->SetParLimits(5, 0.0, 0.1);
+        // f2->SetParLimits(6, 0.0, 0.1);
+        r = G2_ProtonCounts_XY_Fit->Fit(f2, "RS", "");
         G2_ProtonCounts_XY_Fit->SetMarkerStyle(20);
         G2_ProtonCounts_XY_Fit->SetMarkerColor(kBlack);
         G2_ProtonCounts_XY_Fit->SetMarkerSize(2);
@@ -1172,17 +1457,17 @@ void PlottingScans()
         TF2 * f2_yz = new TF2("asympol2_2D_YZ", AsymetricPol2_2D, y_min_fit, y_max_fit, z_min_fit, z_max_fit, 7);
         f2_yz->SetParLimits(0, 1.6, 2.5);
         f2_yz->SetParameter(0, 2.);
-        f2_yz->SetParLimits(1, 0.2, 0.7);
+        f2_yz->SetParLimits(1, 0.2, 0.8);
         f2_yz->SetParameter(1, 0.);
-        f2_yz->SetParLimits(2, 0.0, 10000);
-        f2_yz->SetParameter(2, 600);
-        f2_yz->SetParLimits(3, 0.0, 10000);
-        f2_yz->SetParameter(3, 600);
-        f2_yz->SetParLimits(4, 0.0, 10000);
-        f2_yz->SetParameter(4, 600);
-        f2_yz->SetParLimits(5, 0.0, 10000);
-        f2_yz->SetParameter(5, 600);
-        f2_yz->SetParLimits(6, 0., 10000);
+        f2_yz->SetParLimits(2, 0.0, 1);
+        f2_yz->SetParameter(2, 0.01);
+        f2_yz->SetParLimits(3, 0.0, 1);
+        f2_yz->SetParameter(3, 0.01);
+        f2_yz->SetParLimits(4, 0.0, 1);
+        f2_yz->SetParameter(4, 0.01);
+        f2_yz->SetParLimits(5, 0.0, 1);
+        f2_yz->SetParameter(5, 0.01);
+        f2_yz->SetParLimits(6, 0., 1);
         TCanvas *C_Scan_YZ = new TCanvas("C_Scan_YZ_Fit", "C_Scan_YZ_Fit", 1200, 800);
         r = G2_ProtonCounts_YZ_Fit->Fit(f2_yz, "RS", "");
         G2_ProtonCounts_YZ_Fit->SetMarkerStyle(20);

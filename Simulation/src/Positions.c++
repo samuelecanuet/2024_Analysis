@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 
     //  ################################################# //
     // OUTPUT FILE ///
-    OUTPUT_FILE = MyTFile((DIR_ROOT_DATA_ANALYSED + "Positions_" + TYPE + "_" + to_string(YEAR) + ".root").c_str(), "RECREATE");
+    OUTPUT_FILE = MyTFile((DIR_ROOT_DATA_ANALYSED + "Positions_" + TYPE + "_" + to_string(YEAR) + "_new.root").c_str(), "RECREATE");
     //  ################################################# //
 
 
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
     {
         if (IsDetectorSiliStrip(det))
         {
-            TH1D* H_Exp = (TH1D *)Exp_FILE_grouped->Get(("Strip/Strip_Channel/" + detectorName[det] + "/Channel_Cleaned_" + detectorName[det]).c_str());
+            TH1D* H_Exp = (TH1D *)Exp_FILE_grouped->Get(("Strip/Strip_Channel/" + detectorName[det] + "/Channel_RAW_" + detectorName[det]).c_str());
             if (H_Exp == nullptr) Error("Channel_Cleaned histogram not found for " + detectorName[det] + " in experimental grouped file");
             H_Exp->GetXaxis()->SetRangeUser(Silicon_Calibration[det]->Eval(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first)*1e3, Silicon_Calibration[det]->Eval(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second)*1e3);
             double integral_exp = H_Exp->Integral();
@@ -97,10 +97,15 @@ int main(int argc, char *argv[])
     // path to files 
     // string path = "/run/media/local1/DATANEX/Samuel-G4/CatcherRelativePosition/";
     string path = "/run/media/local1/DATANEX/Samuel-G4/Positions/" + TYPE + "/";
+    // string path = "/run/media/local1/DATANEX/Samuel-G4/Positions/" + TYPE + "/Different_CRADLE/";
 
     // Finding all interesting files in the directory
-    vector<string> filenames = FindAllSimulatedFiles(path, to_string(YEAR));
+    vector<string> filenames;// = FindAllSimulatedFiles(path, to_string(YEAR));
+    vector<string> filenames_new = FindAllSimulatedFiles("/run/media/local1/DATANEX/Samuel-G4/Systematics/Silicon_Position/", to_string(YEAR));
 
+    filenames.insert(filenames.end(), filenames_new.begin(), filenames_new.end());
+    // resize to have 20
+    // filenames.resize(20);
     int counter = 0;
     // Looping over files and filing maps TGraphErrors
     for (auto f : filenames)
@@ -136,28 +141,44 @@ int main(int argc, char *argv[])
         // Chi2_ProtonCounts[par_string] = Sum(G_Sim_ProtonCounts_Relative[par_string]);
         Chi2_Total[par_string] = Chi2_Eshift[par_string] + 4*Chi2_CoincSingle[par_string] + 2*Chi2_ProtonCounts[par_string];
 
-        
 
-        if (x == 0.0)
+        if (y == 1.83 && z == -0.66)
+        {
+            G_ProtonCounts_X->AddPoint(x, Chi2_ProtonCounts[par_string]);
+        }
+        if (x == -0.3 && z == -0.66)
+        {
+            G_ProtonCounts_Y->AddPoint(y, Chi2_ProtonCounts[par_string]);
+        }
+        if (x == -0.3 && y == 1.83)
+        {
+            G_ProtonCounts_Z->AddPoint(z, Chi2_ProtonCounts[par_string]);
+        }
+        
+    
+        if (x == -0.3)
         {
             G2_CoincSingle_YZ->AddPoint(y, z, Chi2_CoincSingle[par_string]);
-            // G2_ProtonCounts_YZ->AddPoint(y, z, Chi2_ProtonCounts[par_string]);
-            pair<double, double> value = MeanDistance(G_Sim_ProtonCounts_Relative[par_string]);
-            G2_ProtonCounts_YZ->AddPoint(y, z, value.first);
-            G2_ProtonCounts_YZ->SetPointError(G2_ProtonCounts_YZ->GetN() - 1, 0, 0, value.second);
+            G2_ProtonCounts_YZ->AddPoint(y, z, Chi2_ProtonCounts[par_string]);
+            // pair<double, double> value = Sum(G_Sim_ProtonCounts_Relative[par_string]);
+            // pair<double, double> value = AsymetryEfficiency(f);
+            // G2_ProtonCounts_YZ->AddPoint(y, z, value.first);
+            // G2_ProtonCounts_YZ->SetPointError(G2_ProtonCounts_YZ->GetN() - 1, 0, 0, value.second);
+
+
             G2_Eshift_YZ->AddPoint(y, z, Chi2_Eshift[par_string]);
             // pair<double, double> value_eshift = MeanDistance(G_Sim_Eshift_Relative[par_string]);
             // G2_Eshift_YZ->AddPoint(y, z, value_eshift.first);
             // G2_Eshift_YZ->SetPointError(G2_Eshift_YZ->GetN() - 1, 0, 0, value_eshift.second);
             G2_Total_YZ->AddPoint(y, z, Chi2_Total[par_string]);
         }
-        if ((z == 0.0 && TYPE == "Catcher") || (z == 0.0 && TYPE == "Detectors"))
+        if ((z == -0.66 && TYPE == "Catcher") || (z == -0.66 && TYPE == "Detectors"))
         {
             G2_CoincSingle_XY->AddPoint(x, y, Chi2_CoincSingle[par_string]);
-            // G2_ProtonCounts_XY->AddPoint(x, y, Chi2_ProtonCounts[par_string]);
-            pair<double, double> value = MeanDistance(G_Sim_ProtonCounts_Relative[par_string]);
-            G2_ProtonCounts_XY->AddPoint(x, y, value.first);
-            G2_ProtonCounts_XY->SetPointError(G2_ProtonCounts_XY->GetN() - 1, 0, 0, value.second);
+            G2_ProtonCounts_XY->AddPoint(x, y, Chi2_ProtonCounts[par_string]);
+            // pair<double, double> value = Sum(G_Sim_ProtonCounts_Relative[par_string]);
+            // G2_ProtonCounts_XY->AddPoint(x, y, value.first);
+            // G2_ProtonCounts_XY->SetPointError(G2_ProtonCounts_XY->GetN() - 1, 0, 0, value.second);
             G2_Eshift_XY->AddPoint(x, y, Chi2_Eshift[par_string]);
             pair<double, double> value_eshift = MeanDistance(G_Sim_Eshift_Relative[par_string]);
             G2_Eshift_XY->AddPoint(x, y, value_eshift.first);
@@ -168,7 +189,7 @@ int main(int argc, char *argv[])
             if (TYPE == "Catcher")
             {
                 pair<double, double> value = MeanDiff(G_Exp_CoincSingle, G_Sim_CoincSingle[par_string]);
-                G2_MeanDiff_CoincSingle_XY->AddPoint(x, y, abs(value.first));
+                G2_MeanDiff_CoincSingle_XY->AddPoint(x, y, value.first);
                 G2_MeanDiff_CoincSingle_XY->SetPointError(G2_MeanDiff_CoincSingle_XY->GetN() - 1, 0, 0, value.second);
             }
             

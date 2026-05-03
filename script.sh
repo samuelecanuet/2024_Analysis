@@ -1,6 +1,6 @@
 #!/bin/bash
 
-YEAR="2021"
+YEAR="2025"
 
 run_list=$(awk '
 /#32Ar/ {f=1}
