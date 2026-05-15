@@ -17,6 +17,11 @@ TFile* MyTFile(string filename, string option, string myoption="", int indent = 
     }
     else if (option == "READ")
     {
+		if (file->GetListOfKeys()->GetEntries() == 0)
+		{
+			Warning("File is empty: " + filename);
+			return NULL;
+		}
         if (myoption != "Q")
         {
             Success("Read: " + filename, indent);
@@ -70,7 +75,8 @@ void WriteTime(TFile* from_File, TFile* to_file)
 
   if (start == NULL || stop == NULL)
   {
-    Error("No Start or Stop time found");
+    Warning("No Start or Stop time found");
+	return;
   }
 
   to_file->cd();

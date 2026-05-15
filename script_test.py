@@ -2,7 +2,7 @@ import os
 import time
 import subprocess
 
-directories = ["Bfield", "Catcher_thickness", "DL", "a_Calibration", "Sampling", "Silicon_Position", "Sensibility_B"]
+directories = ["Bfield", "Catcher_thickness", "DL", "a_Calibration", "Sampling", "Silicon_Position", "Sensibility_B", "Cuts/Cuts", "Cuts/StepMax"]
 
 # inpath = '/run/media/local1/DATANEX/Samuel-G4/Positions/Detectors/AsyEfficiency/'
 

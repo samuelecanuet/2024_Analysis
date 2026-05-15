@@ -5,7 +5,7 @@
 int main()
 {
 
-    FLAG2024 = true;
+    FLAG2025 = true;
     
     InitDetectors("Config_Files/sample.pid");
     VERBOSE = 0;
@@ -42,9 +42,10 @@ int main()
     ///////////////////////////////////  2025 //////////////////////////////////
     else if (YEAR == 2025)
     {
-        Nuclei = {"32Ar"};  
+        Nuclei = {"32Ar", "33Ar"};  
         Start("DATA Files");
-        MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+        // MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+        MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged_around33.root").c_str(), "READ");
         // MERGED_File["32Cl"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
         MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
         Start("SIMULATED Files");

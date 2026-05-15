@@ -49,7 +49,8 @@ int main(int argc, char *argv[])
         // CalibrationPeaks["32Ar_thick"] = {5, 8, 14};
         // CalibrationPeaks["33Ar"] = {2, 12, 21, 26, 35, 37, 40};
 
-        CalibrationPeaks["32Ar"] = {8, 14, 17, 23};
+        // IAS pol1
+        CalibrationPeaks["32Ar"] = {5, 8, 14, 17, 23};
         CalibrationPeaks["33Ar"] = {9, 12, 21, 26};
     }
     ////////////////////////////////////////////////////////////////////////////
@@ -83,7 +84,7 @@ int main(int argc, char *argv[])
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     Start("OUTPUT Files");
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "_fullLitt.root").c_str(), "RECREATE");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + ".root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -91,7 +92,7 @@ int main(int argc, char *argv[])
     int last = 86;
     Fitting_Resolution_FLAG = false;
     // Fitting_Calibration_FLAG = false; // no implemented  
-    Calibration_Litt = true;
+    Calibration_Litt = false;
 
     FillingSimHitograms();
     InitAlphaPeaks();

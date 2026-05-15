@@ -20,9 +20,11 @@ int main(int argc, char *argv[])
         string NUCLEUS = pairr.first;
         // if (NUCLEUS.find("33Ar") == string::npos)
         //     continue;
+        // if (NUCLEUS.find("32Ar") == string::npos)
+        //     continue;
         pair<string, vector<string>> NUCLEUS_Run = make_pair(NUCLEUS, Map_RunFiles[NUCLEUS]);
         Start("Merging " + NUCLEUS_Run.first);
-        MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + NUCLEUS_Run.first + "_merged.root").c_str(), "RECREATE");
+        MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + NUCLEUS_Run.first + "_merged_around33.root").c_str(), "RECREATE");
         InitGraph();
         TDirectory *dir = MERGED_File->mkdir("Strips");
         MERGED_Tree = new TTree("MERGED_Tree", "MERGED_Tree");
@@ -45,6 +47,8 @@ int main(int argc, char *argv[])
         {
             string Run = NUCLEUS_Run.second[i];
             int Run_int = atoi(Run.c_str());
+            // if (Run_int != 61 && Run_int != 60 && Run_int != 59 && Run_int != 58 && Run_int != 62 && Run_int != 63 && Run_int != 64 && Run_int != 65)
+            //     continue;   
             Info("Current Run : " + Run);
             GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, Run);
             GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");

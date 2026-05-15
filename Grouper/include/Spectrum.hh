@@ -651,30 +651,30 @@ void ReadingExperimentalData(string Nucleus)
             H_Silicon_TimeGated_2[Nucleus][dir]->Fill(Silicon_Energy);
 
         // Looping through peaks
-        // for (int peak = 1; peak <= CanvasMap[Nucleus].first * CanvasMap[Nucleus].second; peak++)
-        // {
-        //     if (WindowsMap[Nucleus][peak][Silicon_Label].first == -1 || !WindowsMap[Nucleus][peak][Silicon_Label].first)
-        //         continue;
+        for (int peak = 1; peak <= CanvasMap[Nucleus].first * CanvasMap[Nucleus].second; peak++)
+        {
+            if (WindowsMap[Nucleus][peak][Silicon_Label].first == -1 || !WindowsMap[Nucleus][peak][Silicon_Label].first)
+                continue;
 
-        //     if (WindowsMap[Nucleus][peak][Silicon_Label].first < Silicon_Energy && Silicon_Energy < WindowsMap[Nucleus][peak][Silicon_Label].second)
-        //     {
-        //         H_Release[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
-        //         if (Coincidence && (**SiPM_Groups).size() > 0)
-        //         {
-        //             H_Release_Coinc[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
-        //             if ((**SiPM_Groups)[0].size() >= 3)
-        //             {
-        //                 for (int i = 0; i < (**SiPM_Groups)[0].size(); i++)
-        //                 {
-        //                     if (GetDetectorChannel((**SiPM_Groups)[0][i].second.Label) == 7 && (**SiPM_Groups)[0][i].second.isValid)
-        //                     {
-        //                         H_Exp_Beta[Nucleus][peak][dir]->Fill(Calibration[GetDetectorChannel((**SiPM_Groups)[0][i].second.Label)]->Eval((**SiPM_Groups)[0][i].second.Channel/1000.));
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+            if (WindowsMap[Nucleus][peak][Silicon_Label].first < Silicon_Energy && Silicon_Energy < WindowsMap[Nucleus][peak][Silicon_Label].second)
+            {
+                H_Release[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
+                if (Coincidence && (**SiPM_Groups).size() > 0)
+                {
+                    H_Release_Coinc[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
+                    if ((**SiPM_Groups)[0].size() >= 3)
+                    {
+                        for (int i = 0; i < (**SiPM_Groups)[0].size(); i++)
+                        {
+                            if (GetDetectorChannel((**SiPM_Groups)[0][i].second.Label) == 7 && (**SiPM_Groups)[0][i].second.isValid)
+                            {
+                                H_Exp_Beta[Nucleus][peak][dir]->Fill(Calibration[GetDetectorChannel((**SiPM_Groups)[0][i].second.Label)]->Eval((**SiPM_Groups)[0][i].second.Channel/1000.));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

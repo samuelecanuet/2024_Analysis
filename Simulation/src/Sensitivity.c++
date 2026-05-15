@@ -10,11 +10,12 @@ int main()
 
 
 
-    TFile *fout = MyTFile(("/run/media/local1/DATANEX/Samuel-G4/Systematics/Sensibility_B/Sensitivity_B_" + to_string(YEAR) + ".root").c_str(),"RECREATE");
+    TFile *fout = MyTFile(("/run/media/local1/DATANEX/Samuel-G4/Systematics/Sensibility_B/Sensitivity_B_" + to_string(YEAR) + "_a0.9.root").c_str(),"RECREATE");
 
-
+    
+    
     vector<string> filenames;
-    Search_files("/run/media/local1/DATANEX/Samuel-G4/Systematics/Sensibility_B/", {"result.root"}, filenames);
+    Search_files("/run/media/local1/DATANEX/Samuel-G4/Systematics/Sensibility_B/", {"a0.9", "_result.root"}, filenames);
 
     map<double, TGraphErrors*> G_Eshift;
 

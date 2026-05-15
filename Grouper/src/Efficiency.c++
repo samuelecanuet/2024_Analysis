@@ -22,7 +22,6 @@ int main()
 
     TFile *output = MyTFile(("Efficiency_" + to_string(YEAR) + ".root").c_str(), "RECREATE");
 
-
     map<string, vector<vector<int>>> Peaks;
 
     Peaks["32Ar"] = {{1}, {3}, {5, 6}, {25}, {29}, {30}};

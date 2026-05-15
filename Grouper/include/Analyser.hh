@@ -166,7 +166,7 @@ void InitHistograms()
     Info("Init Histograms end");
 }
 
-void InitCalib()
+void InitCalib(int sigma_calib = 0)
 {
     CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
     for (int i = 0; i < SIGNAL_MAX; i++)
@@ -174,11 +174,16 @@ void InitCalib()
         if (IsDetectorSiliStrip(i))
         {
             Calibration[i] = (TF1 *)CALIBRATED_File->Get(("Calibration_" + detectorName[i]).c_str());
+            
 
             if (Calibration[i] == NULL)
             {
                 Error("No calibration found for " + detectorName[i]);
             }
+
+            // error progagtion
+            Calibration[i]->SetParameter(1, Calibration[i]->GetParameter(1) + sigma_calib * Calibration[i]->GetParError(1));
+            Calibration[i]->SetParameter(0, Calibration[i]->GetParameter(0) + sigma_calib * Calibration[i]->GetParError(0));            
         }
     }
 

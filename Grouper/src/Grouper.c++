@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2025 = true;
+    FLAG2024 = true;
     
     InitDetectors("Config_Files/sample.pid");
     InitWindows();
@@ -60,8 +60,8 @@ int main(int argc, char *argv[])
     else
         GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + ROOT_basefilename + "_grouped.root").c_str(), "RECREATE");
 
-    GROUPED_File->cd();
     WriteTime(ROOT_File, GROUPED_File);
+    GROUPED_File->cd();
     ///////////////////////////////////  INITIALISATION ///////////////////////////////////
     
     InitHistograms_Grouped();

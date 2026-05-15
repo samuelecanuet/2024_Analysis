@@ -279,37 +279,39 @@ file1 = TFile("../Calibration_2025 copy.root", "READ")
 # plt.savefig("Reviewed/2D_Beam_Calibrated_with_fit_2.pdf")
 # plt.show()
 
-# #RESULT ################ 2024
-#     #### 2D
+#RESULT ################ 2024
+    #### 2D
 
-# cmap = plt.get_cmap('Blues')
+cmap = plt.get_cmap('Blues')
 
-# fig, ax = plt.subplots(figsize = (10, 8), constrained_layout=True)
-# file = TFile("../Calibration_2024_Saved.root", "READ")
-# c = file.Get("MeassurementFitted_2D_View")
-# for h in c.GetListOfPrimitives():
-#     if h.ClassName() == "TF2":
-#         f = h
+fig, ax = plt.subplots(figsize = (10, 8), constrained_layout=True)
+file = TFile("../Calibration_2024_Saved.root", "READ")
+c = file.Get("MeassurementFitted_2D_View")
+for h in c.GetListOfPrimitives():
+    if h.ClassName() == "TF2":
+        f = h
+        f.Print("v")
 
-# c = file.Get("Measurement_2D_View")
-# h2 = None
-# for h in c.GetListOfPrimitives():
-#     if h.ClassName() == "TH2D":
-#         h2 = h
+c = file.Get("Measurement_2D_View")
+h2 = None
+for h in c.GetListOfPrimitives():
+    if h.ClassName() == "TH2D":
+        h2 = h
 
-# maxi = 20
-# DisplayTH2D(h2, ax, color=cmap, xlabel=r"$x$ (mm)", ylabel=r"$y$ (mm)", title="", zlog=False, vmax = maxi)
-# ax.set_xlim(-2, 2)
-# ax.set_ylim(-2, 2)
+maxi = 15
+v = 2
+DisplayTH2D(h2, ax, color=cmap, xlabel=r"$x$ (mm)", ylabel=r"$y$ (mm)", title="", zlog=None, vmax = maxi)
+ax.set_xlim(-v, v)
+ax.set_ylim(-v, v)
 
-# cbar = plt.colorbar(ax.images[0], ax=ax, ticks=np.arange(0, maxi+1, maxi/10))
-# cbar.ax.set_yticklabels([str(int(i)) if i != cbar.get_ticks()[-1] else r'$>$' + str(int(i)) for i in cbar.get_ticks()])
-# plt.savefig("2D_Beam_Calibrated_wo_fit_2024.pdf")
-# DisplayTF2(f, ax, [0.1, 0.25, 0.5, 0.75, 0.9])
-# ax.set_xlim(-2, 2)
-# ax.set_ylim(-2, 2)
-# plt.savefig("2D_Beam_Calibrated_with_fit_2024_2.pdf")
-# """
+cbar = plt.colorbar(ax.images[0], ax=ax, ticks=np.arange(0, maxi+1, maxi/10))
+cbar.ax.set_yticklabels([str(int(i)) if i != cbar.get_ticks()[-1] else r'$>$' + str(int(i)) for i in cbar.get_ticks()])
+plt.savefig("2D_Beam_Calibrated_wo_fit_2024.pdf")
+DisplayTF2(f, ax, [0.1, 0.25, 0.5, 0.75, 0.9])
+ax.set_xlim(-v, v)
+ax.set_ylim(-v, v)
+plt.savefig("MCP_2024_Result.pdf")
+
 
 # """
 # ###################### RESOLUTION #####################

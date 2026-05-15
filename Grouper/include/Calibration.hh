@@ -1446,7 +1446,7 @@ void Fitting_Calibration(int Verbose = 0)
     TCanvas *c1 = new TCanvas((detectorName[current_detector] + "_Calibration").c_str(), (detectorName[current_detector] + "_Calibration").c_str(), 1920, 1080);
     c1->Divide(1, 2);
     c1->cd(1);
-    string function = "pol3";
+    string function = "pol1";
     TF1 *fit = new TF1(function.c_str(), function.c_str(), 0, 6500);
 
     TFitResultPtr r = MG_Global_Calibration[current_detector]->Fit(function.c_str(), "QS");
@@ -1476,7 +1476,7 @@ void Fitting_Calibration(int Verbose = 0)
         G_Calibration_FitParameters[3]->AddPoint(current_detector, fit->GetParameter(3));
         G_Calibration_FitParameters[3]->SetPointError(G_Calibration_FitParameters[3]->GetN() - 1, 0, fit->GetParError(3));
     }
-    else
+    else if (function != "pol1")
     {
         Error("Unknown function type for calibration");
     }
