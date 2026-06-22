@@ -238,6 +238,7 @@ void ReadISOLDE()
   fISOLDE = MyTFile((DIR_DATA_ISOLDE+"ISOLDE_pulses.root").c_str(), "RECREATE");
   
   double time;
+  double intensity;
 
   for (auto pairs : Map_RunFiles)
   {
@@ -252,6 +253,7 @@ void ReadISOLDE()
       fISOLDE->cd();
       Tree[Run] = new TTree(("Tree_ISOLDE_Proton_" + Run).c_str(), ("Tree_ISOLDE_Proton_" + Run).c_str());
       Tree[Run]->Branch("Time", &time);
+      Tree[Run]->Branch("Intensity", &intensity);
     }
   }
 
@@ -287,7 +289,7 @@ void ReadISOLDE()
     getline(iss, data_time, ',');
     getline(iss, int_str);
 
-    double intensity = 0.0;
+    // double intensity = 0.0;
     try
     {
       intensity = std::stod(int_str);

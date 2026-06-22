@@ -135,7 +135,6 @@ vector<string> SearchFilesIn(const string &directory, const string &in_it)
 	while ((ent = readdir(dir)) != NULL)
 	{
 	  string filename = ent->d_name;
-	  cout << "Checking file: " << filename << endl;
 	  if (filename.find(in_it) != string::npos)
 	  {
 		filenames.push_back(filename);
@@ -471,6 +470,149 @@ void ScaleXaxis(TH1 *h, Double_t (*Scale)(Double_t, double, double), double a, d
   if (!h) return; // just a precaution
   ScaleAxis(h->GetXaxis(), Scale, a, b);
   return;
+}
+
+
+// MORPHING 1D
+static void GetMeanRMS(const TH1D* h, double &mean, double &rms) {
+    double integral = h->Integral("width");
+    if (integral <= 0.0) {
+        mean = h->GetMean();
+        rms  = h->GetRMS();
+    } else {
+        mean = h->GetMean();
+        rms  = h->GetRMS();
+    }
+
+    // avoid divide by zero
+    if (rms <= 0.0) rms = 1e-9;
+}
+
+// Core moment morphing function
+TH1D* MomentMorph1D(const TH1D* h1,
+                    const TH1D* h2,
+                    double w,
+                    const char* outName = "MomentMorph")
+{
+
+    if (!h1 || !h2) {
+        Error("MomentMorph1D: One or both input histograms are NULL");
+    }
+
+
+    if (w < 0.0 || w > 1.0) {
+	  Error("MomentMorph1D: weight w is outside [0,1]");
+    }
+
+
+    // Get basic stats
+    double mu1, sig1;
+    double mu2, sig2;
+    GetMeanRMS(h1, mu1, sig1);
+    GetMeanRMS(h2, mu2, sig2);
+
+    // Target (interpolated) mean and width
+    const double muStar  = (1.0 - w)*mu1  + w*mu2;
+    const double sigStar = (1.0 - w)*sig1 + w*sig2;
+
+    // We'll build the output histogram by cloning the binning of h1
+    TH1D* hOut = (TH1D*)
+    h1->Clone(outName);
+    hOut->Reset("ICES"); 
+    hOut->SetTitle(Form("MomentMorph( %s , %s ; w=%.3f )",
+                        h1->GetName(), h2->GetName(), w));
+
+    // Precompute integrals
+    const double I1 = h1->Integral("width"); 
+    const double I2 = h2->Integral("width");
+    // Loop over output bins and fill according to the morphing prescription
+    const int nBins = hOut->GetNbinsX();
+    for (int b = 1; b <= nBins; ++b) {
+        // We'll evaluate the pdf at the bin center
+        const double x   = hOut->GetBinCenter(b);
+        const double dx  = hOut->GetBinWidth(b);
+
+        // ----- Transform template 1 -> target moments -----
+        // mapping x(target) -> y(original1)
+        // y = mu1 + (sig1/sigStar)*(x - muStar)
+        const double y1 = mu1 + (sig1/sigStar)*(x - muStar);
+
+        // pdf1(y1): take original histogram h1 as differential counts density
+        // TH1::Interpolate gives content per bin content, not density.
+        // To turn histogram into a pdf density f(x) (counts per unit x):
+        //   f(x) ~ content(bin)/binwidth.
+        // We'll approximate by Interpolate and then divide by a local bin width.
+        // Local bin width ~ take bin that contains y1.
+        int    b1    = h1->FindFixBin(y1);
+        double bw1   = (b1>=1 && b1<=h1->GetNbinsX()) ? h1->GetBinWidth(b1) : 1.0;
+        double f1raw = h1->Interpolate(y1); // ~counts in that (fractional) bin
+        double f1dens = f1raw / bw1;        // ~counts per unit x at y1
+
+        // Jacobian |dy/dx| = sig1/sigStar
+        const double jac1 = sig1/sigStar;
+        // transformed density at x with target moments:
+        const double f1star = f1dens * jac1; // preserves area I1
+
+        // ----- Transform template 2 -> target moments -----
+        const double y2 = mu2 + (sig2/sigStar)*(x - muStar);
+        int    b2    = h2->FindFixBin(y2);
+        double bw2   = (b2>=1 && b2<=h2->GetNbinsX()) ? h2->GetBinWidth(b2) : 1.0;
+        double f2raw = h2->Interpolate(y2);
+        double f2dens = f2raw / bw2;
+        const double jac2 = sig2/sigStar;
+        const double f2star = f2dens * jac2; // preserves area I2
+
+        // ----- Linear mix -----
+        // Weighted sum of densities
+        double fMix = (1.0 - w)*f1star + w*f2star;
+
+        // Convert back to bin content (counts in this bin)
+        double binContent = fMix * dx;
+
+        hOut->SetBinContent(b, binContent);
+    }
+
+    // Error bars: simple Poisson-ish combination.
+    // We'll propagate assuming uncorrelated stats scaled by weights.
+    // σ²_mix = ((1-w)² * σ1* + w² * σ2*) in each bin.
+    // We'll estimate σ1* and σ2* similarly to binContent above, but separately.
+    for (int b = 1; b <= nBins; ++b) {
+        const double x   = hOut->GetBinCenter(b);
+        const double dx  = hOut->GetBinWidth(b);
+
+        // 1 -> *
+        const double y1 = mu1 + (sig1/sigStar)*(x - muStar);
+        int    b1    = h1->FindFixBin(y1);
+        double bw1   = (b1>=1 && b1<=h1->GetNbinsX()) ? h1->GetBinWidth(b1) : 1.0;
+        double c1raw = h1->Interpolate(y1); // ~counts
+        // Poisson error estimate from nearest bin:
+        double e1raw = 0.0;
+        if (b1>=1 && b1<=h1->GetNbinsX()) e1raw = h1->GetBinError(b1);
+
+        // Convert that error to density units, apply Jacobian, then back to this bin
+        double e1dens = (bw1>0.0 ? e1raw/bw1 : 0.0);
+        double e1star = e1dens * (sig1/sigStar); // density error
+        double e1bin  = e1star * dx;             // bin-content error contribution
+
+        // 2 -> *
+        const double y2 = mu2 + (sig2/sigStar)*(x - muStar);
+        int    b2    = h2->FindFixBin(y2);
+        double bw2   = (b2>=1 && b2<=h2->GetNbinsX()) ? h2->GetBinWidth(b2) : 1.0;
+        double c2raw = h2->Interpolate(y2);
+        double e2raw = 0.0;
+        if (b2>=1 && b2<=h2->GetNbinsX()) e2raw = h2->GetBinError(b2);
+
+        double e2dens = (bw2>0.0 ? e2raw/bw2 : 0.0);
+        double e2star = e2dens * (sig2/sigStar);
+        double e2bin  = e2star * dx;
+
+        // weighted combination of uncertainties
+        double varMix = TMath::Power((1.0 - w)*e1bin,2) + TMath::Power(w*e2bin,2);
+        hOut->SetBinError(b, TMath::Sqrt(varMix));
+    }
+
+    // Done
+    return hOut;
 }
 
 const map<string, int> NametoCode_map = {

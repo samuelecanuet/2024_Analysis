@@ -25,10 +25,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    FLAG2021 = true;    
+    FLAG2025 = true;    
     InitDetectors("Config_Files/sample.pid");
     InitRuns();
     InitManualCalibration();
+    InitCalib();
     InitWindows();
 
     ///////////////////////////////////  REFERENCE  //////////////////////////////
@@ -66,8 +67,18 @@ int main(int argc, char *argv[])
 
             G_resPar0[i] = new TGraphErrors();
             G_resPar1[i] = new TGraphErrors();
+        
+
+            for (double peak : Peaks)
+            {   
+                WindowsMap["32Ar"][peak][i].second = (InvertFunction(Calibration[i]))->Eval(WindowsMap["32Ar"][peak][i].second)*1000;
+                WindowsMap["32Ar"][peak][i].first = (InvertFunction(Calibration[i]))->Eval(WindowsMap["32Ar"][peak][i].first)*1000;
+                cout << "Peak : " << peak << " Window : [" << WindowsMap["32Ar"][peak][i].first << ", " << WindowsMap["32Ar"][peak][i].second << "]" << endl;
+            }
         }
     }
+
+
 
     ///////////////////////////////////////////////////////////////////////////////
 

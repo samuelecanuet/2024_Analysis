@@ -44,12 +44,12 @@ int main()
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     Start("OUTPUT Files");
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated_" + to_string(YEAR) + "_all_res.root").c_str(), "RECREATE");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated_" + to_string(YEAR) + "_new5.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
     
     ///////////////////////////////  INITIALISATION ///////////////////////////////
     InitWindowss(0, "");
-    InitSiliconCalibration();
+    InitCalib();
     InitHistograms();
     InitThresholds();
     InitPileUp();

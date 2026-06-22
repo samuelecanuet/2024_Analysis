@@ -16,12 +16,12 @@ TH1D *H_Single[SIGNAL_MAX];
 TH1D *H_Coinc[SIGNAL_MAX];
 TH1D *H_NoCoinc[SIGNAL_MAX];
 TH1D* H_SiPM[SIGNAL_MAX];
+TH1D *H_SiPM_mDT[SIGNAL_MAX];
 TH1D* H_SiPM_Conv[SIGNAL_MAX][MAX_MULTIPLICTY];
+TH1D *H_DeltaT[MAX_MULTIPLICTY];
 
 TGraphErrors *G_Eshift = new TGraphErrors();
 TGraphErrors *G_Ratio = new TGraphErrors();
-
-
 
 
 void InitResolution_SiPM()
@@ -78,6 +78,12 @@ void InitHistograms()
             H_SiPM[det]->GetXaxis()->CenterTitle();
             H_SiPM[det]->GetYaxis()->CenterTitle();
 
+            H_SiPM_mDT[det] = new TH1D(("H_SiPM_mDT_" + detectorName[det]).c_str(), ("H_SiPM_mDT_" + detectorName[det]).c_str(), eSiliN_cal, eSiliMin_cal, eSiliMax_cal);
+            H_SiPM_mDT[det]->GetXaxis()->SetTitle("Energy [keV]");
+            H_SiPM_mDT[det]->GetYaxis()->SetTitle("Counts");
+            H_SiPM_mDT[det]->GetXaxis()->CenterTitle();
+            H_SiPM_mDT[det]->GetYaxis()->CenterTitle();
+
             for (int mul = 1; mul <= BETA_SIZE; mul++)
             {
                 H_SiPM_Conv[GetDetectorChannel(det)][mul] = new TH1D(("H_SiPM_Conv_" + detectorName[det] + "_M" + to_string(mul)).c_str(), ("H_SiPM_Conv_" + detectorName[det] + "_M" + to_string(mul)).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
@@ -89,6 +95,18 @@ void InitHistograms()
         }
     }
 
+    for (int mul = 1; mul <= BETA_SIZE; mul++)
+    {
+        H_DeltaT[mul] = new TH1D(("H_DeltaT_M" + to_string(mul)).c_str(), ("H_DeltaT_M" + to_string(mul)).c_str(), 1000, -500., 500.);
+        H_DeltaT[mul]->GetXaxis()->SetTitle("Delta T (ns)");
+        H_DeltaT[mul]->GetYaxis()->SetTitle("Counts");
+        H_DeltaT[mul]->GetXaxis()->CenterTitle();
+        H_DeltaT[mul]->GetYaxis()->CenterTitle();
+    }
+
+    G_Eshift = new TGraphErrors();
+    G_Ratio = new TGraphErrors();
+
     Info("Init Histograms end");
 }
 
@@ -97,7 +115,7 @@ pair<double, double> ComputeEshift(int det, TH1D *H_Single, TH1D *H_Coinc, TH1D 
     H_Single->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
     H_Coinc->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
     H_NoCoinc->GetXaxis()->SetRangeUser(WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].first, WindowsMap[NUCLEUS][IAS[NUCLEUS]][det].second);
-
+    
     double Ns = H_Single->Integral();
     double Nc = H_Coinc->Integral();
     double Nnc = H_NoCoinc->Integral();
@@ -132,13 +150,11 @@ pair<double, double> ComputeEshift(int det, TH1D *H_Single, TH1D *H_Coinc, TH1D 
     double Eshift_error_1B = 1./Ns * pow(Eshift, 2);
     double Eshift_error_1 = sqrt(Eshift_error_1A + Eshift_error_1B);
 
-
-
     double Eshift_error_2A = pow( 1. - Nc / Ns , 2) * (pow(SEc, 2) + pow(SEnc, 2));
     double Eshift_error_2B = Nc*Nnc/pow(Ns, 3) * pow(Eshift, 2);
     double Eshift_error_2 = sqrt(Eshift_error_2A + Eshift_error_2B);
 
-
+    
     // cout << "Eshift: " << Eshift << endl;
 
     // cout << "Eshift_error_1: " << Eshift_error_1 << endl;
@@ -163,6 +179,7 @@ void WriteHistograms()
     {
         if (IsDetectorSiliStrip(det))
         {
+            Info("Writing Histograms for " + detectorName[det]);
             TCanvas *c = new TCanvas(("H_Single_" + detectorName[det]).c_str(), ("H_Single_" + detectorName[det]).c_str(), 1920, 1080);
             H_Single[det]->SetLineColor(kBlack);
             H_Single[det]->Draw("HIST");
@@ -174,23 +191,22 @@ void WriteHistograms()
             H_Coinc[det]->Draw("HIST SAME");
             c->Write();
 
+            Info("Computing Eshift and Ratio for " + detectorName[det]);
+
             pair<double, double> Eshift_result = ComputeEshift(det, H_Single[det], H_Coinc[det], H_NoCoinc[det]);
             double Eshift = Eshift_result.first;
             double Eshift_error = Eshift_result.second;
 
-            G_Eshift->AddPoint(det, Eshift);
+            G_Eshift->SetPoint(G_Eshift->GetN(), det, Eshift);
             G_Eshift->SetPointError(G_Eshift->GetN() - 1, 0, Eshift_error);
 
-            
             double Nc = H_Coinc[det]->Integral();
             double Nnc = H_NoCoinc[det]->Integral();
             double ratio = Nc / (Nc + Nnc);
             double ratio_err = sqrt( pow ( sqrt(Nc) * (Nnc)/( (Nc + Nnc)*(Nc + Nnc) ),2) + pow( sqrt(Nnc) * Nc / ( (Nc + Nnc)*(Nc + Nnc) ),2) );
 
-            G_Ratio->AddPoint(det, ratio);
+            G_Ratio->SetPoint(G_Ratio->GetN(), det, ratio);
             G_Ratio->SetPointError(G_Ratio->GetN() - 1, 0, ratio_err);
-
-
         }
     }
 
@@ -222,13 +238,19 @@ void WriteHistograms()
                 H_SiPM_Conv[sipm][mul]->Draw("HIST SAME");
         }
         cSiPM_Mul->Write();
+
+        H_DeltaT[mul]->Write();
+        
     }
-    // TCanvas *cBeta = new TCanvas("SiPM_Energy_Calibrated", "SiPM_Energy_Calibrated", 1920, 1080);
+    TCanvas *cBeta = new TCanvas("SiPM_Energy_Calibrated", "SiPM_Energy_Calibrated", 1920, 1080);
+    // H_SiPM[104]->Rebin(100);
+    // H_SiPM_mDT[104]->Rebin(100);
+    // H_SiPM[104]->Scale(H_SiPM_mDT[104]->Integral() / H_SiPM[104]->Integral());
     // H_SiPM[104]->SetLineColor(kBlack);
     // H_SiPM[104]->Draw("HIST");
-    // H_SiPM_Conv[104]->SetLineColor(kRed);
-    // H_SiPM_Conv[104]->Draw("HIST SAME");
-    // cBeta->Write();
+    H_SiPM_mDT[104]->SetLineColor(kRed);
+    H_SiPM_mDT[104]->Draw("HIST");
+    cBeta->Write();
 }
 
 
@@ -251,6 +273,10 @@ void ReaderData()
 
         int Strip_Label = (**Silicon).Label;
         double energy = (**Silicon).Channel;// + gRandom->Gaus(0., 10./2.35);
+
+        if (WindowsMap[NUCLEUS][IAS[NUCLEUS]][Strip_Label].first > energy || WindowsMap[NUCLEUS][IAS[NUCLEUS]][Strip_Label].second < energy)
+            continue;
+
         double Time_Silicon = (**Silicon).Time;
 
         H_Single[Strip_Label]->Fill(energy);
@@ -260,12 +286,16 @@ void ReaderData()
         double SiPM_Energy = 0.;
         double SiPM_Energy_Conv[10];
         int Multiplicity = 0;
+        double MeanTime_SiPM = 0.;
+        vector<bool> SiPM_Subgroupd_Accepted((*SiPM).GetSize(), false);
         for (size_t i = 0; i < (*SiPM).GetSize(); i++)
         {
             double SiPM_Time = (*SiPM)[i].Time;
             SiPM_Energy = (*SiPM)[i].Channel;
-            
-            
+
+            if (SiPM_Time - Time_Silicon < -10)
+                H_SiPM_mDT[104]->Fill(energy);
+            // H_SiPM[104]->Fill(SiPM_Energy);
             // multiplicity condition
             Multiplicity = 0;
             for (int sipm = 1; sipm <= 9; sipm++)
@@ -280,15 +310,30 @@ void ReaderData()
             if (abs((*SiPM)[i].Time - Time_Silicon) < 100. && Multiplicity >=3)
             {
                 coinc = true;
+                SiPM_Subgroupd_Accepted[i] = true;
+                MeanTime_SiPM += (*SiPM)[i].Time;
                 break;
             }
+        }
+
+        int counter = 0;
+        // count accepted SiPMs in the same subgroup for multiplicity condition
+        for (size_t i = 0; i < (*SiPM).GetSize(); i++)
+        {
+            if (SiPM_Subgroupd_Accepted[i])
+                counter++;
+        }
+        if (counter > 1)
+        {
+            Warning("More than one SiPM accepted in the same event, check the code for multiplicity condition");
         }
 
 
         if (coinc)
         {
             H_Coinc[Strip_Label]->Fill(energy);
-            H_SiPM[104]->Fill(SiPM_Energy);
+            
+            H_DeltaT[Multiplicity]->Fill(MeanTime_SiPM / Multiplicity - Time_Silicon);
             for (int sipm = 1; sipm <= 9; sipm++)
             {
                 for (int mul = 1; mul <= BETA_SIZE; mul++)

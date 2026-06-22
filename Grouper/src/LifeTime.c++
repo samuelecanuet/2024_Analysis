@@ -40,7 +40,6 @@ int main()
             TTreeReaderArray<Signal> *SiPMHigh = new TTreeReaderArray<Signal>(*Reader, "CLEANED_Tree_SiPMHigh");
 
             /// PULSE PERIOD ANALYSIS ///
-
             vector<double> Peak_Time;
             vector<double> Peak_Intensity;
             vector<int> Peak_Bin;

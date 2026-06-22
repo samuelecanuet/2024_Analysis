@@ -42,10 +42,10 @@ int main()
     ///////////////////////////////////  2025 //////////////////////////////////
     else if (YEAR == 2025)
     {
-        Nuclei = {"32Ar", "33Ar"};  
+        Nuclei = {"32Ar"};  
         Start("DATA Files");
-        // MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
-        MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged_around33.root").c_str(), "READ");
+        MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
+        // MERGED_File["32Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged_around33.root").c_str(), "READ");
         // MERGED_File["32Cl"] = MyTFile((DIR_ROOT_DATA_MERGED + "32Ar_merged.root").c_str(), "READ");
         MERGED_File["33Ar"] = MyTFile((DIR_ROOT_DATA_MERGED + "33Ar_merged.root").c_str(), "READ");
         Start("SIMULATED Files");
@@ -61,6 +61,11 @@ int main()
 
     // #All
     InitCalib();
+    SiPM_used = 7;
+
+    // #
+    InitBetaSpectrumFit();
+    InitResolution_SiPM();
 
     InitDirectionDeltaEnergy(false);
 
@@ -89,10 +94,10 @@ int main()
             if (WindowsMap[Nucleus][peak][11].first == -1 || !WindowsMap[Nucleus][peak][11].first)
                 continue;
 
-            PlottingPeak(Nucleus, peak);
+            if (peak != 14.0)
+                continue;
 
-            //Doing spectrocopic fit
-                // testing fullfunction
+            PlottingPeak(Nucleus, peak);
         }
     }
     
@@ -104,31 +109,7 @@ int main()
     for (string Nucleus : Nuclei)
     {
         Info("Nucleus : " + Nucleus, 1);
-        dir_nuclei[Nucleus]->cd();
-
-        TCanvas *c_EpEb = new TCanvas(Form("BetaProton_Correlation_%s", Nucleus.c_str()), Form("BetaProton_Correlation_%s", Nucleus.c_str()), 1920, 1080);
-        c_EpEb->Divide(2, 1);
-        c_EpEb->cd(1);
-        H_EpEb[Nucleus]["Up"]->Draw("COLZ");
-        c_EpEb->cd(2);
-        H_EpEb[Nucleus]["Down"]->Draw("COLZ");
-
-        double Qbeta = 11030; // keV, to be updated with real Qbeta
-        double Sp = 1580; // keV, to be updated with real Sp
-        TF1 *f_GS = new TF1("f_GS", "[0]-[1] - x", 0, 10000);
-        f_GS->SetParameters(Qbeta, Sp);
-        f_GS->SetLineColor(kRed);
-        TF1 *f_Ex1 = new TF1("f_Ex1", "[0]-[1]-2230 - x", 0, 10000);
-        f_Ex1->SetParameters(Qbeta, Sp);
-        f_Ex1->SetLineColor(kRed);
-        c_EpEb->cd(1);
-        f_GS->Draw("SAME");
-        f_Ex1->Draw("SAME");
-        c_EpEb->cd(2);
-        f_GS->Draw("SAME");
-        f_Ex1->Draw("SAME");
-        c_EpEb->Write();
-        
+        dir_nuclei[Nucleus]->cd();        
 
         // SIngle /coinc rescale
         TCanvas *c_Spectrum_SingleCoinc = new TCanvas(Form("Spectrum_SingleCoinc_%s", Nucleus.c_str()), Form("Spectrum_SingleCoinc_%s", Nucleus.c_str()), 1920, 1080);
@@ -152,56 +133,6 @@ int main()
         legend->AddEntry(H_Exp_Coinc[Nucleus][dir], "Coincidence", "l");
         legend->Draw("SAME");
         c_Spectrum_SingleCoinc->Write();
-
-        // Single coinc rescale Litt gs 1st 2nd
-        TCanvas *c_Spectrum_SingleCoinc_Litt = new TCanvas(Form("Spectrum_SingleCoinc_Litt_%s_Ex", Nucleus.c_str()), Form("Spectrum_SingleCoinc_Litt_%s_Ex", Nucleus.c_str()), 1920, 1080);
-        c_Spectrum_SingleCoinc_Litt->Divide(1, 3);
-        string dir_Litt = "Down";
-        double peak_Litt = 14.;
-        TLegend *legend_Litt = new TLegend(0.7, 0.7, 0.9, 0.9);
-        H_Exp_Coinc_Litt[Nucleus][dir_Litt]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][peak_Litt][51].first, WindowsMap[Nucleus][peak_Litt][55].second);
-        H_Exp_Litt[Nucleus][dir_Litt]->GetXaxis()->SetRangeUser(WindowsMap[Nucleus][peak_Litt][51].first, WindowsMap[Nucleus][peak_Litt][55].second);
-        double scale_Litt = (double)H_Exp_Coinc_Litt[Nucleus][dir_Litt]->Integral() / (double)H_Exp_Litt[Nucleus][dir_Litt]->Integral();
-        // H_Exp_Litt[Nucleus][dir_Litt]->Scale(scale_Litt);
-        H_Exp_Coinc_Litt[Nucleus][dir_Litt]->GetXaxis()->SetRangeUser(0, 7000);
-        H_Exp_Litt[Nucleus][dir_Litt]->GetXaxis()->SetRangeUser(0, 7000);
-        H_Exp_Litt[Nucleus][dir_Litt]->SetTitle("Silicon Spectrum (Down)");
-        H_Exp_Litt[Nucleus][dir_Litt]->SetStats(false);
-        c_Spectrum_SingleCoinc_Litt->cd(1);
-        // GS 
-        H_Exp_Litt[Nucleus][dir_Litt]->Draw("HIST");
-        legend_Litt->AddEntry(H_Exp_Litt[Nucleus][dir_Litt], "Single", "l");
-        // 1st Excited
-        c_Spectrum_SingleCoinc_Litt->cd(2);
-        TH1D *H_Exp_Litt_1st = (TH1D*)H_Exp_Litt[Nucleus][dir_Litt]->Clone(Form("%s_1st", H_Exp_Litt[Nucleus][dir_Litt]->GetName()));
-        // ScaleXaxis(H_Exp_Litt_1st, Scale, 1., -1248.87);
-        H_Exp_Litt_1st->GetXaxis()->SetRangeUser(-1248.87, 7000-1248.87);
-        H_Exp_Litt_1st->GetXaxis()->SetTitle("E_p + E_{#gamma_{1}} (keV)");
-        H_Exp_Litt_1st->Draw("HIST");
-        gPad->Modified();
-        gPad->Update();
-        // 2nd Excited
-        c_Spectrum_SingleCoinc_Litt->cd(3);
-        TH1D *H_Exp_Litt_2nd = (TH1D*)H_Exp_Litt[Nucleus][dir_Litt]->Clone(Form("%s_2nd", H_Exp_Litt[Nucleus][dir_Litt]->GetName()));
-        // ScaleXaxis(H_Exp_Litt_2nd, Scale, 1., -2230.16);
-        H_Exp_Litt_2nd->GetXaxis()->SetRangeUser(-2230.16, 7000-2230.16);
-        H_Exp_Litt_2nd->GetXaxis()->SetTitle("E_p + E_{#gamma_{2}} (keV)");
-        H_Exp_Litt_2nd->Draw("HIST");
-        legend_Litt->AddEntry(H_Exp_Coinc_Litt[Nucleus][dir_Litt], "Coincidence", "l");
-        legend_Litt->Draw("SAME");
-        gPad->Modified();
-        gPad->Update();
-        
-        c_Spectrum_SingleCoinc_Litt->cd(1);
-        // new upper axis for pad 1
-        TGaxis *axis = new TGaxis(0, 0, 7000+1581.1, 0, 0, 7000+1581.1, 510, "+L");
-        axis->SetTitle("E_x (keV)");  
-        axis->SetTitleOffset(1.2);
-        axis->Draw("SAME");
-
-
-        c_Spectrum_SingleCoinc_Litt->Write();
-
     }
 
     FINAL_FILE->Close();    

@@ -2,7 +2,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2024 = true;
+    FLAG2025 = true;
     
     InitDetectors("Config_Files/sample.pid");
     VERBOSE = 0;
@@ -84,12 +84,13 @@ int main(int argc, char *argv[])
 
     ///////////////////////////////////  OUTPUT ///////////////////////////////////
     Start("OUTPUT Files");
-    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + ".root").c_str(), "RECREATE");
+    CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_"+ to_string(YEAR) + "_test.root").c_str(), "RECREATE");
     CALIBRATED_File->cd();
 
     ///////////////////////////////////////////////////////////////////////////////
     int first = 11;
     int last = 86;
+    function_pol = "pol1";
     Fitting_Resolution_FLAG = false;
     // Fitting_Calibration_FLAG = false; // no implemented  
     Calibration_Litt = false;

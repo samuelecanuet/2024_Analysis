@@ -5,6 +5,7 @@
 #include "Detectors.hh"
 
 int VERBOSE = 0;
+default_random_engine generator;
 
 /// FILE ///
 map<string, TFile *> GROUPED_File;
@@ -84,6 +85,7 @@ map<string, TDirectory *[50]> dir_peaks;
 
 // FUCNTIONS //
 TF1 *F_SiliconCalibration[SIGNAL_MAX];
+TF1 *F_SiliconResolution[SIGNAL_MAX];
 map<string, TF1 *[SIGNAL_MAX]> F_MatchingSiPM;
 map<string, TF1 *[SIGNAL_MAX]> F_MatchingLowHigh;
 map<string, TF1 *[SIGNAL_MAX]> F_MatchingONOFF;
@@ -349,44 +351,31 @@ void InitMatchingSiPM()
 
 }
 
-void InitSiliconCalibration(string addpath = "")
+void InitCalib()
 {
-
-    string CalibFileName;
-
-    CalibFileName = addpath + "Config_Files/" + to_string(YEAR) + "/Calibration_" + to_string(YEAR) + ".txt";
-
-    ifstream file(CalibFileName);
-
-    if (file.is_open())
-    {
-        Info("Calibration file found");
-
-        string line;
-        while (getline(file, line))
-        {
-            istringstream iss(line);
-            int det;
-            double a;
-            double b;
-            double c;
-            iss >> det >> a >> b >> c;
-            SiliconCalibrationParameter[det][0] = a;
-            SiliconCalibrationParameter[det][1] = b;
-            SiliconCalibrationParameter[det][2] = c;
-        }
-    }
-    else
-    {
-        Error("No Calibration file found");
-    }
-
+    
+    TFile *CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + "_full.root").c_str(), "READ");
     for (int i = 0; i < SIGNAL_MAX; i++)
     {
         if (IsDetectorSiliStrip(i))
         {
-            F_SiliconCalibration[i] = new TF1(("F_SiliconCalibration_" + detectorName[i]).c_str(), "[0] + [1]*x + [2]*x*x", eSiliMin_cal, eSiliMax_cal);
-            F_SiliconCalibration[i]->SetParameters(SiliconCalibrationParameter[i][0], SiliconCalibrationParameter[i][1], SiliconCalibrationParameter[i][2]);
+
+            // CALIBRATION
+            F_SiliconCalibration[i] = (TF1 *)CALIBRATED_File->Get(("Calibration_" + detectorName[i]).c_str());
+
+            if (F_SiliconCalibration[i] == NULL)
+            {
+                Error("No calibration found for " + detectorName[i]);
+            }         
+
+            // RESOLUTION
+            F_SiliconResolution[i] = (TF1 *)CALIBRATED_File->Get(("Resolution_" + detectorName[i]).c_str());
+
+            if (F_SiliconResolution[i] == NULL)
+            {
+                Warning("No resolution found for " + detectorName[i]);
+                F_SiliconResolution[i] = new TF1("dummy","0",0,eHighMax);
+            }
         }
     }
 }
@@ -996,7 +985,8 @@ void ExtractingSimulatedTree(vector<string> nucleus_to_recreate)
             {
                 ProgressBar(Reader_SIMULATED->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
                 int sili_code = **Silicon_code;
-                double sili_e = **Silicon_energy;
+                normal_distribution<double> distribution(**Silicon_energy, F_SiliconCalibration[sili_code]->Eval(**Silicon_energy));
+                double sili_e = distribution(generator);
                 double SiPM_e = **SiPM_energy;
 
                 for (int peak_number = 0; peak_number < 50; peak_number++)
@@ -1134,30 +1124,6 @@ void InitSimulatedTree(vector<string> nucleus_to_recreate = {})
             Tree_Peaks_Simulated["33Ar"][0]->Branch("SiPM", &SiPMEnergy);
         }
     }
-
-    /// 207Bi ///
-    // if (find(nucleus_to_recreate.begin(), nucleus_to_recreate.end(), "207Bi") != nucleus_to_recreate.end())
-    // {
-    //     NUCLEUS = "207Bi";
-    //     for (int det = 1; det <= 9; det++)
-    //     {
-    //         f_simulated_tree->cd();
-    //         Tree_Peaks_Simulated["207Bi"][0] = new TTree(("Tree_Peaks_Simulated_" + NUCLEUS + "_" + to_string(0)).c_str(), ("Tree_Peaks_Simulated_" + NUCLEUS + "_" + to_string(0)).c_str());
-    //         Tree_Peaks_Simulated["207Bi"][0]->Branch("SiPM", &SiPMEnergy);
-    //     }
-    // }
-
-    // /// 90Sr ///
-    // if (find(nucleus_to_recreate.begin(), nucleus_to_recreate.end(), "90Sr") != nucleus_to_recreate.end())
-    // {
-    //     NUCLEUS = "90Sr";
-    //     for (int det = 1; det <= 9; det++)
-    //     {
-    //         f_simulated_tree->cd();
-    //         Tree_Peaks_Simulated["90Sr"][0] = new TTree(("Tree_Peaks_Simulated_" + NUCLEUS + "_" + to_string(0)).c_str(), ("Tree_Peaks_Simulated_" + NUCLEUS + "_" + to_string(0)).c_str());
-    //         Tree_Peaks_Simulated["90Sr"][0]->Branch("SiPM", &SiPMEnergy);
-    //     }
-    // }
 
     NUCLEUS = "32Ar";
 
@@ -1370,7 +1336,7 @@ double Chi2TreeHist_conv(const double *par)
                 H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].second->Reset();
                 while (Reader_IAS->Next() && Reader_IAS->GetCurrentEntry() < 1e6)
                 {
-                    energy = Calibration * (**SiPM).Channel / 1000 + Calibration_OffSet;
+                    energy = Calibration * (**SiPM).Channel / 1000. + Calibration_OffSet;
 
                     if (IsDetectorBetaHigh((**SiPM).Label))
                         H_SiPM_Calibrated[NUCLEUS][peak_number][current_detector].first->Fill(energy);
@@ -1405,6 +1371,11 @@ double Chi2TreeHist_conv(const double *par)
                         continue;
                     energy = H_Sim[NUCLEUS][peak_number]->GetBinCenter(i);
                     double sigma_resolution = sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(energy), 2) + pow(Resolution_2 * pow(energy, 2), 2));
+
+                    // double sigma_resolution = sqrt(pow(Resolution_OffSet, 2) + pow(Resolution_SQRT * sqrt(energy), 2) + pow(Resolution_2 * pow(energy, 1), 2));
+
+
+
                     // double sigma_resolution = Resolution_OffSet + Resolution_SQRT * sqrt(energy) + Resolution_2 * pow(energy, 2);        
 
                     // double sigma_resolution = Calibration *(67.20 + 0.115566 * (energy/Calibration) + 3.70031e-6 * pow((energy/Calibration),2)); // FWHM from 32Ar SiPM calibration

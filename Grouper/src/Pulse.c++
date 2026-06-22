@@ -7,10 +7,10 @@ int main()
     InitDetectors("Config_Files/sample.pid");
     ReadAllRunsDate();
 
-    // ReadISOLDE();
+    ReadISOLDE();
     // WriteISOLDE();
 
-    fTime = new TFile((DIR_ROOT_DATA_GROUPED + "../Pulses.root").c_str(), "RECREATE");
+    fTime = new TFile((DIR_ROOT_DATA_GROUPED + "../Pulses_test.root").c_str(), "RECREATE");
     Init();
     InitCalib();
     InitWindows();

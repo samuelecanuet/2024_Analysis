@@ -10,7 +10,7 @@ int main()
     InitDetectors("Config_Files/sample.pid");
     InitRuns();
 
-    bool Making_Data_FLAG = true;
+    bool Making_Data_FLAG = false;
 
     // ReadISOLDE();
     // WriteISOLDE();

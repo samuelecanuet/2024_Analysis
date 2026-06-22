@@ -34,10 +34,10 @@ int main(int argc, char *argv[])
     // - M3
     // - threshold at 100keV
     // EXP
-    Exp_FILE = MyTFile((DIR_ROOT_DATA_ANALYSED + "32Ar_" + to_string(YEAR) + "_analysed.root").c_str(), "READ");   
+    Exp_FILE = MyTFile((DIR_ROOT_DATA_ANALYSED + "32Ar_" + to_string(YEAR) + "_analysed_new_N14.0_M3_T100.root").c_str(), "READ");   
 
     // Eshift 
-    TCanvas *cEshiftCompare_Corrected = (TCanvas *)Exp_FILE->Get("Eshift/Eshift_M3/Eshift_3");
+    TCanvas *cEshiftCompare_Corrected = (TCanvas *)Exp_FILE->Get("Eshift/Eshift_M3/Eshift_M3");
     G_Exp_Eshift = nullptr;
     for (auto key : *cEshiftCompare_Corrected->GetListOfPrimitives())
     {
@@ -46,17 +46,19 @@ int main(int argc, char *argv[])
             G_Exp_Eshift = (TGraphErrors *)key;
         }
     }
+    cout << G_Exp_Eshift->GetN() << endl;
     if (G_Exp_Eshift == nullptr) Error("Eshift graph not found in experimental data");
     Info("Eshift graph loaded from experimental data", 1);
 
     // Coinc/Single
-    TCanvas *cCoincSingle = (TCanvas *)Exp_FILE->Get("RatioCoinc_NoCoinc_Corrected_3");
+    TCanvas *cCoincSingle = (TCanvas *)Exp_FILE->Get("Ratio_Coinc_Single_M3");
     G_Exp_CoincSingle = nullptr;
     for (auto key : *cCoincSingle->GetListOfPrimitives())
     {
-        if (string(key->ClassName()).find("TGraphErrors") != string::npos)
+        if (string(key->ClassName()).find("TMultiGraph") != string::npos)
         {
-            G_Exp_CoincSingle = (TGraphErrors *)key;
+            TMultiGraph *mg = (TMultiGraph *)key;
+            G_Exp_CoincSingle = (TGraphErrors *)mg->GetListOfGraphs()->At(0);
         }
     }
     if (G_Exp_CoincSingle == nullptr) Error("Coinc/Single graph not found in experimental data");
@@ -100,10 +102,10 @@ int main(int argc, char *argv[])
     // string path = "/run/media/local1/DATANEX/Samuel-G4/Positions/" + TYPE + "/Different_CRADLE/";
 
     // Finding all interesting files in the directory
-    vector<string> filenames;// = FindAllSimulatedFiles(path, to_string(YEAR));
-    vector<string> filenames_new = FindAllSimulatedFiles("/run/media/local1/DATANEX/Samuel-G4/Systematics/Silicon_Position/", to_string(YEAR));
+    vector<string> filenames = FindAllSimulatedFiles(path, to_string(YEAR));
+    // vector<string> filenames_new = FindAllSimulatedFiles("/run/media/local1/DATANEX/Samuel-G4/Systematics/Silicon_Position/", to_string(YEAR));
 
-    filenames.insert(filenames.end(), filenames_new.begin(), filenames_new.end());
+    // filenames.insert(filenames.end(), filenames_new.begin(), filenames_new.end());
     // resize to have 20
     // filenames.resize(20);
     int counter = 0;

@@ -40,6 +40,8 @@ double HRandom[SIGNAL_MAX][MAX_MULTIPLICTY];
 
 TH1D* H_SiPM_Channel_M_nocoinc[SIGNAL_MAX][MAX_MULTIPLICTY+1];
 TH1D* H_SiPM_Channel_M_coinc[SIGNAL_MAX][MAX_MULTIPLICTY+1];
+TH1D* H_SiPM_Channel_M_nocoinc_cal[SIGNAL_MAX][MAX_MULTIPLICTY+1];
+TH1D* H_SiPM_Channel_M_coinc_cal[SIGNAL_MAX][MAX_MULTIPLICTY+1];
 
 TH2D* H_Time_Channel[SIGNAL_MAX];
 
@@ -48,8 +50,8 @@ TH2D* H_Coinc_SiPMChannel[SIGNAL_MAX][MAX_MULTIPLICTY+1];
 TH2D* H_Channel_Time_Coinc[SIGNAL_MAX][MAX_MULTIPLICTY+1];
 
 /// params
-double start_gate = -20;
-double end_gate = 40;
+double start_gate = -30;
+double end_gate = 50;
 double start_gate_fake = -300;
 double end_gate_fake = -100;
 
@@ -131,11 +133,24 @@ void InitHistograms()
                 H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->CenterTitle();
                 H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->CenterTitle();
 
-                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eHighN, eHighMin, eHighMax);
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->SetTitle("Channel");
                 H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->SetTitle("Counts");
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->CenterTitle();
                 H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->CenterTitle();
+
+                //calibrated 
+                H_SiPM_Channel_M_nocoinc_cal[i][m] = new TH1D(("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), ("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetXaxis()->SetTitle("Energy (keV)");
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetYaxis()->CenterTitle();
+
+                H_SiPM_Channel_M_coinc_cal[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetXaxis()->SetTitle("Energy (keV)");
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetYaxis()->CenterTitle();
             }
         }
 
@@ -149,11 +164,24 @@ void InitHistograms()
                 H_SiPM_Channel_M_nocoinc[i][m]->GetXaxis()->CenterTitle();
                 H_SiPM_Channel_M_nocoinc[i][m]->GetYaxis()->CenterTitle();
 
-                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eSiliN_cal/10 , eSiliMin_cal, eSiliMax_cal);
+                H_SiPM_Channel_M_coinc[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m)).c_str(), eLowN, eLowMin, eLowMax);
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->SetTitle("Channel");
                 H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->SetTitle("Counts");
                 H_SiPM_Channel_M_coinc[i][m]->GetXaxis()->CenterTitle();
                 H_SiPM_Channel_M_coinc[i][m]->GetYaxis()->CenterTitle();
+
+                //calibrated
+                H_SiPM_Channel_M_nocoinc_cal[i][m] = new TH1D(("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), ("H_SiPM_Channel_nocoinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetXaxis()->SetTitle("Energy (keV)");
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_nocoinc_cal[i][m]->GetYaxis()->CenterTitle();  
+
+                H_SiPM_Channel_M_coinc_cal[i][m] = new TH1D(("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), ("H_SiPM_Channel_coinc_" + detectorName[i] + "_M" + to_string(m) + "_cal").c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetXaxis()->SetTitle("Energy (keV)");
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetYaxis()->SetTitle("Counts");
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetXaxis()->CenterTitle();
+                H_SiPM_Channel_M_coinc_cal[i][m]->GetYaxis()->CenterTitle();
             }
         }
     }
@@ -321,7 +349,7 @@ void ReaderData()
             // Keeping only if Channel > 0
             for (int i = 0; i < (**SiPM_Groups)[NEAREST_GROUP_INDEX].size(); i++)
             {
-                if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
+                if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)// && !(YEAR == 2025 && (GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label) == 6) || GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label) == 6))
                 {
                     if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel > 0 || isnan((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Time))
                         Multiplicity++;
@@ -386,8 +414,8 @@ void ReaderData()
             for (int i = 0; i < (**SiPM_Groups)[NEAREST_GROUP_INDEX].size(); i++)
             {
                 // exluding SiPM6
-                if (YEAR == 2025 && (GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label) == 6))
-                    continue;
+                // if (YEAR == 2025 && (GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label) == 6))
+                //     continue;
                 
                 double e_sipm = 0;
                 if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
@@ -399,7 +427,7 @@ void ReaderData()
                     e_sipm = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel / 1000.);
                 }
 
-                if (e_sipm > 100.)
+                if (e_sipm > 0.) //100keV
                 {
                     Multiplicity++;
                 }
@@ -424,32 +452,39 @@ void ReaderData()
                     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
                         continue;
                     double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel / 1000.);
-                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
+                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
+                    H_SiPM_Channel_M_coinc_cal[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
                 }
                 for (int i = 0; i < Multiplicity; i++)
                 {
                     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
                         continue;
-                    double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel / 1000.);
-                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
+                    double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel / 1000.);
+                    H_SiPM_Channel_M_coinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
+                    H_SiPM_Channel_M_coinc_cal[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
                 }
             }
             else
             {
                 H_NoCoinc[Strip_Label][mul]->Fill(energy);
 
-                // for (int i = 0; i < Multiplicity; i++)
-                // {
-                //     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
-                //         continue;
-                //     H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
-                // }
-                // for (int i = 0; i < Multiplicity; i++)
-                // {
-                //     if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
-                //         continue;
-                //     H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
-                // }
+                for (int i = 0; i < Multiplicity; i++)
+                {
+                    if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.isValid)
+                        continue;
+                    
+                    double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel / 1000.);
+                    H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
+                    H_SiPM_Channel_M_nocoinc_cal[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].first.Channel);
+                }
+                for (int i = 0; i < Multiplicity; i++)
+                {
+                    if (!(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid)
+                        continue;
+                    double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel / 1000.);
+                    H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
+                    H_SiPM_Channel_M_nocoinc_cal[(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label][mul]->Fill(e);//(**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel);
+                }
             }
 
             if (mul <= Multiplicity)
@@ -458,23 +493,31 @@ void ReaderData()
             }
         }
 
-        for (int i_group = 0; i_group < (**SiPM_Groups).size(); i_group++)
-        {
-            for (int mul = 1; mul <= BETA_SIZE; mul++)
-            {
-                if (mul <= (**SiPM_Groups)[i_group].size()                                                                         // Mulitplicity sorting condition
-                    && ((**SiPM_Groups)[i_group][0].first.Time < start_gate || (**SiPM_Groups)[i_group][0].first.Time > end_gate)) // Time gate condition
-                {
-                    for (int i = 0; i < (**SiPM_Groups)[i_group].size(); i++)
-                    {
-                        if ((**SiPM_Groups)[i_group][i].first.isValid)
-                            H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[i_group][i].first.Label][mul]->Fill((**SiPM_Groups)[i_group][i].first.Channel);
-                        if ((**SiPM_Groups)[i_group][i].second.isValid)
-                            H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[i_group][i].second.Label][mul]->Fill((**SiPM_Groups)[i_group][i].second.Channel);
-                    }
-                }
-            }
-        }
+        // for (int i_group = 0; i_group < (**SiPM_Groups).size(); i_group++)
+        // {
+        //     for (int mul = 1; mul <= BETA_SIZE; mul++)
+        //     {
+        //         if (mul <= (**SiPM_Groups)[i_group].size()                                                                         // Mulitplicity sorting condition
+        //             && ((**SiPM_Groups)[i_group][0].first.Time < start_gate || (**SiPM_Groups)[i_group][0].first.Time > end_gate)) // Time gate condition
+        //         {
+        //             for (int i = 0; i < (**SiPM_Groups)[i_group].size(); i++)
+        //             {
+        //                 if ((**SiPM_Groups)[i_group][i].first.isValid)
+        //                 {
+        //                     double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[i_group][i].first.Label)]->Eval((**SiPM_Groups)[i_group][i].first.Channel / 1000.);
+        //                     H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[i_group][i].first.Label][mul]->Fill((**SiPM_Groups)[i_group][i].first.Channel);
+        //                     H_SiPM_Channel_M_nocoinc_cal[(**SiPM_Groups)[i_group][i].first.Label][mul]->Fill(e);
+        //                 }
+        //                 if ((**SiPM_Groups)[i_group][i].second.isValid)
+        //                 {
+        //                     double e = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[i_group][i].second.Label)]->Eval((**SiPM_Groups)[i_group][i].second.Channel / 1000.);
+        //                     H_SiPM_Channel_M_nocoinc[(**SiPM_Groups)[i_group][i].second.Label][mul]->Fill((**SiPM_Groups)[i_group][i].second.Channel);
+        //                     H_SiPM_Channel_M_nocoinc_cal[(**SiPM_Groups)[i_group][i].second.Label][mul]->Fill(e);
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 

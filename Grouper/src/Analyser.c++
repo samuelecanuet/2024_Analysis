@@ -19,7 +19,7 @@ int main(int argc, char **argv)
    
     
     ///////// NEW FILE //////////
-    ANALYSED_File = MyTFile((DIR_ROOT_DATA_ANALYSED + NUCLEUS + "_" + to_string(YEAR) + "_analysed_m1.root").c_str(), "RECREATE");
+    ANALYSED_File = MyTFile((DIR_ROOT_DATA_ANALYSED + NUCLEUS + "_" + to_string(YEAR) + "_analysed.root").c_str(), "RECREATE");
     TTree *ANALYSED_Tree = new TTree("ANALYSED_Tree", "ANALYSED_Tree");
 
     // double TH[10] = {0, 300, 300, 300, 400, 200, 400, 400, 400, 300};

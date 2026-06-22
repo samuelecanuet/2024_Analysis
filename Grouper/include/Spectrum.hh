@@ -2,6 +2,7 @@
 
 int VERBOSE = 0;
 
+
 // TFiles
 map<string, TFile*> MERGED_File;
 map<string, TFile*> SIMULATED_File;
@@ -9,6 +10,7 @@ map<string, TFile*> SIMULATED_File;
 //Calibrations
 TF1* Calibration[SIGNAL_MAX];
 TF1* Calibration_Litt[SIGNAL_MAX];
+TF1* F_Resolution_SiPM[SIGNAL_MAX];
 
 TTreeReader *Reader;
 TTreeReaderArray<Signal> *Silicon;
@@ -30,13 +32,12 @@ map<string, map<string, TH1D*>> H_Silicon_TimeGated_2_Coinc;
 
 //Realse Curves
 map<string, map<int, map<string, TH1D*>>> H_Release;
+map<string, map<string, TH2D*>> H_ReleaseEnergy;
 map<string, map<int, map<string, TH1D*>>> H_Release_Coinc;
 
 // Beta Spectrum
 map<string, map<int, map<string, TH1D*>>> H_Exp_Beta;
-
-// H_EpEb
-map<string, map<string, TH2D*>> H_EpEb;
+map<double, TH1D*> H_SimulatedBetaSpectrum;
 
 // DeltaE
 TGraphErrors *G_Sim_DeltaE_Proton = new TGraphErrors();
@@ -50,6 +51,9 @@ vector<string> Directions = {"Up", "Down"};
 vector<string> Nuclei;
 int start_gate = -20;
 int end_gate = 40;
+double THRESHOLD = 100; //keV
+double MULTIPLICITY = 3; // at least
+int SiPM_used = 0;
 
 void InitCalib()
 {
@@ -100,6 +104,71 @@ void InitCalib()
     }
 
     Success("SiPM Calibration loaded");
+}
+
+
+void InitResolution_SiPM()
+{
+    Info("Init Resolution SiPM start");
+
+    TFile *CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "SiPM_Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
+
+    for (int sipm = 1; sipm <= 9; sipm++)
+    {
+        F_Resolution_SiPM[sipm] = (TF1 *)CALIBRATED_File->Get(("SiPM_" + to_string(sipm) + "/F_Resolution_SiPM" + to_string(sipm)).c_str());
+        if (F_Resolution_SiPM[sipm] == NULL)
+        {
+            Error("No SiPM resolution found for SiPM: " + to_string(sipm));
+        }
+    }
+
+    Info("Init Resolution SiPM end");
+}
+
+void InitBetaSpectrumFit()
+{
+    Info("Init Beta Spectrum Fit");
+    vector<string> filenames = SearchFilesIn("/run/media/local1/DATANEX/Samuel-G4/Qbeta/", "new");
+
+    for (string filename : filenames)
+    {
+        TFile *f = MyTFile(("/run/media/local1/DATANEX/Samuel-G4/Qbeta/" + filename).c_str(), "READ", "Q");
+
+        // *Qbetaxxx_analysed*
+        double Qbeta = stod(filename.find("Qbeta") != string::npos ? filename.substr(filename.find("Qbeta") + 5, filename.find("_analysed") - (filename.find("Qbeta") + 5)) : "0");
+        
+        TCanvas *c = (TCanvas*)f->Get("PlasticScintillator_Energy_Deposit_All");
+        H_SimulatedBetaSpectrum[Qbeta] = (TH1D *)c->GetPrimitive("PlasticScintillator_Energy_Deposit_e+");
+    }
+}
+
+TH1D *GetBetaSpectrum(double Energy, int det = 0)
+{
+    double ratio = ((int)Energy % 100) / 100.0;
+    double lower_bound = (int)(Energy - ratio*100.0);
+    double upper_bound = (int)(lower_bound + 100.0);
+
+    if (det == 0)
+        return MomentMorph1D(H_SimulatedBetaSpectrum[lower_bound], H_SimulatedBetaSpectrum[upper_bound], ratio);
+    else
+    {
+        TH1D *H = MomentMorph1D(H_SimulatedBetaSpectrum[lower_bound], H_SimulatedBetaSpectrum[upper_bound], ratio);
+        TH1D *H_Convolved = (TH1D*)H->Clone();
+        H_Convolved->Reset();
+        for (int i = 1; i <= H->GetNbinsX(); i++)
+        {
+            double e = H->GetBinCenter(i);
+            double content = H->GetBinContent(i);
+            double sigma = F_Resolution_SiPM[det]->Eval(e);
+            for (int j = 1; j <= H_Convolved->GetNbinsX(); j++)
+            {
+                double e_convolved = H_Convolved->GetBinCenter(j);
+                double weight = content * exp(-pow(e_convolved - e, 2) / (2 * pow(sigma, 2))) / (sigma * sqrt(2 * M_PI));
+                H_Convolved->AddBinContent(j, weight);
+            }
+        }
+        return H_Convolved;
+    }
 }
 
 void InitExperimentalSpectrum()
@@ -438,6 +507,12 @@ void InitHistograms(string Nucleus)
         H_Exp[Nucleus][dir]->GetXaxis()->CenterTitle();
         H_Exp[Nucleus][dir]->GetYaxis()->CenterTitle();
 
+        H_ReleaseEnergy[Nucleus][dir] = new TH2D(("H_ReleaseEnergy_" + Nucleus + "_" + dir).c_str(), ("H_ReleaseEnergy_" + Nucleus + "_" + dir).c_str(), 1200, 0, 1.2, eSiliN_cal, eSiliMin_cal, eSiliMax_cal);
+        H_ReleaseEnergy[Nucleus][dir]->GetXaxis()->SetTitle("Time (s)");
+        H_ReleaseEnergy[Nucleus][dir]->GetYaxis()->SetTitle("Energy (keV)");
+        H_ReleaseEnergy[Nucleus][dir]->GetXaxis()->CenterTitle();
+        H_ReleaseEnergy[Nucleus][dir]->GetYaxis()->CenterTitle();
+
         H_Exp_Litt[Nucleus][dir] = new TH1D(("Spectrum_Litt_" + Nucleus + "_" + dir).c_str(), ("Spectrum_Litt_" + Nucleus + "_" + dir).c_str(), 2*eSiliN_cal/10, -eSiliMax_cal, eSiliMax_cal);
         H_Exp_Litt[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
         H_Exp_Litt[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
@@ -455,12 +530,6 @@ void InitHistograms(string Nucleus)
         H_Exp_Coinc_Litt[Nucleus][dir]->GetYaxis()->SetTitle("Counts / keV");
         H_Exp_Coinc_Litt[Nucleus][dir]->GetXaxis()->CenterTitle();
         H_Exp_Coinc_Litt[Nucleus][dir]->GetYaxis()->CenterTitle();
-
-        H_EpEb[Nucleus][dir] = new TH2D(("H_EpEb_" + Nucleus + "_" + dir).c_str(), ("H_EpEb_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal, eSiliN_cal/100, eSiliMin_cal, eSiliMax_cal);
-        H_EpEb[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
-        H_EpEb[Nucleus][dir]->GetYaxis()->SetTitle("Energy (keV)");
-        H_EpEb[Nucleus][dir]->GetXaxis()->CenterTitle();
-        H_EpEb[Nucleus][dir]->GetYaxis()->CenterTitle();
 
         H_Silicon_TimeGated_1[Nucleus][dir] = new TH1D(("H_Silicon_TimeGated_1_" + Nucleus + "_" + dir).c_str(), ("H_Silicon_TimeGated_1_" + Nucleus + "_" + dir).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
         H_Silicon_TimeGated_1[Nucleus][dir]->GetXaxis()->SetTitle("Energy (keV)");
@@ -501,7 +570,7 @@ void InitHistograms(string Nucleus)
             H_Release_Coinc[Nucleus][peak][dir]->GetXaxis()->CenterTitle();
             H_Release_Coinc[Nucleus][peak][dir]->GetYaxis()->CenterTitle();
 
-            H_Exp_Beta[Nucleus][peak][dir] = new TH1D(("Spectrum_Beta_" + Nucleus + "_" + dir + "_" + to_string(peak)).c_str(), ("Spectrum_Beta_" + Nucleus + "_" + dir + "_" + to_string(peak)).c_str(), eLowN, eLowMin, eLowMax);
+            H_Exp_Beta[Nucleus][peak][dir] = new TH1D(("Spectrum_Beta_" + Nucleus + "_" + dir + "_" + to_string(peak)).c_str(), ("Spectrum_Beta_" + Nucleus + "_" + dir + "_" + to_string(peak)).c_str(), eSiliN_cal/10, eSiliMin_cal, eSiliMax_cal);
             H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetTitle("Energy (keV)");
             H_Exp_Beta[Nucleus][peak][dir]->GetYaxis()->SetTitle("Counts / 1keV");
             H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->CenterTitle();
@@ -510,83 +579,129 @@ void InitHistograms(string Nucleus)
     }
 }
 
-bool IsCoincidence(double P_Time, vector<vector<pair<Signal, Signal>>> SiPM_Groups)
+double IsCoincidence(double P_Time, TTreeReaderValue<vector<vector<pair<Signal, Signal>>>> *SiPM_Groups)
 {
-
-  double NEAREST = 1e9;
-  int NEAREST_GROUP_INDEX = -1;
-  vector<double> nearest_group_time;
-  vector<double> mean_group_time = vector<double>(10, 0);
-  if ((SiPM_Groups).size() > 0)
-  {
-    // cout << "Size: " << (SiPM_Groups).size() << endl;
-    // Lopping on subgroups
-    for (int i_group = 0; i_group < (SiPM_Groups).size(); i_group++)
-    {
-      nearest_group_time.push_back(1e9);
-      int counter_mean_group_time = 0;
-      // if ((SiPM_Groups)[i_group].size() > 9)
-      // {
-      //     for (int i_pair = 0; i_pair < (SiPM_Groups)[i_group].size(); i_pair++)
-      //     {
-      //         cout << (SiPM_Groups)[i_group][i_pair].first << endl;
-      //     }
-      // }
-      // Looping on pair of the subgroup
-      for (int i_pair = 0; i_pair < (SiPM_Groups)[i_group].size(); i_pair++)
-      {
-
-        // Taking valid element of pair with High priority
-        if ((SiPM_Groups)[i_group][i_pair].first.isValid && !isnan((SiPM_Groups)[i_group][i_pair].first.Time))
+    // ------------------------------------------------ //
+        // IF 2025 REMOVING SIPM6
+        if (YEAR == 2025 && (**SiPM_Groups).size() > 0)
         {
-          if (abs(nearest_group_time[i_group]) > abs((SiPM_Groups)[i_group][i_pair].first.Time))
-          {
-            nearest_group_time[i_group] = (SiPM_Groups)[i_group][i_pair].first.Time;
-          }
+            for (int i_group = 0; i_group < (**SiPM_Groups).size(); i_group++)
+            {
+                // where is SiPM6 in the group
+                vector<int> index_delete = {};
+                for (int i = 0; i < (**SiPM_Groups)[i_group].size(); i++)
+                {
+                    if (GetDetectorChannel((**SiPM_Groups)[i_group][i].first.Label) == 6 || GetDetectorChannel((**SiPM_Groups)[i_group][i].second.Label) == 6)
+                    {
+                        index_delete.push_back(i);
+                    }
+                }
 
-          mean_group_time[i_group] += (SiPM_Groups)[i_group][i_pair].first.Time;
-          counter_mean_group_time++;
+                // removing SiPM6 from the group
+                for (int i = index_delete.size() - 1; i >= 0; i--)
+                {
+                    (**SiPM_Groups)[i_group].erase((**SiPM_Groups)[i_group].begin() + index_delete[i]);
+                }
+            }           
         }
-        else if ((SiPM_Groups)[i_group][i_pair].second.isValid && !isnan((SiPM_Groups)[i_group][i_pair].second.Time))
+        // ------------------------------------------------ //
+
+        // ------------------------------------------------ //
+        // GETTING MULTIPLCITY FOR EACH SUBGROUP
+        for (int i_group = (**SiPM_Groups).size() - 1; i_group >= 0; i_group--)
         {
-          if (abs(nearest_group_time[i_group]) > abs((SiPM_Groups)[i_group][i_pair].second.Time))
-          {
-            nearest_group_time[i_group] = (SiPM_Groups)[i_group][i_pair].second.Time;
-          }
-          mean_group_time[i_group] += (SiPM_Groups)[i_group][i_pair].first.Time;
-          counter_mean_group_time++;
+            // calculating the multiplicity of the subgroup
+            int Multiplicity = 0;
+            for (int i = 0; i < (**SiPM_Groups)[i_group].size(); i++)
+            {
+                double e_sipm = 0;
+                if ((**SiPM_Groups)[i_group][i].first.isValid)
+                {
+                    e_sipm = Calibration[GetDetectorChannel((**SiPM_Groups)[i_group][i].first.Label)]->Eval((**SiPM_Groups)[i_group][i].first.Channel / 1000.);
+                }
+                // else if ((**SiPM_Groups)[i_group][i].second.isValid)
+                // {
+                //     e_sipm = SiPM_Calibration[GetDetectorChannel((**SiPM_Groups)[i_group][i].second.Label)]->Eval((**SiPM_Groups)[i_group][i].second.Channel / 1000.);
+                // }
+
+                if (e_sipm > THRESHOLD) // 100keV
+                {
+                    Multiplicity++;
+                }
+            }   
+
+            // removing the subgroup if multiplicity < M3
+            if (Multiplicity < MULTIPLICITY)
+            {
+                (**SiPM_Groups).erase((**SiPM_Groups).begin() + i_group);
+            }
         }
-      }
-      mean_group_time[i_group] /= counter_mean_group_time;
-      // cout << "Mean Time: " << mean_group_time[i_group] << endl;
-    }
 
-    // Saving the nearest group in time and index group
-    for (int i_group = 0; i_group < nearest_group_time.size(); i_group++)
-    {
-      if (abs(NEAREST) > abs(nearest_group_time[i_group]))
-      {
-        NEAREST_GROUP_INDEX = i_group;
-        NEAREST = nearest_group_time[i_group];
-      }
-    }
-  }
+        // ------------------------------------------------ //
+        // GETTING THE NEAREST SUBGROUP IF MORE THAN 1
+        double Nearest_Mean_Time_Diff = -1111;
+        int NEAREST_GROUP_INDEX = -1;
+        if ((**SiPM_Groups).size() > 0)
+        {
 
-  // cout << "Nearest: " << NEAREST << "    " << NEAREST_GROUP_INDEX << endl;
+            // MEAN TIME SUBGROUP
+            vector<double> Mean_Time_Diff_SubGroup = vector<double>((**SiPM_Groups).size(), -1111);
+            for (int i_group = 0; i_group < (**SiPM_Groups).size(); i_group++)
+            {
+                double Mean_Time_SiPM = 0;
+                int N_SiPM = 0;
+                for (int i = 0; i < (**SiPM_Groups)[i_group].size(); i++)
+                {
+                    if ((**SiPM_Groups)[i_group][i].first.isValid && !isnan((**SiPM_Groups)[i_group][i].first.Time))
+                    {
+                        Mean_Time_SiPM += (**SiPM_Groups)[i_group][i].first.Time;
+                        N_SiPM++;
+                    }
+                    // else if ((**SiPM_Groups)[i_group][i].second.isValid && !isnan((**SiPM_Groups)[i_group][i].second.Time))
+                    // {
+                    //     Mean_Time_SiPM += (**SiPM_Groups)[i_group][i].second.Time;
+                    //     N_SiPM++;
+                    // }
+                }
+                if (N_SiPM > 0)
+                {
+                    Mean_Time_SiPM /= N_SiPM;
+                    Mean_Time_Diff_SubGroup[i_group] = Mean_Time_SiPM;
+                }
+            }
 
-  int Multiplicity;
-  if (NEAREST_GROUP_INDEX == -1)
-    return false;
-  else
-    Multiplicity = (SiPM_Groups)[NEAREST_GROUP_INDEX].size();
-  
+            // find nearest from 0
+            // NEAREST_GROUP_INDEX = distance(Mean_Time_Diff_SubGroup.begin(), min_element(Mean_Time_Diff_SubGroup.begin(), Mean_Time_Diff_SubGroup.end(), [](double a, double b) { return abs(a) < abs(b); }));
+            // own min loop
+            double min_time = 1111;
+            for (int i = 0; i < Mean_Time_Diff_SubGroup.size(); i++)
+            {
+                if (abs(Mean_Time_Diff_SubGroup[i]) < abs(min_time))
+                {
+                    min_time = Mean_Time_Diff_SubGroup[i];
+                    NEAREST_GROUP_INDEX = i;
+                }
+            }
+            Nearest_Mean_Time_Diff = Mean_Time_Diff_SubGroup[NEAREST_GROUP_INDEX];
+        }
+        // ------------------------------------------------ //
 
-  if (Multiplicity >= 3 && (NEAREST > start_gate && NEAREST < end_gate))
-  {
-    return true;
-  }
 
-  return false;
+        // ------------------------------------------------ //
+        // ADD THE CONDITION ON THE TIME GATE //
+        if ((Nearest_Mean_Time_Diff > start_gate && Nearest_Mean_Time_Diff < end_gate) && Nearest_Mean_Time_Diff != -1111) 
+        {
+            for (int i = 0; i < (**SiPM_Groups)[NEAREST_GROUP_INDEX].size(); i++)
+            {
+                if ((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.isValid )
+                {
+                    if (GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label) == SiPM_used)
+                        return Calibration[GetDetectorChannel((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Label)]->Eval((**SiPM_Groups)[NEAREST_GROUP_INDEX][i].second.Channel / 1000.);
+                }
+            }
+        }
+        return -1;
+        
 }
 
 void ReadingExperimentalData(string Nucleus)
@@ -594,10 +709,9 @@ void ReadingExperimentalData(string Nucleus)
     Info("Reading Experimental Data for " + Nucleus, 1);
     clock_t start = clock(), Current;
     int Entries = Reader->GetEntries();
-
     double Proton_Pulse = 0;
 
-    while (Reader->Next() && Reader->GetCurrentEntry() < Entries)
+    while (Reader->Next() && Reader->GetCurrentEntry() < Entries/50)
     {
         ProgressBar(Reader->GetCurrentEntry(), Entries, start, Current, "Reading Tree");
 
@@ -615,13 +729,22 @@ void ReadingExperimentalData(string Nucleus)
 
         // cout << "Proton Pulse: " << Proton_Pulse << "    Silicon Time: " << Silicon_Time << "    Diff: " << Silicon_Time - Proton_Pulse << endl;
 
-        bool Coincidence = IsCoincidence(Silicon_Time, **SiPM_Groups);
+        double SiPM_energy = IsCoincidence(Silicon_Time, SiPM_Groups);
+        // cout << "SiPM Energy: " << SiPM_energy << endl;
 
         // All Spectrum
         H_Release[Nucleus][0][dir]->Fill(Silicon_Time - Proton_Pulse);
         H_Exp[Nucleus][dir]->Fill(Silicon_Energy);
+        H_ReleaseEnergy[Nucleus][dir]->Fill(Silicon_Time - Proton_Pulse, Silicon_Energy);
         H_Exp_Litt[Nucleus][dir]->Fill(Silicon_Energy_Litt);
-        if (Coincidence)
+
+        if (Silicon_Time - Proton_Pulse < 0.4)
+            H_Silicon_TimeGated_1_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
+        else
+            H_Silicon_TimeGated_2_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
+
+        // Coincidence Spectrum
+        if (SiPM_energy > 0)
         {
             H_Release_Coinc[Nucleus][0][dir]->Fill(Silicon_Time - Proton_Pulse);
             H_Exp_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
@@ -631,24 +754,7 @@ void ReadingExperimentalData(string Nucleus)
                 H_Silicon_TimeGated_1_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
             else
                 H_Silicon_TimeGated_2_Coinc[Nucleus][dir]->Fill(Silicon_Energy);
-
-            if ((**SiPM_Groups)[0].size() >= 3)
-            {
-                for (int i = 0; i < (**SiPM_Groups)[0].size(); i++)
-                {
-                    if (GetDetectorChannel((**SiPM_Groups)[0][i].second.Label) == 7 && (**SiPM_Groups)[0][i].second.isValid)
-                    {
-                        H_EpEb[Nucleus][dir]->Fill(Silicon_Energy, Calibration[7]->Eval((**SiPM_Groups)[0][i].second.Channel/1000.));
-                    }
-                }
-            }
         }
-
-        // if (Silicon_Time - Proton_Pulse < 0.3 && Silicon_Time - Proton_Pulse > 0.1)
-        if (Silicon_Time - Proton_Pulse < 0.4)
-            H_Silicon_TimeGated_1[Nucleus][dir]->Fill(Silicon_Energy);
-        else
-            H_Silicon_TimeGated_2[Nucleus][dir]->Fill(Silicon_Energy);
 
         // Looping through peaks
         for (int peak = 1; peak <= CanvasMap[Nucleus].first * CanvasMap[Nucleus].second; peak++)
@@ -659,21 +765,15 @@ void ReadingExperimentalData(string Nucleus)
             if (WindowsMap[Nucleus][peak][Silicon_Label].first < Silicon_Energy && Silicon_Energy < WindowsMap[Nucleus][peak][Silicon_Label].second)
             {
                 H_Release[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
-                if (Coincidence && (**SiPM_Groups).size() > 0)
+                if (SiPM_energy > 0)
                 {
                     H_Release_Coinc[Nucleus][peak][dir]->Fill(Silicon_Time - Proton_Pulse);
-                    if ((**SiPM_Groups)[0].size() >= 3)
-                    {
-                        for (int i = 0; i < (**SiPM_Groups)[0].size(); i++)
-                        {
-                            if (GetDetectorChannel((**SiPM_Groups)[0][i].second.Label) == 7 && (**SiPM_Groups)[0][i].second.isValid)
-                            {
-                                H_Exp_Beta[Nucleus][peak][dir]->Fill(Calibration[GetDetectorChannel((**SiPM_Groups)[0][i].second.Label)]->Eval((**SiPM_Groups)[0][i].second.Channel/1000.));
-                            }
-                        }
-                    }
+                    H_Exp_Beta[Nucleus][peak][dir]->Fill(SiPM_energy);
                 }
             }
+            
+            if (Silicon_Energy < WindowsMap[Nucleus][peak][Silicon_Label].first)
+                break;
         }
     }
 }
@@ -882,8 +982,8 @@ void PlottingPeak(string Nucleus, double peak)
     legend_release->AddEntry(H_Release[Nucleus][peak]["Down"], "In Coincidence", "l");
 
     TH1D *HIAS = (TH1D *)H_Release[Nucleus][IAS[Nucleus]]["Down"]->Clone(("H_Release_IAS_" + Nucleus + "_" + to_string(peak)).c_str());
-    if (HIAS->Integral() == 0 || H_Release_Coinc[Nucleus][peak]["Down"]->Integral() == 0)
-        return;
+    // if (HIAS->Integral() == 0 || H_Release_Coinc[Nucleus][peak]["Down"]->Integral() == 0)
+        // return;
     
     HIAS->Scale(H_Release_Coinc[Nucleus][peak]["Down"]->Integral() / HIAS->Integral());
     HIAS->SetLineColor(kBlack);
@@ -894,26 +994,58 @@ void PlottingPeak(string Nucleus, double peak)
     // Beta Spectrum
     c->cd(4);
     Info("Beta Spectrum", 2);   
-    // TLegend *legend_beta = new TLegend(0.7, 0.7, 0.9, 0.9);
+    TLegend *legend_beta = new TLegend(0.7, 0.7, 0.9, 0.9);
 
-    // for (string dir : Directions)
-    // {
-    //     // H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(1, WindowsBetaMap[Nucleus][peak]);
-    //     if (H_Exp_Beta[Nucleus][peak][dir] == nullptr)
-    //         continue;
-    //     H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(H_Exp_Beta[Nucleus][peak][dir]->GetBinWidth(1), -1111);
-    //     H_Exp_Beta[Nucleus][peak][dir]->SetTitle("#beta Spectrum");
-    //     H_Exp_Beta[Nucleus][peak][dir]->SetStats(false);
-    //     double factor = (double)Freedman_Diaconis(H_Exp_Beta[Nucleus][peak][dir]);
-    //     H_Exp_Beta[Nucleus][peak][dir]->Rebin((int)factor);
-    //     H_Exp_Beta[Nucleus][peak][dir]->GetYaxis()->SetTitle(("Counts / " + to_string(0.1 * factor) + "keV").c_str());
-    //     if (dir == "Up") H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST");
-    //     else H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST SAME");
+    for (string dir : Directions)
+    {
+        // H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(1, WindowsBetaMap[Nucleus][peak]);
+        if (H_Exp_Beta[Nucleus][peak][dir] == nullptr)
+            continue;
+        // H_Exp_Beta[Nucleus][peak][dir]->GetXaxis()->SetRangeUser(H_Exp_Beta[Nucleus][peak][dir]->GetBinWidth(1), -1111);
+        H_Exp_Beta[Nucleus][peak][dir]->SetTitle("#beta Spectrum");
+        H_Exp_Beta[Nucleus][peak][dir]->SetStats(false);
+        double factor = (double)Freedman_Diaconis(H_Exp_Beta[Nucleus][peak][dir]);
+        H_Exp_Beta[Nucleus][peak][dir]->Rebin((int)factor);
+        H_Exp_Beta[Nucleus][peak][dir]->GetYaxis()->SetTitle(("Counts / " + to_string(0.1 * factor) + "keV").c_str());
+        if (dir == "Up") H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST");
+        else H_Exp_Beta[Nucleus][peak][dir]->Draw("HIST SAME");
 
-    //     legend_beta->AddEntry(H_Exp_Beta[Nucleus][peak][dir], (dir).c_str(), "l");
-    // }
-    // legend_beta->Draw("SAME");
+        legend_beta->AddEntry(H_Exp_Beta[Nucleus][peak][dir], (dir).c_str(), "l");
+    }
 
+    if (H_Exp_Beta[Nucleus][peak]["Down"] == nullptr)
+    {
+        Warning("H_Exp_Beta[" + Nucleus + "][" + to_string(peak) + "][" + dir + "] is nullptr, skipping Beta Spectrum fit");
+        return;
+    }    
+
+    H_Exp_Beta[Nucleus][peak]["Down"]->GetXaxis()->SetRangeUser(100, -1111);
+
+    // BetaSPectrum fit 
+    double Qbeta = 11134.35 - PeakData[Nucleus][peak][0] * 31985684.605/30979557.002 - 1581.14;
+    TH1D *H_p0 = GetBetaSpectrum(Qbeta, SiPM_used);
+    H_p0->GetXaxis()->SetRangeUser(200, -1111);
+    H_p0->Scale(H_Exp_Beta[Nucleus][peak]["Down"]->Integral("width") / H_p0->Integral("width"));
+    H_p0->SetLineColor(kRed);
+    H_p0->Draw("HIST SAME");
+    legend_beta->AddEntry(H_p0, "Beta Spectrum p0", "l");
+    TH1D *H_p1 = GetBetaSpectrum(Qbeta-1248.6, SiPM_used);
+    H_p1->GetXaxis()->SetRangeUser(200, -1111);
+    H_p1->SetLineColor(kBlue);
+    H_p1->Scale(H_Exp_Beta[Nucleus][peak]["Down"]->Integral("width") / H_p1->Integral("width"));
+    H_p1->Draw("HIST SAME");
+    legend_beta->AddEntry(H_p1, "Beta Spectrum p1", "l");
+    TH1D *H_p2 = GetBetaSpectrum(Qbeta-2234.33, SiPM_used);
+    H_p2->GetXaxis()->SetRangeUser(200, -1111);
+    H_p2->SetLineColor(kGreen);
+    H_p2->Scale(H_Exp_Beta[Nucleus][peak]["Down"]->Integral("width") / H_p2->Integral("width"));
+    H_p2->Draw("HIST SAME");
+    legend_beta->AddEntry(H_p2, "Beta Spectrum p2", "l");
+
+    H_Exp_Beta[Nucleus][peak]["Down"]->GetXaxis()->SetRangeUser(0, -1111);
+
+
+    legend_beta->Draw("SAME");
     c->Write();
     Info("Peak " + to_string(peak) + " plotted for " + Nucleus);
 }
@@ -1027,4 +1159,8 @@ void PlottingReleaseScaling(string Nucleus)
     H_Silicon_TimeGated_2_Coinc[Nucleus]["Down"]->Draw("HIST SAME");
     legend_coinc->Draw("SAME");
     cLow_coinc->Write();
+
+
+    H_ReleaseEnergy[Nucleus]["Down"]->Write();
+    H_ReleaseEnergy[Nucleus]["Up"]->Write();
 }

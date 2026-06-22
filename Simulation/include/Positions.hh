@@ -519,6 +519,7 @@ string AnalyseSim(string filename, double &x, double &y, double &z)
     if (std::regex_search(filename, match, rgx) && match.size() == 4)
     // if (std::regex_search(filename, match, rgx) && match.size() == 5)
     {
+        cout << match[0] << "   " << match[1] << "   " << match[2] << "   " << match[3] << endl;
         string x_pos = TYPE == "Catcher" ? to_string(stod(match[1])) : to_string(stod(match[2]));
         string y_pos = TYPE == "Catcher" ? to_string(stod(match[2])) : to_string(stod(match[3]));
         string z_pos = TYPE == "Catcher" ? to_string(stod(match[3])) : to_string(stod(match[1]));
@@ -529,7 +530,7 @@ string AnalyseSim(string filename, double &x, double &y, double &z)
         y = TYPE == "Catcher" ? stod(match[2]) : flagnew ? stod(match[2]) : stod(match[3]);
         z = TYPE == "Catcher" ? stod(match[3]) : flagnew ? stod(match[3]) : stod(match[1]);
 
-        a = TYPE == "Catcher" ? stod(match[4]) : 0;
+        // a = TYPE == "Catcher" ? stod(match[4]) : 0;
     }
 
     // string par_string = "x=" + to_string(x) + " y=" + to_string(y) + " z=" + to_string(z);

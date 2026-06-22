@@ -45,7 +45,6 @@ int main(int argc, char *argv[])
 
     InitDetectors("Config_Files/sample.pid");
     
-
     GROUPED_File = new TFile((DIR_ROOT_DATA + ROOT_basefilename + "_basic.root").c_str(), "RECREATE");
     InitHistograms();
 

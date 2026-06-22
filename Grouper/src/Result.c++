@@ -4,7 +4,7 @@ int main(int argc, char **argv)
 {
     
     NUCLEUS = "32Ar";
-    FLAG2024 = true;
+    FLAG2025 = true;
     VERBOSE = 0;
 
 

@@ -8,6 +8,9 @@ int main(int argc, char *argv[])
     InitRuns();
     InitProtonPulse();
 
+    if (YEAR == 2024)
+        Map_RunFiles["18N"] = Map_RunFiles["32Ar"];
+
     MATCHED_File = MyTFile((DIR_ROOT_DATA_MATCHED + "matched.root").c_str(), "READ");
     MATCHED_SiPM_FILE = MyTFile((DIR_ROOT_DATA_MATCHED + "SiPM_Matching_Functions.root").c_str(), "READ");
 
@@ -18,13 +21,13 @@ int main(int argc, char *argv[])
     for (auto &pairr : Map_RunFiles)
     {
         string NUCLEUS = pairr.first;
-        // if (NUCLEUS.find("33Ar") == string::npos)
+        // if (NUCLEUS.find("33Ar") != string::npos)
         //     continue;
         // if (NUCLEUS.find("32Ar") == string::npos)
         //     continue;
         pair<string, vector<string>> NUCLEUS_Run = make_pair(NUCLEUS, Map_RunFiles[NUCLEUS]);
         Start("Merging " + NUCLEUS_Run.first);
-        MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + NUCLEUS_Run.first + "_merged_around33.root").c_str(), "RECREATE");
+        MERGED_File = MyTFile((DIR_ROOT_DATA_MERGED + NUCLEUS_Run.first + "_merged.root").c_str(), "RECREATE");
         InitGraph();
         TDirectory *dir = MERGED_File->mkdir("Strips");
         MERGED_Tree = new TTree("MERGED_Tree", "MERGED_Tree");
@@ -47,8 +50,7 @@ int main(int argc, char *argv[])
         {
             string Run = NUCLEUS_Run.second[i];
             int Run_int = atoi(Run.c_str());
-            // if (Run_int != 61 && Run_int != 60 && Run_int != 59 && Run_int != 58 && Run_int != 62 && Run_int != 63 && Run_int != 64 && Run_int != 65)
-            //     continue;   
+            // if (Run_int > 64) continue;
             Info("Current Run : " + Run);
             GROUPED_filename = SearchFiles(DIR_ROOT_DATA_GROUPED, Run);
             GROUPED_File = MyTFile((DIR_ROOT_DATA_GROUPED + GROUPED_filename).c_str(), "READ");
@@ -57,7 +59,11 @@ int main(int argc, char *argv[])
                 continue;
             }
 
-            TTree *Tree = (TTree *)GROUPED_File->Get("CLEANED_Tree");
+            TTree *Tree = NULL;
+            if (NUCLEUS == "18N")
+                Tree = (TTree *)GROUPED_File->Get("CLEANED_Tree_18N");
+            else
+                Tree = (TTree *)GROUPED_File->Get("CLEANED_Tree");
             if (Tree == NULL)
             {
                 Warning("No Tree found in " + GROUPED_filename);

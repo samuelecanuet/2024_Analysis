@@ -729,7 +729,7 @@ inline void InitDetectors(const string &fname)
     DIR_DATA_ISOLDE = "/mnt/hgfs/shared-2/2025_DATA/ISOLDE_DATA/";
     DIR_DATA_HDD = "/run/media/local1/Disque_Dur/2025_DATA/DETECTOR_DATA/";
     DIR_HDD_SIMULATED = "/run/media/local1/Disque_Dur/2025_DATA/SIMULATED_DATA/";
-    REFERENCE_RUN = 98;
+    REFERENCE_RUN = 0;
     MATCHING_RUN = 69;
   }
   else if (FLAG2024)
@@ -776,6 +776,7 @@ inline void InitDetectors(const string &fname)
   IAS["32Ar_thick"] = 14.;
   IAS["33Ar"] = 21.;
   IAS["33Ar_thick"] = 21.;
+  IAS["18N"] = 0;
 
   // Nuclei
   NucleusColor["32Ar"] = kCyan;

@@ -97,6 +97,7 @@ map<string, double> Calibration_Shift_Proton_Pulses;
 map<string, TTree*> Tree_ISOLDE_Proton; 
 map<string, TTreeReader*> Reader_ISOLDE_Proton;
 map<string, TTreeReaderValue<double>*> Reader_ISOLDE_Proton_Time;
+map<string, TTreeReaderValue<double>*> Reader_ISOLDE_Proton_Intensity;
 
 
 
@@ -206,8 +207,24 @@ void InitProtonPulse()
       {
         Reader_ISOLDE_Proton[Run] = new TTreeReader(Tree_ISOLDE_Proton[Run]);
         Reader_ISOLDE_Proton_Time[Run] = new TTreeReaderValue<double>(*Reader_ISOLDE_Proton[Run], "Time");
+        Reader_ISOLDE_Proton_Intensity[Run] = new TTreeReaderValue<double>(*Reader_ISOLDE_Proton[Run], "Intensity");
         Reader_ISOLDE_Proton[Run]->Next();
         Info("Tree_ISOLDE_Proton_" + Run + " loaded successfully", 2);
+
+        // if (Run == "064")
+        // {
+        //   while (Reader_ISOLDE_Proton[Run]->Next())
+        //   {
+        //     double Time = **Reader_ISOLDE_Proton_Time[Run];
+        //     double Intensity = **Reader_ISOLDE_Proton_Intensity[Run];
+        //     if (Intensity > 3000)
+        //       cout << "ISOLDE Time : " << Time*1e-9 << " s, Intensity : " << Intensity << endl;
+        //   }
+        // }
+        // Reader_ISOLDE_Proton[Run]->Restart();
+
+
+
       }
     }
   }
@@ -313,28 +330,41 @@ void LoadMatchingFunction(int Run)
 
 void InsertProtonPulse(string Run, double Time)
 {
+
+  // Info("Inserting proton pulse at " + to_string(Reader_ISOLDE_Proton[Run]->GetCurrentEntry()), 2);
   if (YEAR != 2024)
     return;
 
-  double ISOLDE_Time = (**Reader_ISOLDE_Proton_Time[Run] - Calibration_Shift_Proton_Pulses[Run] + 0.5) * 1e9;
-  // cout << "ISOLDE Time : " << ISOLDE_Time*1e-9 << " s" << endl;
-  // cout << "Current Time : " << Time*1e-9 << " s" << endl;
+  if (**Reader_ISOLDE_Proton_Intensity[Run] < 100) 
+  {
+    // Info("Passing Proton pulse n° " + to_string(Reader_ISOLDE_Proton[Run]->GetCurrentEntry()), 2);
+    if (!Reader_ISOLDE_Proton[Run]->Next())
+    {
+      return;
+    }
+    InsertProtonPulse(Run, Time);
+  }
+
+  double ISOLDE_Time = (**Reader_ISOLDE_Proton_Time[Run] + Calibration_Shift_Proton_Pulses[Run] - 0.85 + 1.2*4) * 1e9;
+  // cout << "ISOLDE Time : " << ISOLDE_Time << " s" << endl;
+  // cout << "Current Time : " << Time << " s" << endl;
+  // cout << "Current Run : " << Run << " - ISOLDE Time : " << ISOLDE_Time*1e-9 << " s" << " - ISOLDE Intensity : " << **Reader_ISOLDE_Proton_Intensity[Run] << endl;
   if (ISOLDE_Time < Time)
   {
+    // Info("Analysing Proton pulse n° " + to_string(Reader_ISOLDE_Proton[Run]->GetCurrentEntry()), 2);
+    // cout << "Current Run : " << Run << " - ISOLDE Time : " << ISOLDE_Time*1e-9 << " s" << " - ISOLDE Intensity : " << **Reader_ISOLDE_Proton_Intensity[Run] << endl;
     Signal HRS = Signal(99, ISOLDE_Time, 0);
     MERGED_Tree_HRS = HRS;
     MERGED_Tree->Fill();
     
     // cout << "        Inserted proton pulse at " << ISOLDE_Time << " s" << endl;
 
-    // next proton pulse
-    Reader_ISOLDE_Proton[Run]->Next();
-
     // initialize the MERGED_Tree for current detector data
     MERGED_Tree_HRS = Signal();
     MERGED_Tree_SiPMGroup = vector<vector<pair<Signal, Signal>>>();
     MERGED_Tree_Silicon = vector<Signal>();
-
+  
+    Reader_ISOLDE_Proton[Run]->Next();
     InsertProtonPulse(Run, Time);
   }
 }

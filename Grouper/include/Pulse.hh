@@ -516,7 +516,7 @@ void ReadAllRunsDate()
 
 void ReadISOLDE()
 {
-  string ISOLDE_filename = DIR_DATA_ISOLDE + "2024_05_ISOLDE_data.csv";
+  string ISOLDE_filename = DIR_DATA_ISOLDE + "ISOLDE_data.csv";
   ifstream file(ISOLDE_filename.c_str());
 
   if (!file.is_open())

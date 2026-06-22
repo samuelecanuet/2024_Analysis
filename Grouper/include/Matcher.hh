@@ -47,7 +47,9 @@ int current_detector = 0;
 double CHI2;
 double parameter[2];
 
-vector<int> Peaks = {5, 8, 14, 23};
+vector<int> Peaks = {5, 8, 14};
+
+TF1* Calibration[SIGNAL_MAX];
 
 void InitHistograms(string Run_string)
 {
@@ -111,6 +113,24 @@ double FunctionToMinimize(const double *par)
     return chi2;
 }
 
+void InitCalib()
+{
+    TFile *CALIBRATED_File = MyTFile((DIR_ROOT_DATA_CALIBRATED + "Calibrated_" + to_string(YEAR) + ".root").c_str(), "READ");
+    for (int i = 0; i < SIGNAL_MAX; i++)
+    {
+        if (IsDetectorSiliStrip(i))
+        {
+            Calibration[i] = (TF1 *)CALIBRATED_File->Get(("Calibration_" + detectorName[i]).c_str());
+
+            if (Calibration[i] == NULL)
+            {
+                Error("No calibration found for " + detectorName[i]);
+            }
+        }
+    }
+    CALIBRATED_File->Close();
+}
+
 void CHI2Minimization(int i)
 {
     current_detector = i;
@@ -146,7 +166,7 @@ void CHI2Minimization(int i)
     }
 
     H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
-    H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);
+    H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][IAS["32Ar"]][i].first, WindowsMap["32Ar"][IAS["32Ar"]][i].second);    
     // H_Run[Run][i]->Scale(H_Run_Ref[i]->Integral() / H_Run[Run][i]->Integral());
     H_Run[Run][i]->SetLineColor(Run);
     H_Run[Run][i]->Draw("HIST SAME");
@@ -170,8 +190,8 @@ void CHI2Minimization(int i)
         H_Run[Run][i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
         H_Run_Ref[i]->GetXaxis()->SetRangeUser(WindowsMap["32Ar"][peak][i].first, WindowsMap["32Ar"][peak][i].second);
 
-        if (H_Run[Run][i]->GetMean() < 1000 || H_Run_Ref[i]->GetMean() < 1000)
-            continue;
+        // if (H_Run[Run][i]->GetMean() < 1000 || H_Run_Ref[i]->GetMean() < 1000)
+        //     continue;
 
         // Info("Peak : " + to_string(peak), 2);
         G->AddPoint(H_Run[Run][i]->GetMean(), H_Run_Ref[i]->GetMean());

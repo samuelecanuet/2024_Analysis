@@ -776,6 +776,7 @@ inline void CleaningGroups(TTreeReaderArray<Signal> &signals)
   // cout << "D" << endl;
   // # Saving in Tree #
   CLEANED_Tree_SiPMGroup = SiPM_Groups;
+  H_SiPMHigh_Mulitplicity_Cleaned->Fill(SiPM_Groups.size());
 
   // #####################################
   // ######### DISPLAYING GROUPS #########

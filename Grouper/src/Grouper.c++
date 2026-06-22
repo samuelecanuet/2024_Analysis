@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[])
 {
-    FLAG2024 = true;
+    FLAG2025 = true;
     
     InitDetectors("Config_Files/sample.pid");
     InitWindows();
@@ -69,7 +69,6 @@ int main(int argc, char *argv[])
     clock_t start = clock(), Current;
     if (FULL) ///////// SAVING FIT PARAMETER IF FULL MODE ELSE LOADING THEM
     {
-    
         /////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////  SELECTING TREE /////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////
@@ -78,7 +77,7 @@ int main(int argc, char *argv[])
         GROUPED_Tree->Branch("GROUPED_Tree_SiPMHigh", &GROUPED_Tree_SiPMHigh);
         GROUPED_Tree->Branch("GROUPED_Tree_SiPMLow", &GROUPED_Tree_SiPMLow);
         ULong64_t TotalEntries = Reader->GetEntries();
-        while (Reader->Next())
+        while (Reader->Next() && Reader->GetCurrentEntry() < TotalEntries)
         {
             ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Selecting Groups : ");
 
@@ -117,8 +116,9 @@ int main(int argc, char *argv[])
             CuttingGroups();
         }
 
+        
         WriteHistograms_Cutted();
-
+        delete GROUPED_Tree;
         /////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////// SILICON WALK GROUPS /////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////
@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
         }
 
         WriteHistograms_SiliconWalk();
+        
         /////////////////////////////////////////////////////////////////////////////////////////
         /////////////////////////////////// SiPM WALK GROUPS ////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////
@@ -163,7 +164,7 @@ int main(int argc, char *argv[])
         /////////////////////////////////////////////////////////////////////////////////////////
         ///////////////////////////////////  FINAL CLEANING /////////////////////////////////////
         /////////////////////////////////////////////////////////////////////////////////////////       
-
+        delete CUTTED_Tree;
         if (Run == REFERENCE_RUN) SaveFitParameters();
     }
     else
@@ -195,7 +196,7 @@ int main(int argc, char *argv[])
     signals = TTreeReaderArray<Signal>(*Reader, "Signal");
     Reader->Restart();
     int TotalEntries = Reader->GetEntries();
-    while (Reader->Next())
+    while (Reader->Next() && Reader->GetCurrentEntry() < TotalEntries)
     {
         ProgressBar(Reader->GetCurrentEntry(), TotalEntries, start, Current, "Final Cleaning : ");
 
@@ -234,8 +235,6 @@ int main(int argc, char *argv[])
     dir_Cleaned->cd();
     G_IAS_LossesAfterCut->Write();
 
-    delete GROUPED_Tree;
-    delete CUTTED_Tree;
     WriteTree_Grouped();
 
     GROUPED_File->Close();
